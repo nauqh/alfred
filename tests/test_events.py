@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import dataclasses
 from typing import Any
 
 import hikari
+import lightbulb
 import pytest
 
 from alfred.events import LavalinkEventHandler
@@ -42,19 +44,20 @@ class FakeRest:
 
 @pytest.fixture
 def bot() -> Any:
-    bot = hikari.GatewayBot(FAKE_TOKEN, banner=None, logs=None)
+    bot = hikari.GatewayBot(FAKE_TOKEN, banner=None, logs=None, suppress_optimization_warning=True)
     bot._rest = FakeRest()  # type: ignore[assignment]
     return bot
 
 
-class FakeMenuHandle:
-    """Stands in for the handle `Menu.attach_persistent` returns."""
+def make_menu_handle() -> lightbulb.components.MenuHandle:
+    """
+    A real `MenuHandle`, without the interaction listener behind it.
 
-    def __init__(self) -> None:
-        self.stopped = 0
-
-    def stop(self) -> None:
-        self.stopped += 1
+    Deliberately not a stand-in with its own methods: a hand-written double let
+    `handle.stop()` - a method `MenuHandle` does not have - through code review and the whole
+    test suite, and it only surfaced when the bot ran.
+    """
+    return lightbulb.components.MenuHandle(task=None, stop_event=asyncio.Event())
 
 
 class FakePlayerManager:
@@ -78,7 +81,7 @@ def handler(bot: Any, player: AlfredPlayer, monkeypatch: pytest.MonkeyPatch) -> 
     # matters here is that a handle is kept and later stopped.
     monkeypatch.setattr(
         "alfred.events.PlayerMenu.attach_persistent",
-        lambda self, client, timeout=None: FakeMenuHandle(),
+        lambda self, client, timeout=None: make_menu_handle(),
     )
     return LavalinkEventHandler(bot, client=object(), lavalink_client=FakeLavalinkClient(player))  # type: ignore[arg-type]
 

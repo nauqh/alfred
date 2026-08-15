@@ -36,7 +36,17 @@ def build(config: Config) -> hikari.GatewayBot:
     The Lavalink client can only be created once Discord has told us the bot's own user ID,
     so the rest of the setup happens when the bot reports that it has started.
     """
-    bot = hikari.GatewayBot(config.token, intents=INTENTS, banner=None, logs=None)
+    # `suppress_optimization_warning` because the choice is deliberate rather than an
+    # oversight: the Dockerfile runs `python -O`, and a local run is *meant* to keep its
+    # asserts - they narrow types and check this module's own wiring, so development is
+    # exactly where they earn their keep.
+    bot = hikari.GatewayBot(
+        config.token,
+        intents=INTENTS,
+        banner=None,
+        logs=None,
+        suppress_optimization_warning=True,
+    )
     client = lightbulb.client_from_app(bot, default_enabled_guilds=config.default_guilds, hooks=[log_invocation])
 
     responses.configure(config.delete_after)

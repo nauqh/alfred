@@ -1,8 +1,8 @@
 """Logging setup.
 
-Everything the bot writes goes through loguru. hikari and lavalink.py log through the standard
-library, so those are intercepted and re-emitted into loguru - one stream, one format, rather
-than two logging systems interleaving on the same terminal.
+The bot logs through loguru. hikari and lavalink.py log through the standard library, so their
+records are handed to loguru too - one stream, one format, one set of colours, rather than two
+logging systems interleaving on the same terminal.
 
 When ``LOG_DIR`` is set the bot also keeps rotating files: ``bot.log`` for everything, and
 ``track.log`` for the tracks that were played.
@@ -15,15 +15,16 @@ import sys
 
 from loguru import logger
 
+# Close to hikari's own console format, which is what this replaced.
 CONSOLE_FORMAT = (
-    "<level>{level: <1.1}</level> <dim>{time:YYYY-MM-DD HH:mm:ss}</dim> "
-    "<bold>{name}</bold>: <level>{message}</level>"
+    "<green>{time:HH:mm:ss}</green> <level>{level: <8}</level> "
+    "<cyan>{name}</cyan>: <level>{message}</level>"
 )
 FILE_FORMAT = "{time:YYYY-MM-DD HH:mm:ss} {level} {name}.{function}:{line}: {message}"
 TRACK_FORMAT = "{time:YYYY-MM-DD HH:mm:ss}: {message}"
 
-# Tracks are tagged with this rather than being a separate logger, so `track.log` can be
-# filtered out of everything else.
+# Tracks are tagged rather than sent to a separate logger, so `track.log` can be filtered out
+# of everything else.
 TRACK = "track"
 
 
@@ -36,14 +37,11 @@ class InterceptHandler(logging.Handler):
         except ValueError:
             level = record.levelno
 
-        # Walk out of the logging machinery so the message is attributed to whatever called
-        # it, not to this handler.
-        frame, depth = logging.currentframe(), 2
-        while frame and frame.f_code.co_filename == logging.__file__:
-            frame = frame.f_back
-            depth += 1
-
-        logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
+        # The standard library already knows which logger this came from, so the name is
+        # copied straight across. Walking back through the frames to work it out instead
+        # lands on `logging` itself, which is how these records ended up mislabelled.
+        patched = logger.patch(lambda r: r.update(name=record.name))
+        patched.opt(exception=record.exc_info).log(level, record.getMessage())
 
 
 def configure(level: str = "INFO", log_dir: str | None = None) -> None:
@@ -55,15 +53,16 @@ def configure(level: str = "INFO", log_dir: str | None = None) -> None:
         log_dir: Directory to write log files into. No files are written when this is `None`.
     """
     logger.remove()
-    logger.add(sys.stdout, format=CONSOLE_FORMAT, level=level, filter=_not_track)
-    logger.add(sys.stdout, format=TRACK_FORMAT, level="INFO", filter=_is_track)
+    # `colorize=True` rather than left to autodetection: the console script runs behind a
+    # launcher shim on Windows, and loguru sees that as "not a terminal" and drops the colour.
+    logger.add(sys.stdout, format=CONSOLE_FORMAT, level=level, colorize=True)
 
     if log_dir is not None:
         logger.add(
             f"{log_dir}/bot.log",
             format=FILE_FORMAT,
             level=level,
-            filter=_not_track,
+            filter=lambda record: not record["extra"].get(TRACK),
             rotation="00:00",
             retention=10,
             encoding="utf-8",
@@ -72,22 +71,14 @@ def configure(level: str = "INFO", log_dir: str | None = None) -> None:
             f"{log_dir}/track.log",
             format=TRACK_FORMAT,
             level="INFO",
-            filter=_is_track,
+            filter=lambda record: bool(record["extra"].get(TRACK)),
             rotation="00:00",
             retention=10,
             encoding="utf-8",
         )
 
-    # hikari and lavalink.py log through the standard library. Replacing the root handlers
-    # sends those records to loguru too.
+    # hikari and lavalink.py log through the standard library; this sends those records to
+    # loguru as well, so they arrive coloured and in the same shape as everything else.
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
     for name in ("hikari", "lavalink"):
         logging.getLogger(name).setLevel(logging.INFO)
-
-
-def _is_track(record: dict) -> bool:
-    return bool(record["extra"].get(TRACK))
-
-
-def _not_track(record: dict) -> bool:
-    return not record["extra"].get(TRACK)

@@ -125,7 +125,7 @@ class LavalinkEventHandler:
         # menu that no longer routes anywhere, rather than acting on the next track.
         handle, player.menu_handle = player.menu_handle, None
         if handle is not None:
-            handle.stop()
+            handle.stop_interacting()
 
         now_playing, player.now_playing = player.now_playing, None
         if now_playing is None:
