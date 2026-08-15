@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "alfred"
+version = "2.0.0"
+description = "A Discord music streaming bot built with hikari, lightbulb and Lavalink"
+readme = "README.md"
+# Both hikari and lightbulb declare `>=3.10,<3.15`; matching it here keeps uv's
+# resolution honest rather than letting it pick a Python they cannot install on.
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+
+# Floors, not pins - `uv.lock` holds the exact versions, and it is committed.
+# `uv sync --frozen` installs the lock verbatim; `uv lock --upgrade` moves it.
+dependencies = [
+    "hikari>=2.5.0",
+    "hikari-lightbulb>=3.2.5",
+    "lavalink>=5.11.0",
+    "python-dotenv>=1.2.2",
+    # All of the bot's own logging. hikari and lavalink still log through the standard
+    # library; `log_config` bridges them into loguru so there is one stream, one format.
+    "loguru>=0.7.3",
+]
+
+[project.optional-dependencies]
+speedups = ["hikari[speedups]>=2.5.0"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.3",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
+
+[project.scripts]
+alfred = "alfred.bot:run"
+
+[tool.hatch.build.targets.wheel]
+packages = ["alfred"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+# The `lavalink/` directory holds the node's config, not a local module.
+known-third-party = ["lavalink"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

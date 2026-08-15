@@ -1,0 +1,22 @@
+# The local virtualenv is Windows-built and would shadow the one uv creates
+# inside the image at the same path.
+.venv
+
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Never in an image. Neither is committed, but the build context is a directory
+# on a laptop, not a git checkout - .dockerignore is what actually keeps them out.
+.env
+.env.*
+
+# The node's config and its runtime state. Mounted into the Lavalink container by
+# docker-compose; the bot image has no use for any of it.
+lavalink/
+logs/
+
+tests/
+docs/
+.pytest_cache/
+.ruff_cache/

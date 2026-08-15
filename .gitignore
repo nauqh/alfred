@@ -1,0 +1,12 @@
+__pycache__/
+*.egg-info/
+.venv/
+.env
+logs/
+lavalink/application.yml
+lavalink/logs/
+lavalink/plugins/
+# ~96 MB, and `scripts/lavalink.ps1` fetches it on demand.
+lavalink/Lavalink.jar
+.pytest_cache/
+.ruff_cache/

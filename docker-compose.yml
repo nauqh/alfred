@@ -1,0 +1,71 @@
+services:
+  # Deciphers YouTube's stream signatures for the node. Without it every youtube client
+  # fails with `Must find sig function from script: /s/player/<id>/...` and nothing plays -
+  # the plugin's own extractor cannot read the current player script, and upstream's answer
+  # (youtube-source#225) is this service rather than a version to wait for.
+  #
+  # Self-hosted here on purpose. The author runs a public instance at cipher.kikkia.dev,
+  # which is fine for a laptop, but it is rate limited to 10 req/s across everyone using it
+  # and it sees every player script this node asks about.
+  yt-cipher:
+    # `master` is the only tag published, so it is pinned by digest - the tag itself moves.
+    # Re-pin with:
+    #   docker pull ghcr.io/kikkia/yt-cipher:master && docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/kikkia/yt-cipher:master
+    image: ghcr.io/kikkia/yt-cipher:master@sha256:4c5ec381ff57336cfc24822d2b526a5ad7cd0171f61065a1bbc87bb736842449
+    container_name: alfred-cipher
+    environment:
+      - OVERRIDE_PLAYER_VARIANT=IAS
+      # Read from .env. The service is not published to the host, so this guards against
+      # anything else on the compose network, not against the internet.
+      - API_TOKEN=${CIPHER_PASSWORD:?set CIPHER_PASSWORD in .env}
+    # Deliberately not published to the host - only Lavalink needs to reach it.
+    expose:
+      - 8001
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8001 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  lavalink:
+    # Pinned rather than `:4` - the node's REST/WS contract is what lavalink.py is
+    # written against, and a floating major tag moves it under you on `docker pull`.
+    image: ghcr.io/lavalink-devs/lavalink:4.2.2
+    container_name: alfred-lavalink
+    environment:
+      - _JAVA_OPTIONS=-Xmx2G
+      - SERVER_PORT=2333
+    volumes:
+      # `sudo chown -R 322:322 lavalink/logs lavalink/plugins` before the first run.
+      - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
+      - ./lavalink/logs/:/opt/Lavalink/logs/
+      - ./lavalink/plugins/:/opt/Lavalink/plugins/
+    # Published, not just exposed: the bot reaches the node over the compose network,
+    # but a bot run on the host (`uv run alfred`) can only reach it through here.
+    ports:
+      - "2333:2333"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 2333 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      yt-cipher:
+        condition: service_healthy
+    restart: unless-stopped
+
+  bot:
+    build: .
+    container_name: alfred
+    env_file: .env
+    environment:
+      - LAVALINK_HOST=lavalink
+    depends_on:
+      lavalink:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
