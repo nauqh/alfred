@@ -47,8 +47,15 @@ services:
       - ./lavalink/plugins/:/opt/Lavalink/plugins/
     # Published, not just exposed: the bot reaches the node over the compose network,
     # but a bot run on the host (`uv run alfred`) can only reach it through here.
+    # Bound to loopback, not to every interface. `2333:2333` would put the node on the
+    # public internet on any machine with a public address - and its password is whatever
+    # application.yml says, which starts life as `youshallnotpass`. An open node is a
+    # stranger's streaming relay, billed to you.
+    #
+    # The bot in this file does not use this at all; it reaches the node over the compose
+    # network. This exists so a bot run on the host (`uv run alfred`) can reach it.
     ports:
-      - "2333:2333"
+      - "127.0.0.1:2333:2333"
     healthcheck:
       # curl, not `nc`: the image has no netcat, and a check that cannot run is a check
       # that always fails - the bot then waits on a node that is already serving.

@@ -245,6 +245,7 @@ alfred/
 
 | Document | |
 |---|---|
+| [`docs/deploy.md`](docs/deploy.md) | Putting it on a VPS: the machine, the firewall, the secrets, and what to watch |
 | [`docs/prd.md`](docs/prd.md) | What the bot is for, who operates it, and the requirements this release is measured against |
 | [`docs/design.md`](docs/design.md) | How it is put together, and why the rewrite is shaped differently from the version it replaces |
 
