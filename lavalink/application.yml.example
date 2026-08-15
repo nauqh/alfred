@@ -147,7 +147,10 @@ plugins:
       #
       # Spotify is not like this: it registers with empty credentials and fails per
       # request instead, which `/search` already handles by returning no results.
-      deezer: true
+      #
+      # Off by default for that reason: this file is copied and started before it is read.
+      # Turn it on in the same edit that fills in the two fields below.
+      deezer: false
       applemusic: false
       yandexmusic: false
       flowerytts: false

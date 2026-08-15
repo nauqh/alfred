@@ -37,6 +37,10 @@ services:
     environment:
       - _JAVA_OPTIONS=-Xmx2G
       - SERVER_PORT=2333
+      # `application.yml` reads this back as `${CIPHER_PASSWORD}`. Spring resolves it from
+      # the node's own environment, not from the compose file, so it has to be handed to
+      # this container as well as to yt-cipher - without it the node fails to start at all.
+      - CIPHER_PASSWORD=${CIPHER_PASSWORD:?set CIPHER_PASSWORD in .env}
     volumes:
       # `sudo chown -R 322:322 lavalink/logs lavalink/plugins` before the first run.
       - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
