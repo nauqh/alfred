@@ -21,12 +21,11 @@ services:
     # Deliberately not published to the host - only Lavalink needs to reach it.
     expose:
       - 8001
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 8001 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
+    # No healthcheck: the image is distroless, so there is no /bin/sh for `CMD-SHELL` to
+    # run and no shell utility to probe the port with - every check fails with
+    # `stat /bin/sh: no such file or directory`, and anything waiting on it never starts.
+    # Nothing needs one: the node only calls this service when it resolves a stream, long
+    # after boot, and retries on its own.
     restart: unless-stopped
 
   lavalink:
@@ -51,14 +50,19 @@ services:
     ports:
       - "2333:2333"
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 2333 || exit 1"]
+      # curl, not `nc`: the image has no netcat, and a check that cannot run is a check
+      # that always fails - the bot then waits on a node that is already serving.
+      #
+      # No `-f`: /version answers 401 without the server password, and a 401 is proof the
+      # node is up and answering. What is being tested is that it responds at all.
+      test: ["CMD", "curl", "-sS", "-o", "/dev/null", "http://localhost:2333/version"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
     depends_on:
-      yt-cipher:
-        condition: service_healthy
+      # Start order only - see the note on yt-cipher's missing healthcheck.
+      - yt-cipher
     restart: unless-stopped
 
   bot:
