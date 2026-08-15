@@ -4,6 +4,7 @@ import pytest
 
 from alfred.formatting import PROGRESS_BAR_WIDTH
 from alfred.formatting import format_time
+from alfred.formatting import format_uptime
 from alfred.formatting import parse_time
 from alfred.formatting import progress_bar
 from alfred.formatting import trim
@@ -27,6 +28,20 @@ def test_format_time_picks_the_units_the_duration_needs(milliseconds: int, expec
 def test_format_time_can_be_held_to_one_unit() -> None:
     assert format_time(90_000_000, "h") == "25:00:00"
     assert format_time(3_661_000, "m") == "61:01"
+
+
+@pytest.mark.parametrize(
+    ("milliseconds", "expected"),
+    [
+        (0, "0s"),
+        (45_000, "45s"),
+        (440_000, "7m 20s"),
+        (3_661_000, "1h 1m"),
+        (183_600_000, "2d 3h"),
+    ],
+)
+def test_format_uptime_keeps_the_two_largest_units(milliseconds: int, expected: str) -> None:
+    assert format_uptime(milliseconds) == expected
 
 
 def test_parse_time_splits_a_duration() -> None:

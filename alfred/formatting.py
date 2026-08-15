@@ -41,6 +41,24 @@ def format_time(milliseconds: int, unit: Literal["d", "h", "m"] | None = None) -
     return f"{(days * 24 + hours) * 60 + minutes}:{seconds:02}"
 
 
+def format_uptime(milliseconds: int) -> str:
+    """
+    Format how long something has been running, in the two largest units it needs.
+
+    Deliberately not `format_time`: `0:05:54` reads as a track length, and an uptime is
+    read at a glance rather than compared to a second one.
+    """
+    days, hours, minutes, seconds = parse_time(milliseconds)
+
+    if days:
+        return f"{days}d {hours}h"
+    if hours:
+        return f"{hours}h {minutes}m"
+    if minutes:
+        return f"{minutes}m {seconds}s"
+    return f"{seconds}s"
+
+
 def progress_bar(fraction: float) -> str:
     """Render a playback progress bar, with the marker placed at ``fraction`` of the way along."""
     marker = min(int(max(fraction, 0.0) * PROGRESS_BAR_WIDTH), PROGRESS_BAR_WIDTH - 1)
