@@ -2,20 +2,23 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+
 import hikari
 import lavalink
 import lightbulb
 
-from alfred import embeds
 from alfred import errors
 from alfred import hooks
 from alfred import responses
 from alfred import service
 from alfred.formatting import trim
+from alfred.menus import MENU_TIMEOUT
+from alfred.menus import PlayerMenu
 
 loader = lightbulb.Loader()
 
-QUEUE_PREVIEW_LENGTH = 10
 MAX_CHOICES = 25
 
 
@@ -45,18 +48,34 @@ class Skip(
 class Queue(
     lightbulb.SlashCommand,
     name="queue",
-    description="Show the next tracks in the queue",
+    description="Show the queue, with controls for the player",
     hooks=[hooks.guild_only, hooks.player_playing],
 ):
     @lightbulb.invoke
-    async def invoke(self, ctx: lightbulb.Context, lavalink_client: lavalink.Client = lightbulb.di.INJECTED) -> None:
+    async def invoke(
+        self,
+        ctx: lightbulb.Context,
+        client: lightbulb.Client = lightbulb.di.INJECTED,
+        bot: hikari.GatewayBot = lightbulb.di.INJECTED,
+        lavalink_client: lavalink.Client = lightbulb.di.INJECTED,
+    ) -> None:
         assert ctx.guild_id is not None
 
         player = service.get_player(lavalink_client, ctx.guild_id)
         if player is None:
             raise errors.PlayerNotPlaying
 
-        await ctx.respond(embed=embeds.queue(player, title="🎵 Queue", preview_length=QUEUE_PREVIEW_LENGTH))
+        menu = PlayerMenu(bot, lavalink_client, ctx.guild_id)
+        response = await ctx.respond(embed=menu.embed(), components=menu)
+
+        # This blocks until the last press times the menu out, or a press ends it. The buttons
+        # are then taken off the panel, so a dead panel cannot be pressed - the embed is left
+        # where it is, still readable as the queue it was when it went quiet.
+        with contextlib.suppress(asyncio.TimeoutError):
+            await menu.attach(client, timeout=MENU_TIMEOUT)
+
+        with contextlib.suppress(hikari.NotFoundError, hikari.ForbiddenError):
+            await ctx.edit_response(response, components=[])
 
 
 @lightbulb.di.with_di

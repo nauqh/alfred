@@ -21,17 +21,8 @@ def track_line(track: lavalink.AudioTrack, *, credit_author: bool = True) -> str
 
 
 def track_summary(track: lavalink.AudioTrack) -> str:
-    """The multi-line summary used when a track is queued, or shown on the player message."""
+    """The multi-line summary used when a track is queued."""
     return f"[{track.title}]({track.uri})\n{track.author} `{track_length(track)}`\n\n<@!{track.requester}>"
-
-
-def now_playing(player: AlfredPlayer) -> hikari.Embed:
-    """The embed on the interactive player message."""
-    current = player.current
-    if current is None:
-        return hikari.Embed(description="Nothing is playing.")
-
-    return hikari.Embed(description=track_summary(current)).set_thumbnail(current.artwork_url)
 
 
 def queue(player: AlfredPlayer, *, title: str, preview_length: int = 0) -> hikari.Embed:

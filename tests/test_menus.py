@@ -1,4 +1,4 @@
-"""The buttons on the now-playing message."""
+"""The buttons under `/queue`."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import hikari
 import lavalink
 import pytest
 
+from alfred.menus import MENU_TIMEOUT
 from alfred.menus import NEXT_LOOP
 from alfred.menus import PlayerMenu
 from alfred.player import AlfredPlayer
@@ -73,9 +74,27 @@ class FakeContext:
     def __init__(self, user_id: int) -> None:
         self.user = FakeUser(user_id)
         self.responses: list[dict[str, Any]] = []
+        self.deferred = False
+        self.timeout: float | None = None
+        self.interacting = True
 
     async def respond(self, content: Any = None, **kwargs: Any) -> None:
         self.responses.append({"content": content, **kwargs})
+
+    async def defer(self, *, ephemeral: bool = False, edit: bool = False) -> None:
+        self.deferred = True
+
+    def set_timeout(self, timeout: float) -> None:
+        self.timeout = timeout
+
+    def stop_interacting(self) -> None:
+        self.interacting = False
+
+
+@pytest.fixture(autouse=True)
+def no_waiting(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Skip does not wait on a node here - there is none to answer."""
+    monkeypatch.setattr("alfred.menus.TRACK_CHANGE_TIMEOUT", 0.0)
 
 
 @pytest.fixture
@@ -196,3 +215,77 @@ async def test_an_outsider_cannot_pause(playing_player: AlfredPlayer) -> None:
     await menu.on_pause(FakeContext(OUTSIDER_ID))  # type: ignore[arg-type]
 
     assert playing_player.paused is False
+
+
+def test_the_panel_shows_the_queue(playing_player: AlfredPlayer) -> None:
+    playing_player.add(track=make_track("Up Next"), requester=LISTENER_ID)
+
+    embed = build_menu(playing_player, IN_CHANNEL).embed()
+
+    assert embed.title == "Queue"
+    assert "Some Song" in embed.description
+    assert "Up Next" in embed.description
+
+
+def test_the_panel_says_so_when_there_is_no_player() -> None:
+    embed = build_menu(None, IN_CHANNEL).embed()
+
+    assert embed.description == "Nothing is playing."
+
+
+@pytest.mark.asyncio
+async def test_a_press_redraws_the_panel_in_place(playing_player: AlfredPlayer) -> None:
+    menu = build_menu(playing_player, IN_CHANNEL)
+    ctx = FakeContext(LISTENER_ID)
+
+    await menu.on_loop(ctx)  # type: ignore[arg-type]
+
+    assert ctx.responses[0]["edit"] is True
+    assert ctx.responses[0]["components"] is menu
+    assert ctx.responses[0]["embed"].title == "Queue"
+
+
+@pytest.mark.asyncio
+async def test_a_press_keeps_the_buttons_alive(playing_player: AlfredPlayer) -> None:
+    ctx = FakeContext(LISTENER_ID)
+
+    await build_menu(playing_player, IN_CHANNEL).on_loop(ctx)  # type: ignore[arg-type]
+
+    assert ctx.timeout == MENU_TIMEOUT
+
+
+@pytest.mark.asyncio
+async def test_skip_plays_the_next_track(playing_player: AlfredPlayer) -> None:
+    queued = make_track("Up Next")
+    playing_player.add(track=queued, requester=LISTENER_ID)
+    ctx = FakeContext(LISTENER_ID)
+
+    await build_menu(playing_player, IN_CHANNEL).on_skip(ctx)  # type: ignore[arg-type]
+
+    # Deferred first, because waiting for the node takes longer than an interaction may go
+    # unanswered for.
+    assert ctx.deferred is True
+    assert playing_player._next is queued
+
+
+@pytest.mark.asyncio
+async def test_skipping_the_last_track_takes_the_buttons_away(playing_player: AlfredPlayer) -> None:
+    ctx = FakeContext(LISTENER_ID)
+
+    await build_menu(playing_player, IN_CHANNEL).on_skip(ctx)  # type: ignore[arg-type]
+
+    assert ctx.responses[-1]["components"] == []
+    assert ctx.interacting is False
+
+
+@pytest.mark.asyncio
+async def test_stop_empties_the_player_and_takes_the_buttons_away(playing_player: AlfredPlayer) -> None:
+    playing_player.add(track=make_track("Up Next"), requester=LISTENER_ID)
+    ctx = FakeContext(LISTENER_ID)
+
+    await build_menu(playing_player, IN_CHANNEL).on_stop(ctx)  # type: ignore[arg-type]
+
+    assert playing_player.current is None
+    assert playing_player.queue == []
+    assert ctx.responses[-1]["components"] == []
+    assert ctx.interacting is False

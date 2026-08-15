@@ -13,7 +13,6 @@ from tests.conftest import make_track
 
 GUILD_ID = 1
 REQUESTER_ID = 7
-CHANNEL_ID = 42
 
 
 class FakePlayerManager:
@@ -60,7 +59,6 @@ async def enqueue(client: FakeLavalinkClient, result: lavalink.LoadResult, **kwa
         result,
         guild_id=GUILD_ID,
         requester_id=REQUESTER_ID,
-        channel_id=CHANNEL_ID,
         **kwargs,  # type: ignore[arg-type]
     )
 
@@ -129,7 +127,6 @@ async def test_queueing_a_track_starts_playback_and_describes_it(player: AlfredP
     assert embed.title == "Track added"
     assert "Some Song" in embed.description
     assert player.current is track
-    assert player.announce_channel_id == CHANNEL_ID
 
 
 @pytest.mark.asyncio

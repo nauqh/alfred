@@ -28,7 +28,6 @@ async def test_stop_resets_everything_and_announces_the_end(player: AlfredPlayer
     player.queue.append(make_track("upcoming"))
     player.set_loop(AlfredPlayer.LOOP_QUEUE)
     player.set_shuffle(True)
-    player.announce_channel_id = 42
 
     await player.stop()
 
@@ -36,7 +35,6 @@ async def test_stop_resets_everything_and_announces_the_end(player: AlfredPlayer
     assert player.queue == []
     assert player.loop == AlfredPlayer.LOOP_NONE
     assert player.shuffle is False
-    assert player.announce_channel_id is None
     assert any(isinstance(event, lavalink.QueueEndEvent) for event in client.events)
 
 

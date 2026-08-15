@@ -93,18 +93,17 @@ Moved rather than removed:
 | `/stop` | `/leave`, which disconnects and clears |
 | `/loop` | the `loop` option on `/play` and `/search` |
 | `/shuffle` | the `shuffle` option on `/play` and `/search` |
-| `/now` | the now-playing message, posted for every track |
+| `/now` | `/queue`, whose panel opens with the current track |
 | `/join` | `/play`, which connects on its own |
 
 Removed outright, with nothing replacing them:
 
 | Cut | Consequence |
 |---|---|
-| the player buttons | loop and shuffle are set at queueing time, not adjusted mid-track |
 | **previous** | stepping backwards through history is gone; it needs the player's history back |
 | `/seek`, `/restart` | there is no way to move within a track |
 | `/effects` | no Nightcore or Bass Boost; the node's filters are all off |
-| `/pause`, `/resume` | **there is no way to pause on demand** |
+| `/pause`, `/resume` | there is no *command* to pause; the panel's Pause button is the only manual path |
 
 Pausing has one path left, and it is automatic: when a single listener deafens
 themselves the voice-state handler pauses playback, and undeafening resumes it
@@ -180,15 +179,16 @@ needs a live Discord and Lavalink node.
 | FR-14 | `/skip` plays the next track and names the one it replaced | P0 | `test_player` |
 | FR-17 | `/play loop:true` loops the track, or the queue for a playlist — and **track means track** | P0 | `test_service` |
 | FR-18 | `/play shuffle:true` shuffles a playlist as it is queued | P1 | `test_service` |
-| FR-20 | `/leave` clears the queue, loop and shuffle, and takes down the now-playing message | P0 | `test_player` |
+| FR-20 | `/leave` clears the queue, loop and shuffle | P0 | `test_player` |
 
-### The now-playing message
+### The player panel
 
 | ID | Requirement | Pri | Verified |
 |---|---|---|---|
-| FR-21 | A message describing the track is posted when a track starts, in the channel the last queueing command came from | P0 | `test_events` |
-| FR-22 | Exactly one such message exists per guild — a new track deletes the previous one | P0 | `test_events` |
-| FR-23 | The message is deleted when the queue ends or playback is stopped | P0 | `test_events` |
+| FR-21 | The bot posts nothing unprompted — every message it sends is the reply to a command | P0 | code review |
+| FR-22 | `/queue`'s panel carries Pause, Skip, Loop and Stop, and each press redraws the panel in place | P0 | `test_menus` |
+| FR-23 | Only members in the bot's voice channel may press; anyone else is answered ephemerally | P0 | `test_menus` |
+| FR-24 | The buttons go quiet after 3 minutes without a press, and are removed from the message | P1 | manual |
 
 ### Queue
 
@@ -264,17 +264,18 @@ M5 is the gate. Everything before it is verified offline only.
 | **Nothing has run against live Discord or Lavalink.** Offline checks verify shape, not behaviour | High | M5 walks every P0 by hand in a test guild before cutover |
 | **YouTube playback breaks on YouTube's schedule, not ours.** youtube-source's latest commit is a client-version revert — the arms race is live | High | Not a stack decision: every backend fails the same week. Mitigated by consuming upstream fixes rather than maintaining them; `pot` and `oauth` are both documented in the node config |
 | Plugin versions rot, and a stale client name silently degrades playback | Medium | Versions verified 2026-08-14 and dated in the config; the config warns against copying a client list from an older file |
-| The lightbulb menu-detach workaround depends on `Menu.attach()` internals staying as they are | Low | Uses only documented API; a test asserts the detach, so an upgrade that breaks it fails the suite |
+| `MenuHandle` cannot detach a persistent menu (`components/menus.py:579-587`), so `attach_persistent` leaks an entry per panel | Low | `/queue` blocks on `attach()` instead, which discards in a `finally`; noted in `design.md` so it is not undone by accident |
 | Two `/play` commands within the same moment could skip a track, because `is_playing` is false until the node confirms the track started | Low | Pre-existing in the legacy bot; window is milliseconds; not worth a lock |
-| ~~Custom emoji belong to one Discord application~~ | ~~Low~~ | **Closed.** Eight of the eleven went with the buttons; the three the embed still draws with are Unicode |
+| ~~Custom emoji belong to one Discord application~~ | ~~Low~~ | **Closed.** Eight of the eleven went with the legacy buttons; the three the embed still draws with are Unicode, and the new buttons carry no emoji at all |
 
 ## 12. Open questions
 
 1. **Does the operator want CI?** A workflow running `ruff` and `pytest` on the
    test suite is roughly 20 lines and nothing depends on it.
-2. **Should `/previous` exist as a command?** Stepping backwards was lost with
-   the buttons and is the only capability the trim cost. The player's history and
-   `play_previous` went with it, so restoring it is ~40 lines, not a one-liner.
+2. **Should `/previous` exist?** Stepping backwards was lost with the legacy
+   buttons and is the only capability the trim cost. The player's history and
+   `play_previous` went with it, so restoring it is ~40 lines, not a one-liner —
+   as a command, or as a fifth button on the panel.
 3. **Where should this live long-term?** It currently sits in a subdirectory of a
    GitHub Pages repository, which is where it could be pushed — not where it
    belongs.
@@ -299,4 +300,14 @@ M5 is the gate. Everything before it is verified offline only.
 
 ### Buttons
 
-There are none. The now-playing message carries no components.
+Four, on the reply to `/queue`. Each press redraws that message; none of them
+posts anything new.
+
+| Button | Style | Effect |
+|---|---|---|
+| `Pause` / `Resume` | secondary | toggles playback; the label follows the player |
+| `Skip` | secondary | plays the next track, and waits for the node to confirm before redrawing |
+| `Loop: off` / `track` / `queue` | secondary | cycles the loop mode |
+| `Stop` | danger | clears the player, then takes the buttons off the message |
+
+All four require membership of the bot's voice channel.

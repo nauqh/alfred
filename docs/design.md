@@ -18,22 +18,21 @@ explicit.
 
 Small, but the words are load-bearing and two of them were used loosely before.
 
-**Player** — the guild's `AlfredPlayer`: its queue, loop and shuffle state,
-and a handle on its now-playing message. One per guild, created on the first
-join, destroyed by Lavalink. _Avoid_: session, connection.
+**Player** — the guild's `AlfredPlayer`: its queue, loop and shuffle state. One
+per guild, created on the first join, destroyed by Lavalink. It holds no Discord
+message state at all. _Avoid_: session, connection.
 
 **Queue** — the tracks waiting. The currently playing track is **not** in it;
 `player.current` is separate, and Lavalink only sets it when the node confirms
 the track started.
 
-**Now-playing message** — the embed posted when a track starts and deleted when
-the queue ends. Exactly one per guild at a time. It carries no components: it
-announces, it does not control. _Avoid_: player message, controller, view.
+**Panel** — the reply to `/queue`: an embed describing the player, with a row of
+buttons under it. It is the only thing the bot renders that can be pressed, and
+it exists only because someone asked for it. _Avoid_: now-playing message,
+controller, view.
 
-**Announce channel** — where the next now-playing message will be posted: the
-channel the most recent queueing command came from. _Avoid_: text channel, send
-channel — the legacy player carried both, plus `message_id`, and the three were
-cleared in different places.
+The bot posts nothing unprompted. Every message it sends is the reply to a
+command someone ran.
 
 **Source** — a search backend behind a Lavalink prefix (`ytsearch`, `dzsearch`,
 `spsearch`). Not every Source is **playable**: Spotify is mirrored onto another
@@ -58,7 +57,7 @@ which changes only how it is described, never how it is queued.
    ├──────────────────────────────────────────────┤
    │  alfred                                    │
    │     hooks ──► service ──► player             │
-   │                           events ──► embeds  │
+   │     menus ──► embeds      events ──► log     │
    └───────────────┬──────────────────────────────┘
                    │ lavalink.py 5.11
    ┌───────────────▼──────────────────────────────┐
@@ -81,17 +80,18 @@ alfred/
 │   ├── bot.py            entrypoint: hikari bot, lightbulb client, Lavalink client
 │   ├── config.py         the environment → a frozen Config
 │   ├── service.py        join · resolve · enqueue — the one seam
-│   ├── player.py         AlfredPlayer and the now-playing handle
-│   ├── events.py         Lavalink events → the now-playing message
+│   ├── player.py         AlfredPlayer — the queue, and its tracks' origins
+│   ├── events.py         Lavalink events → the log
 │   ├── hooks.py          the command checks
 │   ├── search.py         the LavaSearch plugin client
 │   ├── embeds.py         embed builders
+│   ├── menus.py          the buttons under /queue
 │   ├── formatting.py     durations, progress bar, trimming
 │   ├── responses.py      replying, and the self-deleting reply
 │   ├── errors.py         errors that carry a user-facing message
 │   ├── sources.py        the search sources and their prefixes
 │   ├── constants.py      the three embed emojis
-│   ├── log_config.py     dictConfig
+│   ├── log_config.py     loguru, and the bridge from the standard library
 │   └── extensions/       general · play · queue · admin
 ├── lavalink/             the node's application.yml
 ├── tests/
@@ -108,7 +108,8 @@ implementation.
 | `Config` | `from_env() -> Config` | env parsing, the multi-node JSON, every validation error |
 | `service` | `join()` · `resolve()` · `enqueue()` | voice connection, query prefixing, five load-result shapes, playlist metadata |
 | `AlfredPlayer` | `skip()` · `stop()` · `remove()` | resetting to a clean state even when the node is unreachable |
-| `LavalinkEventHandler` | nothing — it consumes events | the now-playing message lifecycle |
+| `LavalinkEventHandler` | nothing — it consumes events | what the node reports, and restarting a stuck player |
+| `PlayerMenu` | `embed()` · four button callbacks | who may press, and keeping the panel in step with the player |
 | `search` | `load_search(node, query, types)` | the plugin's REST contract, its 204, its failures |
 | `hooks` | four execution hooks | voice-state cache lookups and dependency injection |
 | `responses` | `respond(ctx, **kwargs)` | the self-deleting reply lightbulb no longer provides |
@@ -146,9 +147,9 @@ both the player and the channel it joined.
 
 ### `AlfredPlayer` — one addition, and one correction
 
-Subclasses `lavalink.DefaultPlayer`. What survives the trims is small: a handle
-on the guild's now-playing message, and a `stop()` that resets rather than merely
-stopping.
+Subclasses `lavalink.DefaultPlayer`. What survives the trims is small: where a
+queued track came from, and a `stop()` that resets rather than merely stopping.
+It holds no message ids and no channel ids — nothing about Discord at all.
 
 **Loop constants are the library's.** The legacy player redefined them
 (`library/player.py:10-12`) as `LOOP_QUEUE = 1`, `LOOP_SINGLE = 2` — inverted
@@ -170,46 +171,50 @@ the voice-state handler when the bot has just been disconnected — which is
 exactly the moment the node may already be gone. The node call is wrapped; the
 local reset is not conditional on it.
 
-`stop()` ends by dispatching `QueueEndEvent`, which is how the now-playing
-message comes down. `DefaultPlayer.play` dispatches the same event when it runs
-out of queue and *also* calls `stop()` on the way, so the event can arrive twice
-for one ending. Teardown is therefore idempotent by construction rather than by
-guard: `clear_now_playing` takes the reference off the player before it awaits
-anything, so the second call finds nothing to do.
+`stop()` ends by dispatching `QueueEndEvent`. `DefaultPlayer.play` dispatches the
+same event when it runs out of queue and *also* calls `stop()` on the way, so the
+event can arrive twice for one ending. Nothing hangs off it but a log line, so
+that costs nothing — but anything added here must stay idempotent.
 
-### `LavalinkEventHandler` — the now-playing message
+### `LavalinkEventHandler` — the log, and a stuck player
 
-One message per guild, replaced on every track change:
+It posts nothing. Every listener writes a line; `TrackStuckEvent` additionally
+calls `play()` to move past the track the node cannot get through.
 
-```
-TrackStartEvent ──► post_now_playing
-                      ├─ clear_now_playing   delete the old message
-                      └─ rest.create_message(embed)
+An earlier revision of this rewrite posted a now-playing message per track and
+deleted it on the next one — an announcement the bot made whether or not anyone
+wanted it, and a second copy of what `/queue` already says. It is gone. What the
+bot renders, someone asked for.
 
-QueueEndEvent ────► clear_now_playing
-```
+### `PlayerMenu` — the buttons under `/queue`
 
-It carries **no components**. An earlier revision made it a
-`lightbulb.components.Menu` with six buttons — previous, pause, next, loop,
-shuffle, stop — and that came with a defect worth recording, because anyone
-adding buttons back will meet it.
+Four: pause/resume, skip, loop, stop. State lives in the label (`Loop: track`)
+rather than in a swapped emoji. The menu holds no player state — every press
+looks the player up again, so a panel left sitting in a channel acts on whatever
+is playing now rather than on what was playing when it was posted.
 
-Lightbulb offers `Menu.attach_persistent(client, timeout=None)` for a menu that
-should outlive the command that created it. Its `MenuHandle.stop_interacting()`
-cannot actually detach the menu: `MenuHandle.__init__` accepts an `_am` argument
-and then assigns `self.__am = None`, discarding it
-(`lightbulb/components/menus.py:579-587`). With `timeout=None` nothing else sets
-it, so the container is never discarded from `client._attached_menus` — a set
-consulted on every component interaction, leaking one entry per track played.
-The working alternative is `asyncio.create_task(menu.attach(client,
-timeout=None))` and cancelling the task, because `attach` discards in a
-`finally`.
+Access matches the commands: only members in the bot's voice channel may press,
+the rule `/skip` and `/leave` apply. A button and its command cannot disagree.
 
-Buttons also need care that commands do not: a callback whose action deletes the
-message must `defer(edit=True)` first, and a `predicate` returning `False`
-without responding both show the user "interaction failed".
+The `/queue` command **blocks on `menu.attach(client, timeout=...)`** rather than
+using `attach_persistent`, which matters. `MenuHandle.__init__` accepts an `_am`
+argument and then assigns `self.__am = None`, discarding it
+(`lightbulb/components/menus.py:579-587`), so with `timeout=None` a persistent
+menu is never discarded from `client._attached_menus` — a set consulted on every
+component interaction, leaking one entry per panel. `attach` discards in a
+`finally`, so it cannot leak. When it returns, the command strips the components
+off the message: the embed stays readable, the dead buttons go.
 
-None of that is in the bot now. It is written down because it was paid for once.
+Two more things buttons need that commands do not:
+
+- **Skip must defer.** `player.play()` only asks the node to change track;
+  `player.current` catches up when the node reports back over the websocket
+  (`lavalink/transport.py:316`). Redrawing immediately shows the track that was
+  just skipped. The callback `defer(edit=True)`s, waits up to two seconds for the
+  change, and then redraws.
+- **A rejected press must still be answered.** A `check` that returns without
+  responding shows the user "interaction failed"; every rejection replies
+  ephemerally.
 
 ### `search` — the LavaSearch client
 
@@ -273,23 +278,23 @@ only weak references to tasks, so an unheld one can be collected mid-sleep.
 8 commands, in four extensions. Every one is a `lightbulb.SlashCommand`
 subclass registered on a `Loader`.
 
-The legacy bot had 18. `/now` went because the now-playing message *is* the
-now-playing display, `/restart` with `/seek`, and `/join` because `/play`
-connects on its own. `/loop` and `/shuffle` became options on `/play` and
-`/search`, set once at queueing time rather than adjusted mid-track. `/stop` went
-because `/leave` covers it — disconnecting clears the player.
+The legacy bot had 18. `/now` went because `/queue` shows the current track at
+the top of the panel, `/restart` with `/seek`, and `/join` because `/play`
+connects on its own. `/shuffle` became an option on `/play` and `/search`, set
+once at queueing time; `/loop` is an option there too, and a button on the panel.
+`/stop` went because `/leave` covers it — disconnecting clears the player — and
+Stop is on the panel.
 
 `/seek`, `/effects` and `/pause` went last, and unlike the rest they were not
 redundant — they are out of scope for what this bot is now. `/seek` and
 `/effects` took the equalizer and timescale filters out of the node config with
 them.
 
-Three capabilities are gone rather than moved: **stepping backwards through
-history** (went with the buttons), **seeking within a track**, and **pausing on
-demand**. The last is the surprising one — the only pause left in the bot is
-automatic, in the voice-state handler: when a single listener deafens themselves,
-playback pauses, and undeafening resumes it. That path is untouched, so pausing
-is a thing you do to yourself rather than to the bot.
+Two capabilities are gone rather than moved: **stepping backwards through
+history** and **seeking within a track**. Pausing has no command, but it is not
+gone: it is a button on the panel, and it still happens on its own in the
+voice-state handler — when a single listener deafens themselves, playback pauses,
+and undeafening resumes it.
 
 ```
 general    /leave                                 hooks: guild, voice, connected
@@ -298,7 +303,8 @@ play       /play    query next loop shuffle       hooks: guild, voice
            /search  query type source + the above hooks: guild, voice
                     query autocompletes; type and source drive LavaSearch
 
-queue      /queue                                 hooks: guild, playing
+queue      /queue   + pause · skip · loop · stop  hooks: guild, playing
+                    buttons: bot's voice channel only
            /skip                                  hooks: guild, voice, playing
            /remove  track       autocompletes from the live queue
 
@@ -307,7 +313,9 @@ admin      /stats /info                           hooks: owner only
 
 `/queue` deliberately carries no voice check — reading what is playing is not a
 privileged act, and requiring channel membership to answer "what is this song"
-was friction with no threat behind it.
+was friction with no threat behind it. Its **buttons** do carry one: acting on
+the player is privileged in a way that reading it is not, so `PlayerMenu.check`
+turns away anyone outside the bot's voice channel.
 
 `next`, `loop` and `shuffle` are **boolean options**. The legacy versions were
 string options constrained to `choices=['True']` and then parsed with
@@ -344,7 +352,7 @@ The node's own configuration is [`lavalink/application.yml.example`](../lavalink
 
 ## Testing
 
-92 tests, no network, ~0.6s. Each module is tested through the interface its
+84 tests, no network, ~2s. Each module is tested through the interface its
 callers use.
 
 - `Config` — the environment is a parameter, so every case is a dict.
@@ -355,8 +363,9 @@ callers use.
 - `search` — a fake node returning recorded payloads, the 204, and a raised error.
 - `hooks` — run through a real `linkd` container, so the test proves the
   injection works and not merely the logic.
-- `events` — a fake REST, asserting the message is posted, replaced, and deleted
-  exactly once even when teardown runs twice.
+- `menus` — a fake menu context and voice-state cache; asserts who may press,
+  what each press does to the player, and that a press redraws the panel in
+  place rather than posting again.
 
 Two library behaviours the tests had to model rather than assume, both found by
 tests failing for the right reason:
@@ -371,8 +380,8 @@ tests failing for the right reason:
   branch.
 
 There is no test that talks to Discord or to a Lavalink node. The offline
-ceiling is the command surface: a script builds the client, loads all five
-extensions and renders all 18 command builders exactly as Discord would receive
+ceiling is the command surface: a script builds the client, loads all four
+extensions and renders all 8 command builders exactly as Discord would receive
 them — names, option types, required flags, autocomplete flags, choice counts —
 which catches the whole class of registration errors without a token.
 
@@ -385,9 +394,10 @@ wrong one for a simplification: the growth is docstrings, type annotations,
 errors. The parts that were genuinely too big got smaller — the copied 56-line
 `play()` override is under 30, `library/base.py`'s 105 lines of mixed
 orchestration and embed-building split into `service.py` and `embeds.py`, and
-and dropping the buttons deleted `ui.py` outright along with the player's
-history, `play_previous` and `play(index=)` — 119 lines of module and 83 of
-player, none of which had another caller.
+and `ui.py` went outright along with the player's history, `play_previous` and
+`play(index=)` — 119 lines of module and 83 of player, none of which had another
+caller. The four buttons that replaced its six are 180 lines, against `ui.py`'s
+119 for six.
 
 ## Why this stack
 
@@ -446,8 +456,8 @@ performance or ergonomics, is the argument for this stack.
 
 `hikari-miru` · `bot.d` · a custom `AutocompleteChoice` class · a copied `play()`
 override · private `_transport` access · `eval` on options · hardcoded node
-config · application-specific emoji IDs · component menus and the player buttons
-· a database · a queue · a worker · persistence across restarts.
+config · application-specific emoji IDs · a message the bot posts unprompted · a
+database · a queue · a worker · persistence across restarts.
 
 The emoji are the subtlest of those. The legacy bot carried eleven custom emojis
 belonging to its own Discord application, and **no other application can render

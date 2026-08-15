@@ -64,7 +64,7 @@ def build(config: Config) -> hikari.GatewayBot:
         assert me is not None, "the bot must know its own user before Lavalink can be set up"
 
         lavalink_client = build_lavalink_client(config, me.id)
-        lavalink_client.add_event_hooks(LavalinkEventHandler(bot, client, lavalink_client))
+        lavalink_client.add_event_hooks(LavalinkEventHandler())
 
         # Registered before the first command runs, which is the last moment the DI registry
         # is still open for writes.

@@ -10,8 +10,9 @@ on the current generation of those libraries: hikari 2.5, lightbulb 3.2 and Lava
 ## Features
 
 * Slash commands, with autocompletion on `/search` and `/remove`.
-* A now-playing message posted each time a track starts and taken down when the queue runs
-  out. It is an announcement, not a control panel - everything is a command.
+* `/queue` is the player panel: the current track, what follows it, and a row of buttons -
+  pause, skip, loop, stop - for anyone in the bot's voice channel. Nothing is posted
+  unprompted; the bot does not follow a queue around a channel with a message per track.
 * `/search` looks queries up per source and per type (track, artist, album, playlist) through the
   [LavaSearch](https://github.com/topi314/LavaSearch) plugin.
 * When one person is listening, Discord's deafen 🎧 pauses playback and undeafening resumes it.
@@ -27,7 +28,7 @@ Eight.
 | Group | Commands                     | |
 | ----- | ---------------------------- | --- |
 | Music | `/play` `/search`            | add a track, playlist or URL to the queue |
-| Queue | `/queue` `/skip` `/remove`   | see what's next, move past it, drop something |
+| Queue | `/queue` `/skip` `/remove`   | the player panel, move past a track, drop something |
 | Voice | `/leave`                     | disconnect and clear |
 | Owner | `/stats` `/info`             | node health |
 
@@ -94,8 +95,9 @@ comments in `application.yml.example`, and the first two are fatal:
 
 * **A cipher server is required for YouTube playback**, as above. On this path either run
   `docker compose up yt-cipher` alongside, or switch `remoteCipher.url` to the public instance.
-* **Deezer must be configured or disabled.** LavaSrc refuses to start with `deezer: true` and an
-  empty `masterDecryptionKey`, and the node exits before it binds a port.
+* **Deezer is off in the example, and has to stay off until it is configured.** LavaSrc refuses
+  to start with `deezer: true` and an empty `masterDecryptionKey`, and the node exits before it
+  binds a port. Turn it on in the same edit that fills the credentials in.
 * **Spotify degrades instead.** With no credentials it registers fine and fails per request, so
   `/search` on Spotify returns nothing until `clientId`/`clientSecret` are filled in. YouTube
   needs no credentials at all.
@@ -173,11 +175,12 @@ alfred/
 ├── bot.py          entrypoint: hikari bot, lightbulb client, Lavalink client
 ├── config.py       configuration read from the environment
 ├── service.py      joining voice, resolving queries, filling the queue
-├── player.py       AlfredPlayer - the queue and the now-playing message
-├── events.py       Lavalink events -> the now-playing message
+├── player.py       AlfredPlayer - the queue, and where its tracks came from
+├── events.py       Lavalink events -> the log
 ├── hooks.py        command checks
 ├── search.py       LavaSearch client
 ├── embeds.py       embed builders
+├── menus.py        the buttons under /queue
 └── extensions/     the slash commands
 ```
 
@@ -188,8 +191,9 @@ The libraries this was built on all changed shape since the legacy version:
 * **lightbulb 2 → 3.** `BotApp`, plugins and the decorator stack are gone. Commands are classes,
   checks are execution hooks, and `bot.d` is replaced by dependency injection - the Lavalink
   client and config are registered on the client's DI registry and injected into commands.
-* **hikari-miru is gone**, and so are the player buttons it existed for. The now-playing
-  message is a plain embed; every control is a command.
+* **hikari-miru is gone.** The buttons it existed for are now `lightbulb.components.Menu`,
+  which ships with lightbulb itself. They live under `/queue` rather than under a message
+  posted for every track.
 * **Lavalink.py 5.1 → 5.11.** `Client._dispatch_event` is synchronous now, `AudioTrack.stream` was
   renamed `is_stream`, nodes take a required region, and `Node.request` is public - so the
   LavaSearch call no longer reaches into `node._transport._request`.

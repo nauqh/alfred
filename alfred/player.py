@@ -1,4 +1,4 @@
-"""Alfred's Lavalink player - a `lavalink.DefaultPlayer` with history and a now-playing message."""
+"""Alfred's Lavalink player - a `lavalink.DefaultPlayer` that knows where its tracks came from."""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ import asyncio
 import dataclasses
 
 import lavalink
-import lightbulb
 from loguru import logger
 
 PLAYLIST_KEY = "alfred.playlist"
@@ -31,28 +30,8 @@ def get_playlist(track: lavalink.AudioTrack) -> PlaylistRef | None:
     return playlist if isinstance(playlist, PlaylistRef) else None
 
 
-@dataclasses.dataclass(slots=True)
-class NowPlayingMessage:
-    """The now-playing message currently posted for a guild."""
-
-    channel_id: int
-    message_id: int
-
-
 class AlfredPlayer(lavalink.DefaultPlayer):
-    """
-    Adds to the default player a handle on the guild's now-playing message, so the message can
-    be replaced when the track changes, and a `stop` that resets rather than merely stopping.
-    """
-
-    def __init__(self, guild_id: int, node: lavalink.Node) -> None:
-        super().__init__(guild_id, node)
-
-        self.now_playing: NowPlayingMessage | None = None
-        self.menu_handle: lightbulb.components.MenuHandle | None = None
-        """The live button menu on `now_playing`, stopped when that message comes down."""
-        self.announce_channel_id: int | None = None
-        """The channel to post the next now-playing message in - the channel the last command came from."""
+    """Adds to the default player a history-aware `stop` that resets rather than merely stopping."""
 
     async def skip(self) -> lavalink.AudioTrack | None:
         """Play the next track, returning the one that was skipped."""
@@ -85,8 +64,7 @@ class AlfredPlayer(lavalink.DefaultPlayer):
         self.queue.clear()
         self.loop = self.LOOP_NONE
         self.shuffle = False
-        self.announce_channel_id = None
 
-        # Tells the event handler to take down the now-playing message. `DefaultPlayer.play`
-        # dispatches this too when it runs out of queue, so handling must stay idempotent.
+        # `DefaultPlayer.play` dispatches this too when it runs out of queue, so handling must
+        # stay idempotent.
         self.client._dispatch_event(lavalink.QueueEndEvent(self))

@@ -17,8 +17,7 @@ from loguru import logger
 
 # Close to hikari's own console format, which is what this replaced.
 CONSOLE_FORMAT = (
-    "<green>{time:HH:mm:ss}</green> <level>{level: <8}</level> "
-    "<cyan>{name}</cyan>: <level>{message}</level>"
+    "<green>{time:HH:mm:ss}</green> <level>{level: <8}</level> <cyan>{name}</cyan>: <level>{message}</level>"
 )
 FILE_FORMAT = "{time:YYYY-MM-DD HH:mm:ss} {level} {name}.{function}:{line}: {message}"
 TRACK_FORMAT = "{time:YYYY-MM-DD HH:mm:ss}: {message}"

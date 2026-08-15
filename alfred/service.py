@@ -111,7 +111,6 @@ async def enqueue(
     *,
     guild_id: int,
     requester_id: hikari.Snowflakeish,
-    channel_id: hikari.Snowflakeish,
     query: str | None = None,
     play_next: bool = False,
     loop: bool = False,
@@ -124,7 +123,6 @@ async def enqueue(
         result: What `resolve` returned.
         guild_id: The guild to queue into.
         requester_id: The member who asked for the tracks.
-        channel_id: The channel to post the now-playing message in.
         query: The original query, used as the playlist link when the result has no richer one.
         play_next: Queue a single track at the front instead of the back.
         loop: Turn on track looping (single result) or queue looping (playlist).
@@ -143,8 +141,6 @@ async def enqueue(
     player = get_player(lavalink_client, guild_id)
     if player is None or not player.is_connected:
         player, _ = await join(bot, lavalink_client, guild_id, requester_id)
-
-    player.announce_channel_id = int(channel_id)
 
     if result.load_type is lavalink.LoadType.PLAYLIST:
         embed = _add_playlist(player, result, requester_id=requester_id, query=query, shuffle=shuffle)
