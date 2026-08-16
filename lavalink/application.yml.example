@@ -124,31 +124,33 @@ plugins:
     # to the request. That is what these two are for, and you want exactly one of them —
     # never both.
     #
-    # poToken: applies only to WEB and WEBEMBEDDED, which is why they lead the client list.
+    # Take OAuth, not poToken. Both are below; they are mutually exclusive and upstream's own
+    # README now says a poToken "no longer bypasses the bot check for majority of cases".
+    # The generator every guide points at - iv-org/youtube-trusted-session-generator - is
+    # deprecated and fails with `timeout waiting for outgoing API request`, because YouTube
+    # changed how these tokens are issued. Left here because it costs nothing and still helps
+    # the two clients it covers when it does work.
     #   https://github.com/lavalink-devs/youtube-source#using-a-potoken
-    #
-    # Generate it on the machine that will be playing, not on a laptop and then copied up.
-    # The token vouches for a session on the IP it was issued to, and one minted at home is
-    # being handed to YouTube from a datacentre, which is the thing it was meant to answer:
-    #
-    #   docker run --rm quay.io/invidious/youtube-trusted-session-generator
-    #
-    # Prints `visitor_data` and `po_token`. Both go below; `docker compose restart lavalink`
-    # picks them up, since this file is a bind mount rather than baked into the image.
-    #
-    # They expire - days to weeks. When every YouTube track starts failing again with
-    # "sign in to confirm you're not a bot", regenerate rather than looking for what broke.
     pot:
       token: ""
       visitorData: ""
 
-    # OAuth: works more broadly, but authenticates as a real account. Use a burner — the
-    # upstream warning is that a terminated account is a possible outcome, and that it can
-    # trigger rate limits on a busy node.
+    # OAuth authenticates as a real Google account, which is why it still works where the
+    # poToken does not. Use a burner: upstream's warning is that termination is a possible
+    # outcome, and that a busy node can draw rate limits.
     #   https://github.com/lavalink-devs/youtube-source#using-oauth-tokens
+    #
+    # First run: uncomment `enabled` alone and restart the node. It logs a code and a URL
+    # (google.com/device); enter them in a browser, sign in, and the node prints the refresh
+    # token. Paste that back here with `skipInitialization`, which stops it asking again.
+    # `dev.lavalink.youtube` already logs at INFO below, so the prompt is visible.
+    #
+    # The refresh token is a credential for that account. It belongs in this file, which is
+    # gitignored, and nowhere else.
     # oauth:
     #   enabled: true
-    #   refreshToken: ""   # printed to the node's log after the first successful flow
+    #   refreshToken: ""
+    #   skipInitialization: true
 
   lavasrc:
     providers:

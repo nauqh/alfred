@@ -262,23 +262,47 @@ is yt-cipher not working. `Sign in to confirm you're not a bot` and
 `This video requires login` are an identity check, and no amount of configuration
 below that line will help.
 
-The fix is a poToken, generated **on the VPS** — the token vouches for a session
-on the IP it was issued to:
+The fix is OAuth, in the `oauth:` block of `lavalink/application.yml`. Not the
+poToken the guides all reach for first: youtube-source's README now says a
+poToken "no longer bypasses the bot check for majority of cases", and the
+generator those guides link — `iv-org/youtube-trusted-session-generator` — is
+deprecated and dies with `timeout waiting for outgoing API request`.
 
-```sh
-docker run --rm quay.io/invidious/youtube-trusted-session-generator
+**Use a burner Google account.** Upstream's warning is that a terminated account
+is a possible outcome. Nothing about this authenticates *your* bot; it borrows an
+account's standing to get past a check aimed at scrapers.
+
+Uncomment `enabled` on its own, leaving the refresh token out:
+
+```yaml
+    oauth:
+      enabled: true
 ```
 
-Both printed values go in the `pot:` block of `lavalink/application.yml`, then
-`docker compose restart lavalink`. No rebuild — the file is a bind mount.
+```sh
+docker compose restart lavalink
+docker compose logs -f lavalink
+```
 
-It is not permanent. Tokens expire in days to weeks; regenerate when playback
-dies again rather than hunting for a change. If that stops being enough, the
-`oauth:` block below it authenticates as a real Google account, which works
-across every client and lasts far longer, at the cost that upstream's own warning
-is that termination is a possible outcome. Use an account you would not miss.
+The node prints a URL and a code. Enter them at `google.com/device` in a browser,
+sign in as the burner, and the node then prints a refresh token. Put it back in
+the file:
 
-Beyond those two, the honest options get worse: a residential proxy through
-`lavalink.server.httpConfig.proxyHost` is durable but bills per gigabyte, and
-audio is measured in gigabytes. SoundCloud needs none of this and is already
-enabled.
+```yaml
+    oauth:
+      enabled: true
+      refreshToken: "<the token from the log>"
+      skipInitialization: true
+```
+
+Restart once more. `skipInitialization` is what stops it asking again on every
+start. The refresh token is a credential for that account — it lives in this
+file, which is gitignored, and nowhere else.
+
+No rebuild at any point: `application.yml` is a bind mount.
+
+If OAuth stops being enough the honest options get worse. A residential proxy
+through `lavalink.server.httpConfig.proxyHost` is durable but bills per gigabyte,
+and audio is measured in gigabytes. Running the bot on a home connection sidesteps
+the whole problem, at the cost of the uptime the VPS was for. SoundCloud needs
+none of this and is already enabled.
