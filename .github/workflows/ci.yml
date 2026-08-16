@@ -1,0 +1,27 @@
+name: CI
+
+# The VPS deploys by pulling `main` (see `scripts/deploy.sh`), so a broken commit on
+# `main` becomes a broken bot within five minutes. This runs first and on every push.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          # Keyed on uv.lock, so a run that changes no dependency reuses the last one.
+          enable-cache: true
+
+      # --frozen installs uv.lock verbatim and fails if the lock has drifted from
+      # pyproject.toml, which is the thing worth catching here.
+      - run: uv sync --frozen
+
+      - run: uv run ruff check .
+
+      - run: uv run pytest -q

@@ -1,0 +1,6 @@
+# Checked out on Windows for development and on Linux for deployment. Anything the
+# server executes has to arrive with LF endings regardless: a shell script checked out
+# with CRLF fails at the shebang, as `bad interpreter: /bin/sh^M`.
+*.sh text eol=lf
+*.yml text eol=lf
+Dockerfile text eol=lf

@@ -71,15 +71,20 @@ plugins:
     #
     # Do not copy a client list from an older config: the set changes. `TVHTML5EMBEDDED`, which
     # the legacy bot led with, is no longer a valid client name at all.
+    #
+    # WEB and WEBEMBEDDED lead because they are the only two a `pot.token` applies to, and on a
+    # VPS that token is the difference between playing and not. Left further down, the node
+    # works through six clients that YouTube has already decided to refuse before reaching the
+    # two that carry the credential.
     clients:
       - MUSIC
+      - WEB
+      - WEBEMBEDDED
       - TVHTML5_SIMPLY
       - TV
       - IOS
       - MWEB
       - ANDROID_VR
-      - WEB
-      - WEBEMBEDDED
 
     # REQUIRED. Without this, every client above fails and nothing plays - verified here on
     # 2026-08-15, on youtube-source 1.18.2, the current release:
@@ -119,8 +124,20 @@ plugins:
     # to the request. That is what these two are for, and you want exactly one of them —
     # never both.
     #
-    # poToken: applies only to WEB and WEBEMBEDDED.
+    # poToken: applies only to WEB and WEBEMBEDDED, which is why they lead the client list.
     #   https://github.com/lavalink-devs/youtube-source#using-a-potoken
+    #
+    # Generate it on the machine that will be playing, not on a laptop and then copied up.
+    # The token vouches for a session on the IP it was issued to, and one minted at home is
+    # being handed to YouTube from a datacentre, which is the thing it was meant to answer:
+    #
+    #   docker run --rm quay.io/invidious/youtube-trusted-session-generator
+    #
+    # Prints `visitor_data` and `po_token`. Both go below; `docker compose restart lavalink`
+    # picks them up, since this file is a bind mount rather than baked into the image.
+    #
+    # They expire - days to weeks. When every YouTube track starts failing again with
+    # "sign in to confirm you're not a bot", regenerate rather than looking for what broke.
     pot:
       token: ""
       visitorData: ""
