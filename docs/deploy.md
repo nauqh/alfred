@@ -1,13 +1,12 @@
 # Deploying to a VPS
 
 Any provider that hands you root on a Debian or Ubuntu box works the same way —
-this has been run on Hostinger and sized on Hetzner. The whole deploy is
-`docker compose up -d`; everything before that is getting the machine and the
-secrets into place.
+this has been run on Hostinger. The deploy itself is `docker compose up -d`;
+everything before that is getting the machine and the secrets into place.
 
 ## The machine
 
-Sized against what the stack actually uses, idle:
+Idle usage, measured:
 
 | | |
 |---|---|
@@ -15,77 +14,42 @@ Sized against what the stack actually uses, idle:
 | `alfred-lavalink` | ~420 MB — the JVM is the whole cost |
 | `alfred-cipher` | ~104 MB |
 
-**4 GB is comfortable, 2 GB fits, 1 GB does not**, and 512 MB is not worth
-attempting. Hostinger *KVM 1* (1 vCPU / 4 GB) and Hetzner *CX22* (2 vCPU / 4 GB)
-both land around €4–5/month. One vCPU is enough: the node passes Opus through
-rather than transcoding it, so the CPU only works when a filter is applied.
+**4 GB is comfortable, 2 GB fits, 1 GB does not.** Hostinger *KVM 1* is €5/month
+and enough. One vCPU is fine — the node passes Opus through rather than
+transcoding, so the CPU only works when a filter is applied.
 
-Pick the region nearest your Discord voice region. Take a **plain Debian 12 or
-Ubuntu 24.04 image** — the templates bundling CyberPanel, Plesk or CloudPanel
-install a web stack that claims ports 80 and 443 and adds users you did not ask
-for.
+Take a **plain Debian 12 or Ubuntu 24.04 image**. The templates bundling
+CyberPanel or Plesk install a web stack that claims ports 80 and 443.
 
-Add your SSH public key at creation if the provider offers it. Where it does not
-and a root password arrives instead — Hostinger works this way — get a key on
-before anything else: a box with password login on port 22 starts getting
-brute-forced within the hour.
+On a 2 GB box, lower the JVM ceiling in `docker-compose.yml` — `-Xmx2G` invites
+the OOM killer, and the node uses about 60 MB of heap while playing:
 
-## Firewall
-
-**No inbound ports are needed. None.** The bot opens a websocket *out* to
-Discord, and the node talks to the bot over Docker's internal network. Nothing
-on the internet needs to reach this machine except your own SSH.
-
-Set this in the provider's panel where there is one — Hetzner *Cloud Firewall*,
-Hostinger *VPS → Security → Firewall* — since a rule applied outside the VM
-still holds when the VM is misconfigured. Failing that, `ufw` on the box:
-
-| Direction | Rule |
-|---|---|
-| Inbound | TCP 22, from your IP if it is static — otherwise from anywhere |
-| Inbound | nothing else |
-| Outbound | allow all |
-
-Be clear-eyed about what this buys: with key-only SSH and nothing else listening,
-a firewall allowing only port 22 blocks nothing that was open anyway. It earns
-its place later, the day something gets exposed by accident. Confirm what is
-actually listening instead of assuming:
-
-```sh
-sudo ss -tlnp        # want 22 on 0.0.0.0, 2333 on 127.0.0.1, nothing else public
+```yaml
+- _JAVA_OPTIONS=-Xmx512m
 ```
 
-**Add the SSH rule before attaching the rule set.** Hostinger creates every new
-firewall with a drop-everything rule already in it, so attaching an empty one
-takes SSH with it and costs a panel reset to undo.
+## Set up the box
 
-`docker-compose.yml` binds the node to `127.0.0.1:2333` for this reason. Do not
-change that to `2333:2333` on a public machine: it would expose a Lavalink node
-whose password starts life as `youshallnotpass`, and an open node is a
-stranger's streaming relay, billed to your bandwidth.
-
-## The box, once
-
-If the provider gave you a root password rather than taking a key, fix that from
-your own machine first:
+Hostinger hands you a root password rather than taking a key. Fix that first,
+from your own machine:
 
 ```sh
-ssh-copy-id root@<ip>        # then confirm `ssh root@<ip>` needs no password
+ssh-copy-id root@<ip>        # then check `ssh root@<ip>` needs no password
 ```
 
-Then, on the server:
+Then on the server:
 
 ```sh
 apt update && apt upgrade -y
 curl -fsSL https://get.docker.com | sh           # Docker's own installer
 systemctl enable docker                          # survives a reboot
 
-adduser alfred                                   # prompts for a password, then Enter through
-usermod -aG sudo,docker alfred                   # -aG appends; -G alone would replace
+adduser alfred                                   # prompts for a password
+usermod -aG sudo,docker alfred                   # -aG appends; -G alone replaces
 rsync --archive --chown=alfred:alfred ~/.ssh /home/alfred/   # carry the key over
 ```
 
-`docker` group membership only attaches at login, so log in as `alfred` and check
+Group membership only attaches at login, so log in as `alfred` and check
 `docker ps` answers before going on.
 
 Then close the door in `/etc/ssh/sshd_config`:
@@ -95,53 +59,63 @@ PermitRootLogin no
 PasswordAuthentication no
 ```
 
-`systemctl restart ssh`, and **open a second terminal to confirm you can still
-get in** before closing the first. Locking yourself out of a fresh VPS costs a
-rebuild.
+`systemctl restart ssh`, then **open a second terminal and confirm you can still
+get in** before closing the first. Locking yourself out costs a rebuild.
+
+## Firewall
+
+**No inbound ports are needed.** The bot opens a websocket *out* to Discord, and
+the node talks to it over Docker's internal network. Only your SSH comes in.
+
+With key-only SSH and nothing else listening, a firewall allowing port 22 blocks
+nothing that was open anyway — it earns its place the day something gets exposed
+by accident. Check what is actually listening:
+
+```sh
+sudo ss -tlnp     # want 22 on 0.0.0.0, 2333 on 127.0.0.1, nothing else public
+```
+
+If you add one (Hostinger: *VPS → Security → Firewall*), **allow TCP 22 before
+attaching it**. New rule sets are created with a drop-everything rule already in
+them, so attaching an empty one takes SSH with it.
+
+`docker-compose.yml` binds the node to `127.0.0.1:2333`. Do not change that to
+`2333:2333` — it would put a Lavalink node on the public internet, and an open
+node is a stranger's streaming relay billed to your bandwidth.
 
 ## The code
 
 ```sh
 git clone https://github.com/nauqh/alfred.git ~/alfred
-```
-
-Nothing secret is in the repository, so a plain clone over HTTPS is enough — no
-deploy key, no credentials on the box. `.env` and `lavalink/application.yml` are
-both gitignored and so are never in a clone; they get created on the server in
-the next step rather than copied up from a laptop.
-
-## The secrets
-
-```sh
 cd ~/alfred
 cp .env.example .env
 cp lavalink/application.yml.example lavalink/application.yml
 ```
 
-`.env` needs three things:
+Nothing secret is in the repository, so a plain HTTPS clone is enough. `.env` and
+`lavalink/application.yml` are gitignored and never arrive in a clone — they get
+created here, not copied up from a laptop.
+
+`.env` needs three values:
 
 | | |
 |---|---|
 | `DISCORD_TOKEN` | The bot token |
-| `CIPHER_PASSWORD` | Any random string — `openssl rand -hex 24`. The node and yt-cipher both read it, and compose refuses to start without it |
-| `LAVALINK_PASSWORD` | Whatever you like, as long as `server.password` in `application.yml` is the same string. The two not matching is the single most common way to end up with a node that starts, a bot that connects, and no audio |
+| `CIPHER_PASSWORD` | Any random string — `openssl rand -hex 24`. Both the node and yt-cipher read it, and compose refuses to start without it |
+| `LAVALINK_PASSWORD` | Anything, as long as `server.password` in `application.yml` is the same string |
 
-Leaving `LAVALINK_PASSWORD` at `youshallnotpass` is defensible here — the node
-listens on `127.0.0.1` only, so the sort of attacker who could try the password
-already has a shell and could read `.env`. What protects that port is the loopback
-binding, not the string. Which is why the binding is the line to guard.
+Those two not matching is the most common way to end up with a node that starts,
+a bot that connects, and no audio. Leaving both at `youshallnotpass` is fine: the
+node listens on `127.0.0.1` only, so anyone who could try the password already
+has a shell and could read `.env`. The loopback binding is what protects it.
 
-
-`application.yml` needs two edits before the first start:
-
-| | |
-|---|---|
-| `remoteCipher.url` | `http://yt-cipher:8001`, with `password: "${CIPHER_PASSWORD}"` — the example ships this way. Do **not** leave it pointing at `cipher.kikkia.dev`: that instance is shared, rate limited to 10 req/s, and sees every player script your node asks about |
-| `server.password` | Match `LAVALINK_PASSWORD` in `.env` |
+`application.yml` ships ready except for one thing — if you run the node outside
+Docker, `remoteCipher.url` must not be left pointing at `cipher.kikkia.dev`. That
+instance is shared, rate limited to 10 req/s, and sees every player script your
+node asks about.
 
 Deezer stays `false` unless you fill in `masterDecryptionKey` and `arl` — LavaSrc
-refuses to start otherwise and the node exits before binding a port. Spotify is
-safe to leave blank; it degrades per request instead.
+refuses to start otherwise and the node exits before binding a port.
 
 ## Start it
 
@@ -154,7 +128,7 @@ docker compose ps          # lavalink should reach (healthy)
 docker compose logs -f bot
 ```
 
-You are looking for these three lines:
+Looking for:
 
 ```
 Registered Lavalink node 'default-node' at lavalink:2333
@@ -162,86 +136,31 @@ Connected to Lavalink node 'default-node'
 started successfully in approx 2 seconds
 ```
 
-`restart: unless-stopped` plus `systemctl enable docker` means the stack comes
-back after a reboot without you.
-
-## Sizing the JVM
-
-`_JAVA_OPTIONS=-Xmx2G` in `docker-compose.yml` is a ceiling, not a reservation —
-but on a 2 GB box it invites the kernel's OOM killer. The node uses about 60 MB
-of heap with a track playing, so on anything smaller than the CX22:
-
-```yaml
-- _JAVA_OPTIONS=-Xmx512m
-```
+`restart: unless-stopped` plus `systemctl enable docker` brings the stack back
+after a reboot without you.
 
 ## Updating
 
+Deploys are manual. After pushing a commit:
+
 ```sh
+ssh alfred@<ip>
 cd ~/alfred && git pull
 docker compose up -d --build bot
 ```
 
-`git pull` alone changes nothing that runs: the source is baked into the image at
-build time, not read off disk, so the container keeps serving the old code until
-`--build` replaces it. Config is the other way round — `.env` needs only
-`docker compose up -d`, and `lavalink/application.yml` is a bind mount, so
-`docker compose restart lavalink` is enough.
+`git pull` alone changes nothing that runs — the source is baked into the image
+at build time, not read off disk, so the container serves the old code until
+`--build` replaces it. Config is the other way round:
 
-Only the bot is built from source; the node and yt-cipher are pinned images and
-are not rebuilt. To move the node or cipher forward, change the tag or digest in
-`docker-compose.yml` deliberately — both are pinned so that a `docker pull` cannot
-move them underneath you.
-
-## Deploying on push
-
-`scripts/deploy.sh` rebuilds the bot when a new commit lands on `main`. Install it
-as a cron entry, as `alfred`:
-
-```sh
-chmod +x ~/alfred/scripts/deploy.sh
-crontab -e
-```
-
-```cron
-*/5 * * * * /usr/bin/flock -n /tmp/alfred-deploy.lock /home/alfred/alfred/scripts/deploy.sh >> /home/alfred/deploy.log 2>&1
-```
-
-`flock -n` drops the run rather than queueing it, so a build that outlasts the
-five-minute interval is not joined by a second one part-way through.
-
-This is deliberately pull-based. The alternative — GitHub Actions holding an SSH
-key and connecting inward on every push — is faster to trigger and means a key
-granting a shell on this machine lives in a public repository's secrets. The
-server asking GitHub every five minutes needs no inbound port and no stored
-credential, and its failure mode is that a deploy is late.
-
-The lag is real: up to five minutes, and no way to trigger it from your laptop
-except by waiting or running `scripts/deploy.sh` over SSH yourself.
-
-What it will not do is deploy over a local edit — `git merge --ff-only` stops if
-the checkout has diverged, on the grounds that a cron job at three in the morning
-is the wrong thing to be resolving a merge.
-
-## CI
-
-`.github/workflows/ci.yml` runs `ruff check` and `pytest` on every push and pull
-request. It matters more than usual here: the VPS follows `main` on a timer, so a
-red commit on `main` is a broken bot within five minutes rather than whenever
-someone next deploys.
-
-## What to watch
-
-| | |
+| Changed | Command |
 |---|---|
-| `docker compose logs -f` | Everything. The bot logs one line per track and one per command |
-| `/stats` in Discord | Node uptime, players, memory, CPU. Owner-only |
-| `/info` in Discord | What the node is running: version, plugins, sources |
-| `docker stats --no-stream` | Whether the box is actually big enough |
+| Code | `git pull && docker compose up -d --build bot` |
+| `.env` | `docker compose up -d` |
+| `lavalink/application.yml` | `docker compose restart lavalink` — it is a bind mount |
 
-**YouTube breaks on YouTube's schedule, not yours.** When playback stops working
-across every track, the fix is upstream: usually a newer `youtube-plugin` version
-in `application.yml`, sometimes the section below.
+Only the bot is built from source. The node and yt-cipher are pinned images; move
+them forward by editing the tag or digest in `docker-compose.yml` deliberately.
 
 ## YouTube on a datacentre IP
 
@@ -253,24 +172,22 @@ Client [WEB] failed: This video requires login.
 ```
 
 Nothing is misconfigured. A residential IP is shared with people watching YouTube
-all day, so YouTube assumes a human; a VPS sits in a published datacentre range
-where almost everything is a scraper, so it asks for proof. The range's reputation
-was spent before the machine existed.
+all day, so YouTube assumes a human. A VPS sits in a published datacentre range
+where almost everything is a scraper, so it asks for proof — and the range's
+reputation was spent before your machine existed.
 
-Read the log for which kind of failure it is. `Must find sig function from script`
-is yt-cipher not working. `Sign in to confirm you're not a bot` and
-`This video requires login` are an identity check, and no amount of configuration
-below that line will help.
+Read the log for which failure it is. `Must find sig function from script` is
+yt-cipher not working. `Sign in to confirm you're not a bot` and `This video
+requires login` are an identity check, and no configuration below that line helps.
 
 The fix is OAuth, in the `oauth:` block of `lavalink/application.yml`. Not the
-poToken the guides all reach for first: youtube-source's README now says a
-poToken "no longer bypasses the bot check for majority of cases", and the
-generator those guides link — `iv-org/youtube-trusted-session-generator` — is
-deprecated and dies with `timeout waiting for outgoing API request`.
+poToken every guide reaches for first: youtube-source's README now says a poToken
+"no longer bypasses the bot check for majority of cases", and the generator those
+guides link is deprecated and dies with `timeout waiting for outgoing API request`.
 
 **Use a burner Google account.** Upstream's warning is that a terminated account
-is a possible outcome. Nothing about this authenticates *your* bot; it borrows an
-account's standing to get past a check aimed at scrapers.
+is a possible outcome. This borrows an account's standing to pass a check aimed at
+scrapers; it does not authenticate your bot.
 
 Uncomment `enabled` on its own, leaving the refresh token out:
 
@@ -284,9 +201,8 @@ docker compose restart lavalink
 docker compose logs -f lavalink
 ```
 
-The node prints a URL and a code. Enter them at `google.com/device` in a browser,
-sign in as the burner, and the node then prints a refresh token. Put it back in
-the file:
+The node prints a URL and a code. Enter them at `google.com/device`, sign in as
+the burner, and the node prints a refresh token. Put it back in the file:
 
 ```yaml
     oauth:
@@ -295,14 +211,22 @@ the file:
       skipInitialization: true
 ```
 
-Restart once more. `skipInitialization` is what stops it asking again on every
-start. The refresh token is a credential for that account — it lives in this
-file, which is gitignored, and nowhere else.
+Restart once more. `skipInitialization` stops it asking on every start. The
+refresh token is a credential for that account — it belongs in this file, which is
+gitignored, and nowhere else.
 
-No rebuild at any point: `application.yml` is a bind mount.
+OAuth tokens last far longer than poTokens but not forever. When YouTube breaks
+again months from now, redo the device flow before hunting for what changed.
 
-If OAuth stops being enough the honest options get worse. A residential proxy
-through `lavalink.server.httpConfig.proxyHost` is durable but bills per gigabyte,
-and audio is measured in gigabytes. Running the bot on a home connection sidesteps
-the whole problem, at the cost of the uptime the VPS was for. SoundCloud needs
-none of this and is already enabled.
+## What to watch
+
+| | |
+|---|---|
+| `docker compose logs -f` | Everything. One line per track, one per command |
+| `/stats` in Discord | Node uptime, players, memory, CPU. Owner-only |
+| `/info` in Discord | Node version, plugins, sources |
+| `docker stats --no-stream` | Whether the box is big enough |
+
+`Authorization missing for 127.0.0.1 on GET /version` every ten seconds is the
+healthcheck, which deliberately sends no password — a 401 still proves the node is
+answering, which is all the check needs to know.
