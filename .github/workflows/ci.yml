@@ -13,7 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10
+      # Pinned to a patch version: setup-uv stopped publishing a floating major tag after
+      # v7.6, so `@v10` does not resolve to anything.
+      - uses: astral-sh/setup-uv@v10.0.1
         with:
           # Keyed on uv.lock, so a run that changes no dependency reuses the last one.
           enable-cache: true
