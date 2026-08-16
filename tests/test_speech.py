@@ -98,6 +98,19 @@ async def test_a_song_ending_leaves_the_volume_alone(player: AlfredPlayer) -> No
 
 
 @pytest.mark.asyncio
+async def test_a_finished_line_does_not_block_the_next_one(player: AlfredPlayer) -> None:
+    # Flowery tracks carry no known duration, so the node treats them as unbounded and leaves
+    # `current` set after the audio has finished. Gating on `is_playing` let the first spoken
+    # line block every line after it, permanently.
+    player.current = make_track("Good evening, sir.", source="flowery-tts")
+    client = FakeLavalinkClient(player=player, result=lavalink.LoadResult.from_track(make_track()))
+
+    await speak(client, "And again, sir.")
+
+    assert client.queries == ["ftts://And%20again%2C%20sir."]
+
+
+@pytest.mark.asyncio
 async def test_a_line_of_whitespace_never_reaches_the_node(player: AlfredPlayer) -> None:
     client = FakeLavalinkClient(player=player)
 

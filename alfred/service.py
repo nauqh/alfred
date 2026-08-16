@@ -14,6 +14,7 @@ from loguru import logger
 from alfred import embeds
 from alfred import errors
 from alfred import sources
+from alfred.player import SPEECH_SOURCE
 from alfred.player import AlfredPlayer
 from alfred.player import PlaylistRef
 from alfred.player import set_playlist
@@ -161,7 +162,13 @@ async def speak(
     if player is None or not player.is_connected:
         player, _ = await join(bot, lavalink_client, guild_id, requester_id)
 
-    if player.is_playing:
+    # Refuse to speak over *music*, not over a previous spoken line. Flowery tracks carry no
+    # known duration, so the node treats them as unbounded and `current` can stay set long
+    # after the audio has finished - gating on `is_playing` left the first line blocking every
+    # line after it, permanently. Replacing one spoken line with the next is what was wanted
+    # anyway.
+    current = player.current
+    if current is not None and current.source_name != SPEECH_SOURCE:
         raise errors.AlreadyPlaying
 
     result = await _load(lavalink_client, f"{TTS_PREFIX}{quote(text)}")

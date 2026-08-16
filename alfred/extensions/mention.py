@@ -52,6 +52,7 @@ async def on_mention(
     # voice channel has nowhere to go. Ignored rather than answered: a mention is not a command
     # invocation, and replying to every stray one is noise in a channel people are chatting in.
     if service.voice_channel_of(bot, event.guild_id, event.author_id) is None:
+        logger.debug("Ignoring mention from '{}': not in a voice channel", event.author.username)
         return
 
     logger.info("'{}' asked for {!r} on guild {}", event.author.username, request, event.guild_id)
@@ -60,6 +61,11 @@ async def on_mention(
         await _handle(event, bot, lavalink_client, request)
     except errors.AlfredError as e:
         await event.message.respond(e.message, reply=True, mentions_reply=False)
+    except Exception:
+        # A listener that raises is a listener that fails silently: hikari logs the traceback
+        # and the channel sees nothing, which is indistinguishable from the bot ignoring you.
+        logger.exception("Failed to handle {!r} on guild {}", request, event.guild_id)
+        await event.message.respond("Something went wrong handling that.", reply=True, mentions_reply=False)
 
 
 async def _handle(
