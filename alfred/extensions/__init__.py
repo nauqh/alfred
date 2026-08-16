@@ -9,5 +9,6 @@ EXTENSIONS: Final = (
     "alfred.extensions.play",
     "alfred.extensions.queue",
     "alfred.extensions.speech",
+    "alfred.extensions.mention",
     "alfred.extensions.admin",
 )
