@@ -5,6 +5,7 @@ from __future__ import annotations
 import random
 import re
 from typing import Any
+from urllib.parse import quote
 
 import hikari
 import lavalink
@@ -20,6 +21,14 @@ from alfred.player import set_playlist
 URL_RX = re.compile(r"https?://(?:www\.)?.+")
 
 RICH_PLAYLIST_TYPES = ("artist", "album", "playlist")
+
+# LavaSrc's Flowery TTS source. Enabled under `plugins.lavasrc.sources` in application.yml,
+# where the voice is set too - nothing about the voice is decided here.
+TTS_PREFIX = "ftts://"
+
+# Flowery reads far more than this, but a slash command is not the place to paste an essay,
+# and the whole line arrives as one URL.
+MAX_SPEECH_LENGTH = 300
 
 
 def get_player(lavalink_client: lavalink.Client, guild_id: int) -> AlfredPlayer | None:
@@ -87,21 +96,77 @@ async def resolve(
     if not URL_RX.match(query):
         query = source.query(query)
 
+    return await _load(lavalink_client, query)
+
+
+async def _load(lavalink_client: lavalink.Client, identifier: str) -> lavalink.LoadResult:
+    """
+    Ask the node to load an identifier, exactly as given.
+
+    Raises:
+        NoResults: If the node could not be reached, refused the identifier, or matched nothing.
+    """
     try:
-        result = await lavalink_client.get_tracks(query)
+        result = await lavalink_client.get_tracks(identifier)
     except lavalink.LavalinkError as e:
-        logger.error("Track lookup failed for {!r}: {}", query, e)
+        logger.error("Track lookup failed for {!r}: {}", identifier, e)
         raise errors.NoResults("Could not reach the audio server - try again in a moment.") from e
 
     if result.load_type is lavalink.LoadType.ERROR:
         message = result.error.message if result.error is not None else "unknown error"
-        logger.warning("Lavalink failed to load {!r}: {}", query, message)
+        logger.warning("Lavalink failed to load {!r}: {}", identifier, message)
         raise errors.NoResults(f"Could not load that query: {message}")
 
     if result.load_type is lavalink.LoadType.EMPTY or not result.tracks:
         raise errors.NoResults
 
     return result
+
+
+async def speak(
+    bot: hikari.GatewayBot,
+    lavalink_client: lavalink.Client,
+    text: str,
+    *,
+    guild_id: int,
+    requester_id: hikari.Snowflakeish,
+) -> lavalink.AudioTrack:
+    """
+    Say something out loud in the guild's voice channel.
+
+    The speech is a track like any other - LavaSrc's Flowery source turns `ftts://` into audio,
+    and the node plays it down the same connection the music uses.
+
+    Raises:
+        NoResults: If there is nothing to say, or the node could not render it.
+        SpeechTooLong: If the text is longer than Flowery will read in one go.
+        AlreadyPlaying: If a track is loaded. One player per guild, and Lavalink cannot mix
+            two streams, so speaking now would cut the music off mid-bar.
+        NotInVoice: If the bot has to connect, and the requester is not in a voice channel.
+    """
+    # Collapse the whitespace before measuring: a line pasted out of a lyrics page is mostly
+    # newlines, and the length limit should apply to what is actually read out.
+    text = " ".join(text.split())
+    if not text:
+        raise errors.NoResults("There is nothing there to say.")
+    if len(text) > MAX_SPEECH_LENGTH:
+        raise errors.SpeechTooLong
+
+    player = get_player(lavalink_client, guild_id)
+    if player is None or not player.is_connected:
+        player, _ = await join(bot, lavalink_client, guild_id, requester_id)
+
+    if player.is_playing:
+        raise errors.AlreadyPlaying
+
+    result = await _load(lavalink_client, f"{TTS_PREFIX}{quote(text)}")
+    track = result.tracks[0]
+
+    # `play(track)` rather than `add` then `play`: speech is not queue material, and playing it
+    # directly leaves whatever is queued untouched to resume afterwards.
+    await player.play(track)
+
+    return track
 
 
 async def enqueue(

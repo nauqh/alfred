@@ -3,11 +3,16 @@ from __future__ import annotations
 import pytest
 
 from alfred.formatting import PROGRESS_BAR_WIDTH
+from alfred.formatting import UNKNOWN_DURATION
 from alfred.formatting import format_time
 from alfred.formatting import format_uptime
 from alfred.formatting import parse_time
+from alfred.formatting import player_bar
 from alfred.formatting import progress_bar
+from alfred.formatting import track_length
 from alfred.formatting import trim
+from alfred.player import AlfredPlayer
+from tests.conftest import make_track
 
 
 @pytest.mark.parametrize(
@@ -61,6 +66,22 @@ def test_progress_bar_stays_in_bounds(fraction: float) -> None:
     bar = progress_bar(fraction)
 
     assert bar.count("▬") == PROGRESS_BAR_WIDTH - 1
+
+
+def test_a_track_of_unknown_length_says_so_rather_than_guessing() -> None:
+    # Flowery TTS tracks arrive with Lavaplayer's unknown-duration sentinel, which formatted
+    # as a real duration reads as 106751991167300 days.
+    speech = make_track("Very good, sir.", duration=UNKNOWN_DURATION)
+
+    assert track_length(speech) == "--:--"
+
+
+def test_a_track_of_unknown_length_gets_the_live_progress_bar(player: AlfredPlayer) -> None:
+    # Otherwise `position / duration` is a rounding error away from zero and the marker never
+    # moves, which reads as a stuck player.
+    player.current = make_track("Very good, sir.", duration=UNKNOWN_DURATION)
+
+    assert "LIVE" in player_bar(player)
 
 
 def test_trim_only_shortens_what_is_too_long() -> None:

@@ -172,8 +172,24 @@ plugins:
       deezer: false
       applemusic: false
       yandexmusic: false
-      flowerytts: false
+      # Text to speech, and what `/say` plays. Free, no account, no key - LavaSrc turns
+      # `ftts://some text` into a track like any other.
+      flowerytts: true
       youtube: false
+
+    # `voice` is the voice's name, case sensitive, from https://api.flowery.pw/v1/tts/voices.
+    # There are 1757 of them and most are eSpeak, which sounds like a screen reader; the
+    # Amazon Polly ones are the only ones worth using. `Brian` is Polly's British male.
+    #
+    # ogg_opus because that is what Discord wants anyway - any other format is a transcode
+    # the node has to do on the way out.
+    flowerytts:
+      voice: "Brian"
+      translate: false
+      silence: 0
+      speed: 0.95
+      audioFormat: "ogg_opus"
+
     spotify:
       clientId: ""
       clientSecret: ""
