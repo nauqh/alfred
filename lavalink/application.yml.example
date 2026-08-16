@@ -177,14 +177,18 @@ plugins:
       flowerytts: true
       youtube: false
 
-    # `voice` is the voice's name, case sensitive, from https://api.flowery.pw/v1/tts/voices.
-    # There are 1757 of them and most are eSpeak, which sounds like a screen reader; the
-    # Amazon Polly ones are the only ones worth using. `Brian` is Polly's British male.
+    # `voice` is the voice's name, case sensitive and matched exactly - dashes, spaces and all -
+    # from https://api.flowery.pw/v1/tts/voices. There are 1757 of them across fifteen engines;
+    # the eSpeak and Flite ones sound like a screen reader, and the 889 Cartesia voices are the
+    # ones worth listening to.
+    #
+    # `speed` does more for how old the voice sounds than the choice of voice does. 0.85 is
+    # noticeably more measured than 0.95, on any of them.
     #
     # ogg_opus because that is what Discord wants anyway - any other format is a transcode
     # the node has to do on the way out.
     flowerytts:
-      voice: "Brian"
+      voice: "Quentin - Refined Narrator"
       translate: false
       silence: 0
       speed: 0.95
