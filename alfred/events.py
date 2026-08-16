@@ -10,6 +10,8 @@ from __future__ import annotations
 import lavalink
 from loguru import logger
 
+from alfred.player import SPEECH_SOURCE
+
 
 class LavalinkEventHandler:
     """
@@ -30,6 +32,17 @@ class LavalinkEventHandler:
     @lavalink.listener(lavalink.TrackEndEvent)
     async def on_track_end(self, event: lavalink.TrackEndEvent) -> None:
         logger.debug("Track finished on guild {} ({})", event.player.guild_id, event.reason)
+
+        # `/say` raises the volume for the line and leaves the old value here to be put back.
+        # Without this the next song plays at speech volume.
+        player = event.player
+        previous = getattr(player, "volume_before_speech", None)
+        # `track` is None when the node could not encode what it just played.
+        if previous is None or event.track is None or event.track.source_name != SPEECH_SOURCE:
+            return
+
+        player.volume_before_speech = None
+        await player.set_volume(previous)
 
     @lavalink.listener(lavalink.TrackExceptionEvent)
     async def on_track_exception(self, event: lavalink.TrackExceptionEvent) -> None:

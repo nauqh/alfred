@@ -30,6 +30,11 @@ TTS_PREFIX = "ftts://"
 # and the whole line arrives as one URL.
 MAX_SPEECH_LENGTH = 300
 
+# Flowery's output sits well below a normalised music track, so speech at the player's usual
+# volume is hard to make out. Lavalink accepts up to 1000, but much past 150 is clipping
+# rather than loudness.
+SPEECH_VOLUME = 150
+
 
 def get_player(lavalink_client: lavalink.Client, guild_id: int) -> AlfredPlayer | None:
     """Return the guild's player, if one exists."""
@@ -163,8 +168,11 @@ async def speak(
     track = result.tracks[0]
 
     # `play(track)` rather than `add` then `play`: speech is not queue material, and playing it
-    # directly leaves whatever is queued untouched to resume afterwards.
-    await player.play(track)
+    # directly leaves whatever is queued untouched to resume afterwards. The volume rides along
+    # on the same call, so there is no window where the line has started but is still quiet -
+    # `alfred.events` puts it back when the line ends.
+    player.volume_before_speech = player.volume
+    await player.play(track, volume=SPEECH_VOLUME)
 
     return track
 

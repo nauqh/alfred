@@ -7,6 +7,7 @@ import pytest
 
 from alfred import errors
 from alfred import service
+from alfred.events import LavalinkEventHandler
 from alfred.player import AlfredPlayer
 from tests.conftest import confirm_playback
 from tests.conftest import make_track
@@ -60,6 +61,40 @@ async def test_speaking_over_a_track_is_refused(player: AlfredPlayer) -> None:
         await speak(client, "Very good, sir.")
 
     assert client.queries == []
+
+
+@pytest.mark.asyncio
+async def test_speech_is_played_louder_than_music(player: AlfredPlayer) -> None:
+    # Flowery's output is well below a normalised track, so speech at the usual volume is hard
+    # to make out over a Discord call.
+    client = FakeLavalinkClient(player=player, result=lavalink.LoadResult.from_track(make_track()))
+
+    await speak(client, "Very good, sir.")
+
+    assert player.node.updates[-1]["volume"] == service.SPEECH_VOLUME
+    assert player.volume_before_speech == 100
+
+
+@pytest.mark.asyncio
+async def test_the_volume_goes_back_when_the_line_ends(player: AlfredPlayer) -> None:
+    # Otherwise the next song plays at speech volume.
+    speech = make_track("Very good, sir.", source="flowery-tts")
+    player.volume_before_speech = 100
+    player.volume = service.SPEECH_VOLUME
+
+    await LavalinkEventHandler().on_track_end(lavalink.TrackEndEvent(player, speech, "finished"))
+
+    assert player.volume == 100
+    assert player.volume_before_speech is None
+
+
+@pytest.mark.asyncio
+async def test_a_song_ending_leaves_the_volume_alone(player: AlfredPlayer) -> None:
+    player.volume = 100
+
+    await LavalinkEventHandler().on_track_end(lavalink.TrackEndEvent(player, make_track(), "finished"))
+
+    assert player.volume == 100
 
 
 @pytest.mark.asyncio

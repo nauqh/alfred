@@ -44,7 +44,13 @@ class FakeNode:
         return None
 
 
-def make_track(title: str = "Track", *, duration: int = 200_000, seekable: bool = True) -> lavalink.AudioTrack:
+def make_track(
+    title: str = "Track",
+    *,
+    duration: int = 200_000,
+    seekable: bool = True,
+    source: str = "youtube",
+) -> lavalink.AudioTrack:
     """Build an `AudioTrack` the same way lavalink.py builds one from a server response."""
     identifier = f"id-{next(_ids)}"
     return lavalink.AudioTrack(
@@ -59,7 +65,7 @@ def make_track(title: str = "Track", *, duration: int = 200_000, seekable: bool 
                 "title": title,
                 "uri": f"https://example.com/{identifier}",
                 "artworkUrl": None,
-                "sourceName": "youtube",
+                "sourceName": source,
                 "position": 0,
             },
         },

@@ -10,6 +10,10 @@ from loguru import logger
 
 PLAYLIST_KEY = "alfred.playlist"
 
+# What LavaSrc names its Flowery TTS tracks, and so how a spoken line is told apart from music
+# once it comes back as an event.
+SPEECH_SOURCE = "flowery-tts"
+
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class PlaylistRef:
@@ -32,6 +36,11 @@ def get_playlist(track: lavalink.AudioTrack) -> PlaylistRef | None:
 
 class AlfredPlayer(lavalink.DefaultPlayer):
     """Adds to the default player a history-aware `stop` that resets rather than merely stopping."""
+
+    #: The volume to put back once a spoken line ends. `alfred.service.speak` raises the volume
+    #: for speech and records what it was here; `alfred.events` restores it. `None` means no
+    #: line is speaking, so there is nothing owed.
+    volume_before_speech: int | None = None
 
     async def skip(self) -> lavalink.AudioTrack | None:
         """Play the next track, returning the one that was skipped."""
