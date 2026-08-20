@@ -110,32 +110,25 @@ over HTTP. `docker compose up` starts one, `application.yml` points at it, and
 ## Configuration
 
 Everything is read from the environment; a `.env` file is loaded if present.
+`cp .env.example .env` gives working defaults for everything below — only two
+have no default:
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `DISCORD_TOKEN` | *required* | The bot token |
-| `LAVALINK_HOST` | `lavalink` | Node hostname. `127.0.0.1` when the bot runs on the host |
-| `LAVALINK_PORT` | `2333` | Node port |
-| `LAVALINK_PASSWORD` | `youshallnotpass` | Node password |
-| `LAVALINK_REGION` | `eu` | Region the node is assigned to |
-| `LAVALINK_SSL` | `false` | Use `wss`/`https` to reach the node |
-| `LAVALINK_NODE_NAME` | `default-node` | What the node is called in logs and `/stats` |
-| `LAVALINK_NODES` | unset | JSON array of node objects, for more than one node |
-| `CIPHER_PASSWORD` | *required by compose* | Shared between the node and yt-cipher. Any random string |
-| `DEFAULT_GUILDS` | unset | Guild IDs to register commands in. Global if unset |
-| `DELETE_AFTER` | `60` | Seconds before command replies clean themselves up. `0` keeps them |
-| `LOG_LEVEL` | `INFO` | Level for the bot's own loggers |
-| `LOG_DIR` | unset | Write rotating `bot.log` and `track.log` here |
+| Variable | Meaning |
+|---|---|
+| `DISCORD_TOKEN` | The bot token |
+| `CIPHER_PASSWORD` | Shared between the node and yt-cipher. Any random string |
 
-`LAVALINK_NODES` takes partial objects — anything left out falls back to the
-single-node variables:
+Two worth knowing:
 
-```sh
-LAVALINK_NODES='[{"name": "eu-1", "region": "eu"}, {"name": "us-1", "host": "10.0.0.4", "region": "us"}]'
-```
+- `LAVALINK_NODES` — a JSON array of node objects, for more than one node. Partial
+  objects fall back to the single-node variables:
 
-Register to `DEFAULT_GUILDS` while developing: guild commands appear instantly,
-global commands take up to an hour to propagate.
+  ```sh
+  LAVALINK_NODES='[{"name": "primary", "region": "asia"}, {"name": "backup", "host": "10.0.0.4"}]'
+  ```
+
+- `DEFAULT_GUILDS` — register commands to named guilds while developing. Guild
+  commands appear instantly; global ones take up to an hour to propagate.
 
 ## Development
 
