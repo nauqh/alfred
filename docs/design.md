@@ -352,7 +352,7 @@ The node's own configuration is [`lavalink/application.yml.example`](../lavalink
 
 ## Testing
 
-84 tests, no network, ~2s. Each module is tested through the interface its
+100 tests, no network, ~2s. Each module is tested through the interface its
 callers use.
 
 - `Config` — the environment is a parameter, so every case is a dict.
@@ -387,7 +387,7 @@ which catches the whole class of registration errors without a token.
 
 ## What the rewrite costs
 
-The package is **1,821 lines against the legacy `bot/`'s 1,578**, plus 977 lines
+The package is **2,064 lines against the legacy `bot/`'s 1,578**, plus 1,246 lines
 of tests where there were none. Stated plainly because the direction is the
 wrong one for a simplification: the growth is docstrings, type annotations,
 `config.py` (146 lines that were previously eight hardcoded ones), and typed

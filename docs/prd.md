@@ -240,7 +240,7 @@ needs a live Discord and Lavalink node.
 | Scope held | 8 commands, no buttons; every removal deliberate and recorded | §4.1 |
 | Known defects shipped | 0 of the 5 in §2 | Each has a test or a documented manual check |
 | Dependencies on a pre-release or unmaintained version | 0 | `pyproject.toml` |
-| Automated test coverage of pure logic | Every non-I/O module has tests | 92 tests at time of writing |
+| Automated test coverage of pure logic | Every non-I/O module has tests | 100 tests at time of writing |
 | Time for a new operator to first playback | < 15 minutes from clone | README walkthrough, unmeasured |
 | Post-cutover regressions reported in the first week | 0 | User reports |
 
@@ -251,7 +251,7 @@ needs a live Discord and Lavalink node.
 | **M1 — Port** | All four libraries current, commands registering, miru removed | Done |
 | **M2 — Defects** | The five §2 defects fixed, each with a test where testable | Done |
 | **M3 — Operability** | Environment configuration, Docker compose, README, node config example | Done |
-| **M4 — Safety net** | Test suite, lint and format clean | Done — 92 tests |
+| **M4 — Safety net** | Test suite, lint and format clean | Done — 100 tests |
 | **M5 — Live verification** | First run against a test guild with `DEFAULT_GUILDS` set: every P0 walked through by hand | **Not started** |
 | **M6 — Cutover** | Global command registration, legacy deployment retired | Not started |
 
