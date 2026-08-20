@@ -172,31 +172,8 @@ plugins:
       deezer: false
       applemusic: false
       yandexmusic: false
-      # Text to speech, and what `/say` plays. Free, no account, no key - LavaSrc turns
-      # `ftts://some text` into a track like any other.
-      flowerytts: true
+      flowerytts: false
       youtube: false
-
-    # `voice` is the voice's name, case sensitive and matched exactly - dashes, spaces and all -
-    # from https://api.flowery.pw/v1/tts/voices. There are 1757 of them across fifteen engines;
-    # the eSpeak and Flite ones sound like a screen reader, and the 889 Cartesia voices are the
-    # ones worth listening to.
-    #
-    # `speed` does more for how old the voice sounds than the choice of voice does. 0.85 is
-    # noticeably more measured than 0.95, on any of them.
-    #
-    # mp3, not ogg_opus. Opus would save the node a transcode on the way to Discord, but
-    # Flowery answers without a Content-Length - the body is chunked - and lavaplayer's Ogg
-    # loader cannot read a stream it cannot size. Every line fails at
-    # `OggPacketInputStream.readPageHeader`, reported as "Something broke when playing the
-    # track". Its mp3 loader handles the same stream without complaint, and is LavaSrc's
-    # own default.
-    flowerytts:
-      voice: "Quentin - Refined Narrator"
-      translate: false
-      silence: 0
-      speed: 0.95
-      audioFormat: "mp3"
 
     spotify:
       clientId: ""

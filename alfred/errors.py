@@ -37,14 +37,6 @@ class PlayerNotPlaying(AlfredError):
     default_message = "Nothing is playing right now."
 
 
-class AlreadyPlaying(AlfredError):
-    default_message = "I can only speak when nothing is playing - pause or stop the track first."
-
-
-class SpeechTooLong(AlfredError):
-    default_message = "That is more than I can say in one breath - keep it under 300 characters."
-
-
 class NoResults(AlfredError):
     default_message = "No results for that query."
 

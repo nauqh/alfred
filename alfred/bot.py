@@ -15,11 +15,9 @@ from alfred.events import LavalinkEventHandler
 from alfred.extensions import EXTENSIONS
 from alfred.player import AlfredPlayer
 
-# GUILD_MESSAGES carries the messages `alfred.extensions.mention` listens for, including those
-# in a voice channel's own chat. MESSAGE_CONTENT is deliberately not here: it is privileged, and
-# Discord sends a message's text without it whenever the bot is mentioned in it - which is the
-# only case that listener acts on anyway.
-INTENTS = hikari.Intents.GUILDS | hikari.Intents.GUILD_VOICE_STATES | hikari.Intents.GUILD_MESSAGES
+# GUILD_MESSAGES is deliberately not here: the bot posts only replies to commands and does
+# not listen to ordinary channel traffic.
+INTENTS = hikari.Intents.GUILDS | hikari.Intents.GUILD_VOICE_STATES
 
 
 @lightbulb.hook(lightbulb.ExecutionSteps.PRE_INVOKE)

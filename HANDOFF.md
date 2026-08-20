@@ -3,51 +3,25 @@
 Working notes for picking this up cold. Not documentation — `docs/` and the code comments
 are that. This is the context that would otherwise have to be re-derived.
 
-Last updated: 2026-08-17.
+Last updated: 2026-08-20.
 
 ## Where things stand
 
-Alfred plays music, and he talks. Both work.
+Alfred plays music. Speech was removed — the whole talking feature set (`/say`, `@Alfred`
+mentions, the OpenRouter answerer, Flowery TTS) is out of the tree and the node's
+`application.yml` no longer enables `flowerytts`. The bot is back to being a music bot:
+8 commands in four extensions.
 
 | | State |
 |---|---|
-| Play / search / queue / skip | Working |
-| `/say` — speak a line aloud | Working |
-| `@Alfred <text>` — speak, or `play …` / `skip` | Working |
-| Tagging Alfred's **role** instead of his user | Fixed, unconfirmed in a live server |
-| Hearing you | Not possible on this bot — see below |
-| Understanding loose phrasing | Not built — he string-matches |
+| Play / search / queue / skip / remove / leave | Working |
+| `/stats` / `/info` | Working |
+| Hearing you | Not possible — see below |
+| Speech / mentions / LLM answering | Removed 2026-08-20. `git log` has it all if it ever comes back |
 
-## Uncommitted right now
-
-`alfred/extensions/mention.py` and `tests/test_mention.py` — the role-mention fix. 129 tests
-pass, ruff clean. Not committed.
-
-## The role-mention fix, and what is still unknown
-
-**The bug**: `on_mention` only checked `user_mentions_ids`. Discord's mention picker starts
-offering the bot's *managed role* once the bot has been tagged once, and a role tag lands in
-`role_mention_ids` — a different field — so every tag after the first fell through the
-"not mentioned" path in silence.
-
-**The fix**: match role mentions too, strip `<@&id>` from the text, and ignore
-`@everyone`/`@here` deliberately.
-
-**The genuinely unresolved part**: Discord has never documented whether a mention of a *role
-the app holds* qualifies for the MESSAGE_CONTENT exemption the way a mention of the app
-itself does. Their own announcement thread punts the question to Developer Support. So the
-code does not bet on it — if a message is known to tag the bot but arrives with `content`
-blank, that is read as "the text was withheld" and answered with a hint to tag directly.
-Correct under either answer.
-
-**Still worth confirming in a live server**: tag the role, see which branch fires. If the
-text comes through, the exemption covers role mentions and the hint is dead code worth
-keeping anyway. If the hint appears, it does not.
-
-**Do not remove the REST fallback in `_my_role_ids`.** The bot runs without the members
-intent. If the member cache turns out not to hold even the bot's own member, dropping the
-fallback puts the listener straight back to ignoring every role mention — the original bug.
-It is memoised, so it costs at most one request per guild for the life of the process.
+`git revert` will not cleanly bring the speech work back (later non-speech commits touch
+the same files); `git log --oneline 5d3dd6e..HEAD` names the speech commits if you ever
+want them cherry-picked.
 
 ## Voice: what is settled, and why
 
@@ -66,45 +40,23 @@ Consequences that were checked and are not worth rechecking:
 - **Rewriting on py-cord does not fix it.** py-cord + Lavalink is fine; py-cord + Lavalink +
   hearing is not. Same one-slot problem.
 - **Dropping Lavalink for native audio would work** but loses the YouTube OAuth fix,
-  Spotify/Deezer via LavaSrc, LavaSearch autocomplete and Flowery TTS — and puts YouTube
-  resolution back on the VPS IP, which is exactly the `Sign in to confirm you're not a bot`
-  failure that OAuth was adopted to solve.
+  Spotify/Deezer via LavaSrc and LavaSearch autocomplete — and puts YouTube resolution back
+  on the VPS IP, which is exactly the `Sign in to confirm you're not a bot` failure that
+  OAuth was adopted to solve.
 - **Time-sharing the slot** (listen while idle, hand over to Lavalink to play) works, but the
   bot is deaf while music plays, and every handover is a visible leave-and-rejoin. Rejected:
   "skip" and "pause" by voice are the point, and those are exactly when it cannot hear.
 - **A second bot user gets a second slot.** That is the only design that gets hearing without
-  losing playback. Alfred would not need changing at all — a separate discord.py process with
-  `discord-ext-voice-recv` (real-time per-packet `write()`, speaker attached; pycord's sinks
-  buffer until recording stops, so they are the wrong shape for always-on listening).
-
-An ears-bot spike was planned and then abandoned before any code was written. Nothing from it
-is in the tree.
-
-## Offered, not built
-
-- **An LLM brain for `mention.py`.** `_handle` currently string-matches: `play …` and exactly
-  `skip`/`next`, everything else parroted aloud. So `@Alfred put on some jazz` makes him *say*
-  "put on some jazz". Replacing that middle step with Claude tool-use (tools: play / skip /
-  say) is contained to one function, needs no second bot and no voice receive, and is the
-  single biggest gain available. Roughly ½¢ per mention; needs an Anthropic API key.
-  Load the `claude-api` skill before starting — do not write the call from memory.
-- Interrupt-and-resume so speech can cut in over music instead of being refused.
-- Dockerfile layer split so dependency installs cache separately from source changes.
+  losing playback. A separate discord.py process with `discord-ext-voice-recv` (real-time
+  per-packet `write()`, speaker attached; pycord's sinks buffer until recording stops, so
+  they are the wrong shape for always-on listening).
 
 ## Facts worth not re-deriving
 
-- **Flowery TTS requires a User-Agent.** `curl/8`, bare `Lavalink` and an empty UA all get a
-  403 with a JSON body. Lavaplayer's default passes, so nothing in the code handles this —
-  but it will look baffling when debugging by hand.
-- **`audioFormat: ogg_opus` is broken with Flowery.** Served chunked with no `Content-Length`,
-  which lavaplayer's Ogg parser cannot read — fails in `OggPacketInputStream.readPageHeader`.
-  Use `mp3`, which is LavaSrc's own default.
-- **Flowery tracks report `Long.MAX_VALUE` as their duration.** Handled in two places, both
-  load-bearing: `formatting.UNKNOWN_DURATION` (else it renders as 106751991167300 days), and
-  the guard in `service.speak`, which checks `current.source_name != SPEECH_SOURCE` rather
-  than `player.is_playing` — the node treats these tracks as unbounded and leaves `current`
-  set after the audio finishes, so gating on `is_playing` let the first spoken line block
-  every line after it, permanently.
+- **YouTube playback runs through OAuth**, not a poToken. `docs/deploy.md` covers the
+  device flow; the refresh token lives in `lavalink/application.yml` (gitignored). A
+  `Sign in to confirm you're not a bot` failure usually means the token expired or was
+  revoked — rerun the flow.
 - **`.env` and `lavalink/application.yml` are gitignored** and never arrive via `git pull`.
   A deploy that "did nothing" is usually this.
 - **Local runs do not need Docker**: `scripts/lavalink.ps1` for the node, `uv run alfred` for

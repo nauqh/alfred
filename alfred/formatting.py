@@ -14,13 +14,6 @@ if TYPE_CHECKING:
 
 PROGRESS_BAR_WIDTH = 12
 
-# Lavaplayer's "I do not know how long this is" sentinel, which is Java's Long.MAX_VALUE.
-# Flowery TTS tracks arrive carrying it, and formatted naively it reads as 106751991167300
-# days. Anything at or above it is a track with no known end.
-UNKNOWN_DURATION = 2**63 - 1
-
-UNKNOWN_LENGTH = "--:--"
-
 
 def parse_time(milliseconds: int) -> tuple[int, int, int, int]:
     """Split a duration in milliseconds into whole days, hours, minutes and seconds."""
@@ -80,7 +73,7 @@ def player_bar(player: lavalink.DefaultPlayer) -> str:
 
     play_pause = EMOJI_RESUME_PLAYER if player.paused else EMOJI_PAUSE_PLAYER
 
-    if current.is_stream or not current.duration or current.duration >= UNKNOWN_DURATION:
+    if current.is_stream or not current.duration:
         return f"{play_pause} {progress_bar(0.99)} `LIVE`"
 
     playtime = f"{format_time(player.position)} | {format_time(current.duration)}"
@@ -88,12 +81,8 @@ def player_bar(player: lavalink.DefaultPlayer) -> str:
 
 
 def track_length(track: lavalink.AudioTrack) -> str:
-    """Format a track's length, or ``LIVE`` for streams and ``--:--`` where it is not known."""
-    if track.is_stream:
-        return "LIVE"
-    if track.duration >= UNKNOWN_DURATION:
-        return UNKNOWN_LENGTH
-    return format_time(track.duration)
+    """Format a track's length, or ``LIVE`` for streams."""
+    return "LIVE" if track.is_stream else format_time(track.duration)
 
 
 def trim(text: str, max_len: int) -> str:

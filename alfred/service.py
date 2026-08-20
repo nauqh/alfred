@@ -5,7 +5,6 @@ from __future__ import annotations
 import random
 import re
 from typing import Any
-from urllib.parse import quote
 
 import hikari
 import lavalink
@@ -14,7 +13,6 @@ from loguru import logger
 from alfred import embeds
 from alfred import errors
 from alfred import sources
-from alfred.player import SPEECH_SOURCE
 from alfred.player import AlfredPlayer
 from alfred.player import PlaylistRef
 from alfred.player import set_playlist
@@ -22,19 +20,6 @@ from alfred.player import set_playlist
 URL_RX = re.compile(r"https?://(?:www\.)?.+")
 
 RICH_PLAYLIST_TYPES = ("artist", "album", "playlist")
-
-# LavaSrc's Flowery TTS source. Enabled under `plugins.lavasrc.sources` in application.yml,
-# where the voice is set too - nothing about the voice is decided here.
-TTS_PREFIX = "ftts://"
-
-# Flowery reads far more than this, but a slash command is not the place to paste an essay,
-# and the whole line arrives as one URL.
-MAX_SPEECH_LENGTH = 300
-
-# Flowery's output sits well below a normalised music track, so speech at the player's usual
-# volume is hard to make out. Lavalink accepts up to 1000, but much past 150 is clipping
-# rather than loudness.
-SPEECH_VOLUME = 150
 
 
 def get_player(lavalink_client: lavalink.Client, guild_id: int) -> AlfredPlayer | None:
@@ -127,61 +112,6 @@ async def _load(lavalink_client: lavalink.Client, identifier: str) -> lavalink.L
         raise errors.NoResults
 
     return result
-
-
-async def speak(
-    bot: hikari.GatewayBot,
-    lavalink_client: lavalink.Client,
-    text: str,
-    *,
-    guild_id: int,
-    requester_id: hikari.Snowflakeish,
-) -> lavalink.AudioTrack:
-    """
-    Say something out loud in the guild's voice channel.
-
-    The speech is a track like any other - LavaSrc's Flowery source turns `ftts://` into audio,
-    and the node plays it down the same connection the music uses.
-
-    Raises:
-        NoResults: If there is nothing to say, or the node could not render it.
-        SpeechTooLong: If the text is longer than Flowery will read in one go.
-        AlreadyPlaying: If a track is loaded. One player per guild, and Lavalink cannot mix
-            two streams, so speaking now would cut the music off mid-bar.
-        NotInVoice: If the bot has to connect, and the requester is not in a voice channel.
-    """
-    # Collapse the whitespace before measuring: a line pasted out of a lyrics page is mostly
-    # newlines, and the length limit should apply to what is actually read out.
-    text = " ".join(text.split())
-    if not text:
-        raise errors.NoResults("There is nothing there to say.")
-    if len(text) > MAX_SPEECH_LENGTH:
-        raise errors.SpeechTooLong
-
-    player = get_player(lavalink_client, guild_id)
-    if player is None or not player.is_connected:
-        player, _ = await join(bot, lavalink_client, guild_id, requester_id)
-
-    # Refuse to speak over *music*, not over a previous spoken line. Flowery tracks carry no
-    # known duration, so the node treats them as unbounded and `current` can stay set long
-    # after the audio has finished - gating on `is_playing` left the first line blocking every
-    # line after it, permanently. Replacing one spoken line with the next is what was wanted
-    # anyway.
-    current = player.current
-    if current is not None and current.source_name != SPEECH_SOURCE:
-        raise errors.AlreadyPlaying
-
-    result = await _load(lavalink_client, f"{TTS_PREFIX}{quote(text)}")
-    track = result.tracks[0]
-
-    # `play(track)` rather than `add` then `play`: speech is not queue material, and playing it
-    # directly leaves whatever is queued untouched to resume afterwards. The volume rides along
-    # on the same call, so there is no window where the line has started but is still quiet -
-    # `alfred.events` puts it back when the line ends.
-    player.volume_before_speech = player.volume
-    await player.play(track, volume=SPEECH_VOLUME)
-
-    return track
 
 
 async def enqueue(
