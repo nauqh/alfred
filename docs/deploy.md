@@ -81,7 +81,7 @@ time, so `git pull` alone does not affect a running stack. The node and
 yt-cipher are pinned images - update them by deliberately editing the tag or
 digest in `docker-compose.yml`.
 
-## 5. YouTube on a datacentre IP
+## 5. Configure YouTube auth
 
 The following is expected on the first deploy:
 
