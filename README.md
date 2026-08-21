@@ -10,54 +10,55 @@
 
 A Discord music bot. `/play` joins your voice channel and queues what you asked
 for; `/queue` shows what's playing with buttons to control it. Audio never
-touches this process — a Lavalink node does the streaming, the bot only tells it
-what to do.
+touches this process - a Lavalink node does the streaming, the bot only tells
+it what to do.
 
 ## Features
 
 - Music from **YouTube, Spotify and Deezer**, plus URL playback and playlists
 - `/search` with live autocomplete for tracks, artists, albums and playlists via [LavaSearch](https://github.com/topi314/LavaSearch)
 - Queue panel with Pause, Skip, Loop and Stop buttons
-- The bot posts nothing unprompted — every message is a reply to a command
+- The bot posts nothing unprompted - every message is a reply to a command
 
 ## Quick start
 
 ### Docker
 
 ```sh
-cp .env.example .env                                           # DISCORD_TOKEN, CIPHER_PASSWORD
-cp lavalink/application.yml.example lavalink/application.yml   # then fill in plugin credentials
+cp .env.example .env                                           # set DISCORD_TOKEN and CIPHER_PASSWORD
+cp lavalink/application.yml.example lavalink/application.yml
 docker compose up -d
 ```
 
-Three services start in order: **yt-cipher**, **Lavalink**, then the **bot**.
-On Linux, run `chown -R 322:322 lavalink/logs lavalink/plugins` first, or the
-node cannot write.
+Linux only: run `chown -R 322:322 lavalink/logs lavalink/plugins` before the
+first `up`, or the node cannot write its logs.
 
-The bot image is a snapshot of the code — after a code change, rebuild with
-`docker compose up -d --build bot`.
+That starts three services: **yt-cipher**, **Lavalink**, then the **bot**.
+After a code change, rebuild the bot with `docker compose up -d --build bot`.
+
+To run this on a VPS, follow [docs/deploy.md](docs/deploy.md) - it covers
+machine prep, secrets, updates and YouTube auth.
 
 ### Local development (no Docker)
 
 Requires Java 17+ for Lavalink:
 
 ```sh
-winget install --id Microsoft.OpenJDK.21 -e   # once
+winget install --id Microsoft.OpenJDK.21 -e   # once, Windows
 .\scripts\lavalink.ps1                        # runs the node
 uv run alfred                                 # second terminal, LAVALINK_HOST=127.0.0.1
 ```
 
-### Before the first run
+### Source caveats before first run
 
 | | |
 |---|---|
-| **A cipher server is required** | Without it every YouTube client fails and nothing plays. `docker compose` starts one; see [YouTube needs a cipher server](#youtube-needs-a-cipher-server) |
-| **Deezer is off until configured** | LavaSrc refuses to start with `deezer: true` and an empty `masterDecryptionKey`; turn it on in the same edit that fills the credentials in |
+| **Deezer is off until configured** | LavaSrc refuses to start with `deezer: true` and an empty `masterDecryptionKey`; turn it on in the same edit that fills the credentials |
 | **Spotify degrades instead** | With no credentials it registers fine and fails per request, so `/search` on Spotify returns nothing until `clientId`/`clientSecret` are set. YouTube needs no credentials at all |
 
 ## Commands
 
-Eight commands, and `/play` connects to your voice channel on its own — there is
+Eight commands; `/play` connects to your voice channel on its own - there is
 no `/join`.
 
 | Group | Commands | |
@@ -72,13 +73,13 @@ no `/join`.
 | Loop and shuffle are **options**, not commands | Set once as tracks are queued. Loop is also a button |
 | `/search` narrows by source and type | Track, artist, album or playlist |
 | `/queue` needs no voice check; its **buttons** do | Reading the queue is open to anyone; acting on the player is restricted to the bot's voice channel |
-| There is no `/pause` | Deafening yourself pauses playback when you're the only listener, and undeafening resumes it. The panel's Pause button is the only manual path |
+| There is no `/pause` | Deafening yourself pauses playback when you are the only listener, and undeafening resumes it. The panel's Pause button is the only manual path |
 | The bot leaves once it is alone | Nobody left to hear it |
 
 ### The panel
 
 `/queue` is the whole player interface: current track, progress, what's next,
-and four buttons. Each press redraws that message — never a second one.
+and four buttons. Each press redraws that message - never a second one.
 
 | Button | Does | Note |
 |---|---|---|
@@ -90,71 +91,65 @@ and four buttons. Each press redraws that message — never a second one.
 Buttons go quiet after three minutes without a press (refreshed by every press)
 and are then removed; the embed stays as a readable snapshot of the queue.
 
-## YouTube needs a cipher server
+## YouTube playback needs a cipher server
 
 YouTube protects its audio URLs with an obfuscated player script that must be
-*run* to turn a stream signature into something playable — youtube-source's own
+*run* to turn a stream signature into something playable - youtube-source's own
 extractor can no longer read it, so every client fails with `Must find sig
 function from script`. Upstream's answer is a remote cipher server
 ([youtube-source#225](https://github.com/lavalink-devs/youtube-source/issues/225)).
 
 [yt-cipher](https://github.com/kikkia/yt-cipher) runs that script and answers
-over HTTP. `docker compose up` starts one, `application.yml` points at it, and
+over HTTP. `docker compose up` starts one and `application.yml` points at it;
 `CIPHER_PASSWORD` in `.env` is what the two sides agree on.
 
-| | |
-|---|---|
-| **Self-hosted by default** | The author's public instance at `cipher.kikkia.dev` is fine for a laptop, but it's shared and rate limited |
-| **A cipher server does not fix `sign in to confirm you're not a bot`** | That's YouTube objecting to your IP. The fix is OAuth — see [docs/deploy.md](docs/deploy.md) |
+**A cipher server does not fix `sign in to confirm you're not a bot`** - that
+is YouTube objecting to the *IP*, normally because the bot runs on a VPS. The
+fix is OAuth; see [docs/deploy.md](docs/deploy.md).
 
 ## Configuration
 
-Everything is read from the environment; a `.env` file is loaded if present.
-`cp .env.example .env` gives working defaults for everything below — only two
-have no default:
-
-| Variable | Meaning |
-|---|---|
-| `DISCORD_TOKEN` | The bot token |
-| `CIPHER_PASSWORD` | Shared between the node and yt-cipher. Any random string |
+Everything is read from the environment; `.env` is loaded if present.
+`cp .env.example .env` gives working defaults, so only two variables have no
+default: `DISCORD_TOKEN` and `CIPHER_PASSWORD`.
 
 Two worth knowing:
 
-- `LAVALINK_NODES` — a JSON array of node objects, for more than one node. Partial
-  objects fall back to the single-node variables:
+- `LAVALINK_NODES` - a JSON array of node objects, for more than one node.
+  Partial objects fall back to the single-node variables:
 
   ```sh
   LAVALINK_NODES='[{"name": "primary", "region": "asia"}, {"name": "backup", "host": "10.0.0.4"}]'
   ```
 
-- `DEFAULT_GUILDS` — register commands to named guilds while developing. Guild
+- `DEFAULT_GUILDS` - register commands to named guilds while developing. Guild
   commands appear instantly; global ones take up to an hour to propagate.
 
 ## Development
 
 ```sh
-uv sync --frozen    # install the lock exactly — what the Docker build does
+uv sync --frozen    # install the lock exactly - what the Docker build does
 uv add <package>    # add a dependency and update the lock
 uv lock --upgrade   # move the lock forward within the floors
 ```
 
-Checks, both clean:
+Checks:
 
 ```sh
 uv run pytest
 uv run ruff check .
 ```
 
-The lock is committed and pins everything; `pyproject.toml` carries floors only.
-`--frozen` fails the build when the lock has drifted, so a forgotten `uv lock`
-breaks the build rather than the deploy.
+The lock is committed and pins everything; `pyproject.toml` carries floors
+only. `--frozen` fails the build when the lock has drifted, so a forgotten
+`uv lock` breaks the build rather than the deploy.
 
 ## Documentation
 
 | | |
 |---|---|
-| [docs/deploy.md](docs/deploy.md) | Putting it on a VPS: machine, firewall, secrets, OAuth for datacentre IPs |
-| [docs/design.md](docs/design.md) | How it's put together |
+| [docs/deploy.md](docs/deploy.md) | Run it on a VPS: box prep, secrets, updates, YouTube OAuth |
+| [docs/design.md](docs/design.md) | How it is put together |
 | [docs/prd.md](docs/prd.md) | Product requirements and acceptance criteria |
 
 ## Credits
