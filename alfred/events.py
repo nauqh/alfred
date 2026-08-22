@@ -10,6 +10,12 @@ from __future__ import annotations
 import lavalink
 from loguru import logger
 
+# How many times to re-queue a track that failed to load or stalled mid-play, before letting
+# the player move on to the next one. YouTube streams die transiently (rate limits, expired
+# stream URLs) - re-queueing the same track once keeps the song going instead of skipping.
+RETRY_KEY = "alfred.retry_count"
+MAX_RETRIES = 1
+
 
 class LavalinkEventHandler:
     """
@@ -33,12 +39,29 @@ class LavalinkEventHandler:
 
     @lavalink.listener(lavalink.TrackExceptionEvent)
     async def on_track_exception(self, event: lavalink.TrackExceptionEvent) -> None:
+        """
+        Log a failed track, and re-queue it once before the player advances past it.
+
+        On `TrackExceptionEvent` the failed track is still the player's current track. Putting
+        it back at the front of the queue makes the player's own end-of-track handler (which runs
+        right after this on `TrackEndEvent`) pick the same track again, so a transient YouTube
+        failure retries the song rather than skipping to the next one. The retry is capped by
+        a counter on the track, so a genuinely dead track still moves on.
+        """
+        track = event.track
+        attempts = int(track.extra.get(RETRY_KEY, 0))
         logger.warning(
-            "Track {!r} failed on guild {}: {}",
-            event.track.title,
+            "Track {!r} failed on guild {} (attempt {}): {}",
+            track.title,
             event.player.guild_id,
+            attempts + 1,
             event.message,
         )
+
+        if attempts < MAX_RETRIES:
+            track.extra[RETRY_KEY] = attempts + 1
+            event.player.queue.insert(0, track)
+            logger.info("Retrying {!r} once on guild {}", track.title, event.player.guild_id)
 
     @lavalink.listener(lavalink.TrackStuckEvent)
     async def on_track_stuck(self, event: lavalink.TrackStuckEvent) -> None:
