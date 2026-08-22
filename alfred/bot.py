@@ -7,6 +7,7 @@ import lavalink
 import lightbulb
 from loguru import logger
 
+from alfred import constants
 from alfred import errors
 from alfred import log_config
 from alfred import responses
@@ -64,6 +65,13 @@ def build(config: Config) -> hikari.GatewayBot:
 
         me = bot.get_me()
         assert me is not None, "the bot must know its own user before Lavalink can be set up"
+
+        await bot.update_presence(
+            activity=hikari.Activity(
+                name=constants.ACTIVITY_NAME,
+                type=hikari.ActivityType.LISTENING,
+            ),
+        )
 
         lavalink_client = build_lavalink_client(config, me.id)
         lavalink_client.add_event_hooks(LavalinkEventHandler())

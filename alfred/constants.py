@@ -11,3 +11,5 @@ from typing import Final
 EMOJI_RESUME_PLAYER: Final = "▶️"
 EMOJI_PAUSE_PLAYER: Final = "⏸️"
 EMOJI_RADIO_BUTTON: Final = "🔘"
+
+ACTIVITY_NAME: Final = "https://nauqh.github.io/alfred/"
