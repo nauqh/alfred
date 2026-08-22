@@ -74,7 +74,7 @@ no `/join`.
 | `/search` narrows by source and type | Track, artist, album or playlist |
 | `/queue` needs no voice check; its **buttons** do | Reading the queue is open to anyone; acting on the player is restricted to the bot's voice channel |
 | There is no `/pause` | Deafening yourself pauses playback when you are the only listener, and undeafening resumes it. The panel's Pause button is the only manual path |
-| The bot leaves once it is alone | Nobody left to hear it |
+| The bot leaves when no one is left in the channel | Queue state is irrelevant - it stays even with nothing queued |
 
 ### The panel
 

@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alfred - The self-hosted music bot for Discord server</title>
+<link rel="icon" type="image/jpeg" href="alfred_avatar.jpg">
+<link rel="apple-touch-icon" href="alfred_avatar.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Lenis Smooth Scroll CSS -->
+<link rel="stylesheet" href="https://unpkg.com/lenis@1.1.20/dist/lenis.css">
+<style>
+  *, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  :root {
+    /* Teak-inspired Palette Tokens */
+    --bg: #f8faf7;
+    --grid: rgba(39, 16, 20, 0.016);
+    --ink: #1e1418;
+    --body: #4c4044;
+    --body-muted: #786b70;
+    --line: #e6e8e2;
+    --line-subtle: #eeefe9;
+    --card-bg: #ffffff;
+
+    /* Accents */
+    --accent: #3a7582;
+    --accent-hover: #2d606c;
+    --accent-soft: rgba(58, 117, 130, 0.08);
+    --highlight: #bce5ec;
+
+    /* Category dots */
+    --green-dot: #03af54;
+    --blue-dot: #3a7582;
+    --pink-dot: #d3379f;
+    --orange-dot: #d4562d;
+    --purple-dot: #8352ec;
+
+    /* Dark / Code / Discord Tokens */
+    --code-bg: #151316;
+    --code-border: #28242a;
+    --code-text: #e6e2e8;
+    --code-muted: #8e8794;
+    --code-accent: #65d6c8;
+
+    --discord-window: #1e1f22;
+    --discord-chat: #313338;
+    --discord-embed: #2b2d31;
+    --discord-sidebar: #2b2d31;
+    --discord-blurple: #5865f2;
+    --discord-blurple-hover: #4752c4;
+    --discord-text-header: #f2f3f5;
+    --discord-text-normal: #dbdee1;
+    --discord-text-muted: #949ba4;
+    --discord-btn: #4e5058;
+    --discord-btn-hover: #6d6f78;
+    --discord-btn-active: #3b3d44;
+    --discord-btn-danger: #da373c;
+    --discord-btn-danger-hover: #a1282c;
+    --discord-btn-success: #248046;
+  }
+
+  html.lenis, html.lenis body {
+    height: auto;
+  }
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+  .lenis.lenis-scrolling iframe {
+    pointer-events: none;
+  }
+
+  body {
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(to right, var(--grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size: 72px 72px;
+    color: var(--ink);
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ================= NAV ================= */
+  .nav-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background: rgba(248, 250, 247, 0.72);
+    border-bottom: none;
+  }
+
+  nav {
+    max-width: 1440px;
+    height: 72px;
+    margin: 0 auto;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+    color: var(--ink);
+  }
+
+  .logo-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center 15%;
+    border: 1.5px solid rgba(39, 16, 20, 0.15);
+    box-shadow: 0 2px 8px rgba(39, 16, 20, 0.12);
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--body);
+    transition: color 0.15s, transform 0.15s;
+  }
+
+  .nav-links a:hover {
+    color: var(--ink);
+  }
+
+  .color-sq {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .sq-green { background: var(--green-dot); }
+  .sq-blue { background: var(--blue-dot); }
+  .sq-purple { background: var(--purple-dot); }
+  .sq-pink { background: var(--pink-dot); }
+  .sq-orange { background: var(--orange-dot); }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .github-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--body);
+    transition: color 0.15s;
+  }
+
+  .github-nav-link:hover {
+    color: var(--ink);
+  }
+
+  .btn-dark {
+    background: var(--ink);
+    color: #ffffff;
+    border: none;
+    border-radius: 999px;
+    padding: 7px 15px;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+
+  .btn-dark:hover {
+    background: #341e26;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(30, 20, 24, 0.15);
+  }
+
+  .play-arrow {
+    width: 0;
+    height: 0;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    border-left: 6px solid currentColor;
+    display: inline-block;
+  }
+
+  /* ================= HERO SECTION ================= */
+  .hero-section {
+    padding: clamp(96px, 12vh, 140px) 0 96px;
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+
+  .hero-left {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  h1 {
+    font-size: clamp(46px, 5.2vw, 70px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -2.2px;
+    color: var(--ink);
+    margin-bottom: 22px;
+    max-width: 640px;
+    text-wrap: balance;
+  }
+
+  .highlight-wrap {
+    position: relative;
+    display: inline-block;
+    padding: 0 8px;
+    margin: 0 -3px;
+    z-index: 1;
+  }
+
+  .highlight-wrap::before {
+    content: "";
+    position: absolute;
+    top: 6%;
+    bottom: 6%;
+    left: 0;
+    right: 0;
+    background: var(--highlight);
+    border-radius: 6px;
+    z-index: -1;
+  }
+
+  .hero-desc {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--body);
+    font-weight: 500;
+    max-width: 560px;
+    margin-bottom: 28px;
+  }
+
+  .hero-ctas {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 0;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #ffffff;
+    border-radius: 999px;
+    padding: 14px 30px;
+    font-size: 15.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 6px 20px rgba(58, 117, 130, 0.35);
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(58, 117, 130, 0.45);
+  }
+
+  .btn-secondary {
+    background: #ffffff;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 14px 26px;
+    font-size: 15.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  }
+
+  .btn-secondary:hover {
+    background: #f1f3ee;
+    border-color: #d2d6cb;
+    transform: translateY(-1px);
+  }
+
+  .tech-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tech-badge {
+    background: rgba(39, 16, 20, 0.04);
+    border: 1px solid var(--line);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--body-muted);
+  }
+
+  /* HERO SCREENSHOT FRAME */
+  .hero-right {
+    position: relative;
+  }
+
+  .screenshot-frame {
+    background: var(--discord-window);
+    border: 1px solid rgba(39, 16, 20, 0.12);
+    border-radius: 18px;
+    box-shadow:
+      0 24px 60px rgba(39, 16, 20, 0.14),
+      0 4px 16px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .screenshot-frame:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 32px 72px rgba(39, 16, 20, 0.18);
+  }
+
+  .window-header {
+    background: #141517;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .mac-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .mac-red { background: #ff5f56; }
+  .mac-yellow { background: #ffbd2e; }
+  .mac-green { background: #27c93f; }
+
+  .window-title {
+    color: var(--discord-text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    margin-left: 6px;
+  }
+
+  .discord-screenshot {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* ================= SECTION HEADERS ================= */
+  .section-wrap {
+    padding: 84px 0;
+  }
+
+  .section-head {
+    max-width: 720px;
+    margin-bottom: 52px;
+  }
+
+  .section-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: clamp(28px, 3.2vw, 38px);
+    font-weight: 800;
+    line-height: 1.18;
+    letter-spacing: -1px;
+    color: var(--ink);
+    margin-bottom: 14px;
+  }
+
+  .section-subtitle {
+    font-size: 16.5px;
+    color: var(--body);
+    line-height: 1.6;
+  }
+
+  /* ================= FEATURES GRID ================= */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .feature-card {
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 32px 28px;
+    box-shadow: 0 4px 16px rgba(39, 16, 20, 0.03);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+  }
+
+  .feature-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(39, 16, 20, 0.07);
+    border-color: #d3d7cd;
+  }
+
+  .feature-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    color: var(--accent);
+    font-size: 20px;
+  }
+
+  .feature-card h3 {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.3px;
+    margin-bottom: 10px;
+  }
+
+  .feature-card p {
+    font-size: 14.5px;
+    color: var(--body);
+    line-height: 1.55;
+  }
+
+  .feature-pill-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 18px;
+  }
+
+  .source-pill {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: #f1f3ee;
+    color: var(--body);
+  }
+
+  /* ================= COMMANDS & INTERACTIVE PLAYER ================= */
+  .commands-layout {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+
+  .discord-sim-box {
+    background: var(--discord-chat);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+    color: var(--discord-text-normal);
+  }
+
+  .sim-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .sim-channel-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--discord-text-header);
+  }
+
+  .sim-tag-live {
+    font-size: 11px;
+    background: var(--discord-blurple);
+    color: #fff;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+  }
+
+  .discord-msg {
+    display: flex;
+    gap: 14px;
+  }
+
+  .msg-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .msg-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .msg-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .bot-author {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--discord-text-header);
+  }
+
+  .bot-tag {
+    background: var(--discord-blurple);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    line-height: 1.3;
+  }
+
+  .msg-time {
+    font-size: 12px;
+    color: var(--discord-text-muted);
+  }
+
+  .discord-embed-card {
+    background: var(--discord-embed);
+    border-left: 4px solid var(--accent);
+    border-radius: 4px;
+    padding: 16px;
+    margin-top: 8px;
+  }
+
+  .embed-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--discord-text-header);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .now-playing-title {
+    font-size: 14px;
+    color: #00a8fc;
+    font-weight: 600;
+    margin-bottom: 12px;
+    word-break: break-all;
+  }
+
+  .progress-wrap {
+    margin-bottom: 14px;
+  }
+
+  .progress-bar-bg {
+    width: 100%;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+
+  .progress-bar-fill {
+    width: 42%;
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.3s;
+  }
+
+  .progress-times {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--discord-text-muted);
+  }
+
+  .queue-list-preview {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--discord-text-normal);
+    margin-bottom: 16px;
+  }
+
+  .queue-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .queue-item:last-child {
+    border-bottom: none;
+  }
+
+  /* INTERACTIVE DISCORD BUTTONS */
+  .discord-button-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .d-btn {
+    background: var(--discord-btn);
+    color: var(--discord-text-header);
+    border: none;
+    border-radius: 4px;
+    padding: 5px 11px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s, transform 0.1s;
+    user-select: none;
+  }
+
+  .d-btn:hover {
+    background: var(--discord-btn-hover);
+  }
+
+  .d-btn:active {
+    transform: scale(0.97);
+  }
+
+  .d-btn.btn-active {
+    background: var(--discord-blurple);
+  }
+
+  .d-btn.btn-stop:hover {
+    background: var(--discord-btn-danger);
+  }
+
+  .sim-hint {
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--discord-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* COMMANDS TABLE */
+  .commands-table-wrap {
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(39, 16, 20, 0.03);
+  }
+
+  .cmd-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+  }
+
+  .cmd-table th {
+    background: #f4f6f1;
+    padding: 14px 18px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--body-muted);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .cmd-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    font-size: 13.5px;
+    color: var(--body);
+    vertical-align: top;
+  }
+
+  .cmd-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .cmd-badge {
+    display: inline-block;
+    background: rgba(58, 117, 130, 0.1);
+    color: var(--accent);
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 12.5px;
+  }
+
+  .cmd-group-tag {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .source-notes-box {
+    margin-top: 20px;
+    background: #fbfbf9;
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 13px;
+    color: var(--body);
+  }
+
+  .source-notes-box strong {
+    color: var(--ink);
+  }
+
+  /* ================= ARCHITECTURE SECTION ================= */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+
+  .arch-card {
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 10px rgba(39, 16, 20, 0.02);
+  }
+
+  .arch-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--purple-dot);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 8px;
+  }
+
+  .arch-card h4 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .arch-card p {
+    font-size: 14px;
+    color: var(--body);
+    line-height: 1.5;
+  }
+
+  .cipher-callout {
+    background: #fbf8f5;
+    border: 1px solid #fae1d4;
+    border-left: 4px solid var(--orange-dot);
+    border-radius: 12px;
+    padding: 20px 24px;
+    font-size: 14px;
+    color: var(--body);
+  }
+
+  .cipher-callout strong {
+    color: var(--ink);
+  }
+
+  /* ================= QUICKSTART / CODE TABS ================= */
+  .quickstart-card {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(21, 19, 22, 0.35);
+  }
+
+  .qs-tabs-header {
+    background: #100e11;
+    border-bottom: 1px solid var(--code-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+  }
+
+  .qs-tab-buttons {
+    display: flex;
+    gap: 4px;
+  }
+
+  .qs-tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--code-muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .qs-tab-btn:hover {
+    color: #fff;
+  }
+
+  .qs-tab-btn.active {
+    color: #fff;
+    border-bottom-color: var(--accent);
+  }
+
+  .qs-tab-content {
+    display: none;
+    padding: 28px;
+  }
+
+  .qs-tab-content.active {
+    display: block;
+  }
+
+  .code-block-wrap {
+    position: relative;
+    background: #0d0b0e;
+    border: 1px solid #231f26;
+    border-radius: 10px;
+    padding: 20px 22px;
+    margin-bottom: 18px;
+    overflow-x: auto;
+  }
+
+  .code-block-wrap pre {
+    color: var(--code-text);
+    font-size: 13.5px;
+    line-height: 1.65;
+    margin: 0;
+  }
+
+  .code-comment {
+    color: var(--code-muted);
+  }
+
+  .code-cmd {
+    color: var(--code-accent);
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #242028;
+    color: #d1cbd8;
+    border: 1px solid #36303c;
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .copy-btn:hover {
+    background: #342e3b;
+    color: #ffffff;
+  }
+
+  .qs-instructions {
+    color: #a8a2af;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+
+  .qs-instructions strong {
+    color: #ffffff;
+  }
+
+  .qs-instructions code {
+    background: #231f26;
+    color: #e4dfe9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+  }
+
+  /* ================= DOCS & RESOURCES ================= */
+  .docs-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .doc-card {
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .doc-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+    box-shadow: 0 10px 24px rgba(39, 16, 20, 0.06);
+  }
+
+  .doc-tag {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--orange-dot);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .doc-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .doc-card p {
+    font-size: 14px;
+    color: var(--body);
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  .doc-link {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ================= TEAK GRID FOOTER (STRUCTURE FROM IMAGE) ================= */
+  .footer-section {
+    padding: 84px 0 40px;
+    background: transparent;
+  }
+
+  .footer-grid-frame {
+    display: grid;
+    grid-template-columns: 1fr 1.08fr;
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 6px 28px rgba(39, 16, 20, 0.04);
+  }
+
+  /* LEFT COLUMN: BRAND */
+  .footer-left-col {
+    padding: 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: #fafbf9;
+    border-right: 1px solid var(--line);
+    position: relative;
+  }
+
+  .footer-big-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .footer-big-avatar {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center 15%;
+    border: 2px solid rgba(39, 16, 20, 0.15);
+    box-shadow: 0 4px 14px rgba(39, 16, 20, 0.12);
+  }
+
+  .footer-brand-title {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -1.2px;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .footer-brand-desc {
+    font-size: 15px;
+    color: var(--body);
+    max-width: 400px;
+    line-height: 1.6;
+  }
+
+  /* RIGHT COLUMN: NEWSLETTER + 2X2 LINKS GRID */
+  .footer-right-col {
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+  }
+
+  /* ACCENT NEWSLETTER CALLOUT */
+  .footer-newsletter-card {
+    background: var(--highlight);
+    padding: 40px 44px;
+    border-bottom: 1px solid rgba(39, 16, 20, 0.08);
+  }
+
+  .newsletter-heading {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.8px;
+    color: var(--ink);
+    margin-bottom: 6px;
+    line-height: 1.15;
+  }
+
+  .newsletter-sub {
+    font-size: 14.5px;
+    color: var(--body);
+    margin-bottom: 22px;
+    font-weight: 500;
+  }
+
+  .newsletter-form {
+    display: flex;
+    gap: 10px;
+    max-width: 480px;
+  }
+
+  .newsletter-input {
+    flex: 1;
+    background: #ffffff;
+    border: 1px solid rgba(39, 16, 20, 0.12);
+    border-radius: 999px;
+    padding: 10px 20px;
+    font-size: 13px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .newsletter-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(58, 117, 130, 0.15);
+  }
+
+  .newsletter-btn {
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    border-radius: 999px;
+    padding: 10px 22px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    white-space: nowrap;
+    box-shadow: 0 2px 10px rgba(58, 117, 130, 0.25);
+  }
+
+  .newsletter-btn:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(58, 117, 130, 0.35);
+  }
+
+  /* 2X2 LINKS GRID WITH CLEAN BORDER LINES */
+  .footer-links-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: #ffffff;
+    flex: 1;
+  }
+
+  .footer-cell {
+    padding: 36px 44px;
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .footer-cell:nth-child(2n) {
+    border-right: none;
+  }
+
+  .footer-cell:nth-child(3),
+  .footer-cell:nth-child(4) {
+    border-bottom: none;
+  }
+
+  .footer-cell-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 18px;
+    letter-spacing: -0.2px;
+  }
+
+  .footer-cell-links {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .footer-cell-links a {
+    font-size: 13.5px;
+    color: var(--body);
+    transition: color 0.15s, transform 0.15s;
+    display: inline-block;
+  }
+
+  .footer-cell-links a:hover {
+    color: var(--accent);
+    transform: translateX(3px);
+  }
+
+  /* BOTTOM METADATA BAR */
+  .footer-bottom-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 8px 0;
+    font-size: 13px;
+    color: var(--body-muted);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .footer-legal-links {
+    display: flex;
+    gap: 24px;
+  }
+
+  .footer-legal-links a {
+    color: var(--body-muted);
+    transition: color 0.15s;
+  }
+
+  .footer-legal-links a:hover {
+    color: var(--accent);
+  }
+
+  /* ================= RESPONSIVE ================= */
+  @media (max-width: 1024px) {
+    .hero-grid {
+      grid-template-columns: 1fr;
+      gap: 48px;
+    }
+    .commands-layout {
+      grid-template-columns: 1fr;
+    }
+    .features-grid,
+    .arch-grid,
+    .docs-grid {
+      grid-template-columns: 1fr;
+    }
+    .footer-grid-frame {
+      grid-template-columns: 1fr;
+    }
+    .footer-left-col {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .nav-links {
+      display: none;
+    }
+    h1 {
+      font-size: 36px;
+    }
+    .hero-section {
+      padding: 44px 0 60px;
+    }
+    .section-wrap {
+      padding: 60px 0;
+    }
+    .footer-links-grid {
+      grid-template-columns: 1fr;
+    }
+    .footer-cell {
+      border-right: none !important;
+      border-bottom: 1px solid var(--line) !important;
+      padding: 24px 28px;
+    }
+    .footer-cell:last-child {
+      border-bottom: none !important;
+    }
+    .footer-left-col,
+    .footer-newsletter-card {
+      padding: 28px 24px;
+    }
+    .newsletter-form {
+      flex-direction: column;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ================= TOP NAV ================= -->
+  <div class="nav-wrap">
+    <nav>
+      <a href="#" class="logo">
+        <img src="alfred_avatar.jpg" alt="Alfred" class="logo-avatar">
+        <span>alfred</span>
+      </a>
+
+      <ul class="nav-links mono">
+        <li><a href="#features"><span class="color-sq sq-green"></span>Features</a></li>
+        <li><a href="#commands"><span class="color-sq sq-blue"></span>Commands</a></li>
+        <li><a href="#architecture"><span class="color-sq sq-purple"></span>Architecture</a></li>
+        <li><a href="#quickstart"><span class="color-sq sq-pink"></span>Quickstart</a></li>
+        <li><a href="#docs"><span class="color-sq sq-orange"></span>Docs</a></li>
+      </ul>
+
+      <div class="nav-right mono">
+        <a href="https://github.com/nauqh/alfred" target="_blank" rel="noopener noreferrer" class="btn-dark">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          Star on GitHub <span class="play-arrow"></span>
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ================= HERO SECTION ================= -->
+  <section class="hero-section">
+    <div class="container hero-grid">
+
+      <div class="hero-left">
+        <h1>
+          The <span class="highlight-wrap">self-hosted</span> music bot for Discord server
+        </h1>
+
+        <p class="hero-desc">
+          Play music from YouTube, Spotify, and Deezer directly in your Discord voice channels. Fast autocomplete search, clean single-message button controls, and zero channel spam.
+        </p>
+
+        <div class="hero-ctas">
+          <a href="#quickstart" class="btn-primary mono">
+            Deploy Now <span class="play-arrow"></span>
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="screenshot-frame">
+          <div class="window-header">
+            <div class="mac-dot mac-red"></div>
+            <div class="mac-dot mac-yellow"></div>
+            <div class="mac-dot mac-green"></div>
+            <span class="window-title mono">discord / #music-room</span>
+          </div>
+          <img src="thumbnail.png" alt="Alfred Discord Player View" class="discord-screenshot">
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= FEATURES SECTION ================= -->
+  <section id="features" class="section-wrap">
+    <div class="container">
+      <div class="section-head">
+        <div class="section-tag mono">
+          <span class="color-sq sq-green"></span> 01 / Core Features
+        </div>
+        <h2 class="section-title">Built for servers that care about audio fidelity and clean channels.</h2>
+        <p class="section-subtitle">
+          Audio never touches the main Python bot process. A dedicated Lavalink node handles decoding and playback streaming while Alfred manages your server requests.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon-box">🎵</div>
+          <h3>Multi-Source Streaming</h3>
+          <p>Stream directly from YouTube, Spotify, and Deezer. Supports tracks, full albums, playlists, and raw audio URLs.</p>
+          <div class="feature-pill-list mono">
+            <span class="source-pill">YouTube</span>
+            <span class="source-pill">Spotify</span>
+            <span class="source-pill">Deezer</span>
+            <span class="source-pill">Direct URLs</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-box">⚡</div>
+          <h3>LavaSearch Autocomplete</h3>
+          <p>Instant search suggestions right inside Discord's slash command input. Filter by track name, artist, album, or playlist.</p>
+          <div class="feature-pill-list mono">
+            <span class="source-pill">/search</span>
+            <span class="source-pill">Live Query</span>
+            <span class="source-pill">LavaSearch</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-box">🎛️</div>
+          <h3>Unified Queue Panel</h3>
+          <p>Single-message interactive UI. Pause, Skip, cycle Loop modes, and Stop using Discord buttons with instant state updates.</p>
+          <div class="feature-pill-list mono">
+            <span class="source-pill">No Spam</span>
+            <span class="source-pill">In-Place Redraw</span>
+            <span class="source-pill">Button Actions</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-box">🔇</div>
+          <h3>Zero Unprompted Spam</h3>
+          <p>Alfred never speaks unless spoken to. Every embed is a direct slash reply. Buttons expire cleanly after 3 minutes of inactivity.</p>
+          <div class="feature-pill-list mono">
+            <span class="source-pill">Quiet Bot</span>
+            <span class="source-pill">Clean Channels</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-box">👂</div>
+          <h3>Smart Deafen & Auto-Leave</h3>
+          <p>Deafening yourself automatically pauses playback when you are the sole listener. Alfred disconnects when voice channels empty.</p>
+          <div class="feature-pill-list mono">
+            <span class="source-pill">Auto-Pause</span>
+            <span class="source-pill">Auto-Leave</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-box">🛡️</div>
+          <h3>yt-cipher Bypass</h3>
+          <p>Includes a companion cipher server that executes obfuscated YouTube player scripts to resolve streaming signatures reliably.</p>
+          <div class="feature-pill-list mono">
+            <span class="source-pill">yt-cipher</span>
+            <span class="source-pill">Docker Ready</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COMMANDS & INTERACTIVE PLAYGROUND ================= -->
+  <section id="commands" class="section-wrap">
+    <div class="container">
+      <div class="section-head">
+        <div class="section-tag mono">
+          <span class="color-sq sq-blue"></span> 02 / Commands & Interactive UI
+        </div>
+        <h2 class="section-title">Eight concise commands. One reactive interface.</h2>
+        <p class="section-subtitle">
+          `/play` connects to your voice channel automatically - no `/join` needed. Try clicking the buttons below to test the reactive panel state machine.
+        </p>
+      </div>
+
+      <div class="commands-layout">
+
+        <!-- INTERACTIVE DISCORD SIMULATOR -->
+        <div class="discord-sim-box">
+          <div class="sim-header">
+            <div class="sim-channel-name mono">
+              <span>#</span> music-room
+            </div>
+            <div class="sim-tag-live mono">INTERACTIVE DEMO</div>
+          </div>
+
+          <div class="discord-msg">
+            <img src="alfred_avatar.jpg" alt="Alfred" class="msg-avatar">
+            <div class="msg-body">
+              <div class="msg-meta">
+                <span class="bot-author">Alfred</span>
+                <span class="bot-tag">BOT</span>
+                <span class="msg-time mono">Today at 7:42 PM</span>
+              </div>
+
+              <!-- EMBED -->
+              <div class="discord-embed-card">
+                <div class="embed-title">
+                  <span>🎶</span> Currently Playing
+                </div>
+                <div id="sim-track-title" class="now-playing-title">
+                  1. Red Hot Chili Peppers - Can't Stop
+                </div>
+
+                <div class="progress-wrap">
+                  <div class="progress-bar-bg">
+                    <div id="sim-progress-fill" class="progress-bar-fill"></div>
+                  </div>
+                  <div class="progress-times mono">
+                    <span id="sim-time-current">01:58</span>
+                    <span id="sim-time-total">04:29</span>
+                  </div>
+                </div>
+
+                <div class="queue-list-preview mono">
+                  <div style="color: var(--discord-text-muted); margin-bottom: 6px; font-weight: 700;">UP NEXT (3 TRACKS):</div>
+                  <div class="queue-item">
+                    <span>2. Daft Punk - Instant Crush</span>
+                    <span style="color: var(--discord-text-muted);">05:37</span>
+                  </div>
+                  <div class="queue-item">
+                    <span>3. Gorillaz - Feel Good Inc.</span>
+                    <span style="color: var(--discord-text-muted);">03:41</span>
+                  </div>
+                </div>
+
+                <!-- BUTTON CONTROLS -->
+                <div class="discord-button-row mono">
+                  <button id="btn-pause" class="d-btn" onclick="togglePause()">
+                    <span id="pause-icon">⏸️</span> <span id="pause-text">Pause</span>
+                  </button>
+                  <button id="btn-skip" class="d-btn" onclick="skipTrack()">
+                    ⏭️ Skip
+                  </button>
+                  <button id="btn-loop" class="d-btn" onclick="cycleLoop()">
+                    🔁 <span id="loop-text">Loop: off</span>
+                  </button>
+                  <button id="btn-stop" class="d-btn btn-stop" onclick="stopPlayer()">
+                    ⏹️ Stop
+                  </button>
+                </div>
+              </div>
+
+              <div class="sim-hint mono">
+                <span>💡</span> Press buttons to test reactive updates. Queue redraws in place on every click.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COMMANDS TABLE -->
+        <div>
+          <div class="commands-table-wrap">
+            <table class="cmd-table">
+              <thead>
+                <tr>
+                  <th>Group</th>
+                  <th>Command</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody class="mono">
+                <tr>
+                  <td><span class="cmd-group-tag">MUSIC</span></td>
+                  <td><span class="cmd-badge">/play</span></td>
+                  <td>Add track, playlist or URL to queue with auto voice join</td>
+                </tr>
+                <tr>
+                  <td><span class="cmd-group-tag">MUSIC</span></td>
+                  <td><span class="cmd-badge">/search</span></td>
+                  <td>Live autocomplete across tracks, artists, and playlists</td>
+                </tr>
+                <tr>
+                  <td><span class="cmd-group-tag">QUEUE</span></td>
+                  <td><span class="cmd-badge">/queue</span></td>
+                  <td>Open the interactive button panel and track list</td>
+                </tr>
+                <tr>
+                  <td><span class="cmd-group-tag">QUEUE</span></td>
+                  <td><span class="cmd-badge">/skip</span></td>
+                  <td>Move forward to the next queued track</td>
+                </tr>
+                <tr>
+                  <td><span class="cmd-group-tag">QUEUE</span></td>
+                  <td><span class="cmd-badge">/remove</span></td>
+                  <td>Drop a specific track from the queue index</td>
+                </tr>
+                <tr>
+                  <td><span class="cmd-group-tag">VOICE</span></td>
+                  <td><span class="cmd-badge">/leave</span></td>
+                  <td>Disconnect bot from voice and clear player state</td>
+                </tr>
+                <tr>
+                  <td><span class="cmd-group-tag">OWNER</span></td>
+                  <td><span class="cmd-badge">/stats</span></td>
+                  <td>Display Lavalink node health and memory metrics</td>
+                </tr>
+                <tr>
+                  <td><span class="cmd-group-tag">OWNER</span></td>
+                  <td><span class="cmd-badge">/info</span></td>
+                  <td>Show running bot versions, plugins, and Lavalink info</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="source-notes-box mono">
+            <strong>Source Configuration Caveats:</strong><br>
+            • <strong>YouTube:</strong> Zero credentials required; handled via local yt-cipher server.<br>
+            • <strong>Spotify:</strong> Requires <code>clientId</code> and <code>clientSecret</code> in configuration.<br>
+            • <strong>Deezer:</strong> Disabled until <code>masterDecryptionKey</code> is provided.
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ARCHITECTURE SECTION ================= -->
+  <section id="architecture" class="section-wrap">
+    <div class="container">
+      <div class="section-head">
+        <div class="section-tag mono">
+          <span class="color-sq sq-purple"></span> 03 / Architecture
+        </div>
+        <h2 class="section-title">Engineered for zero-lag streaming.</h2>
+        <p class="section-subtitle">
+          Alfred isolates control logic from audio transport, guaranteeing high responsiveness even under heavy server load.
+        </p>
+      </div>
+
+      <div class="arch-grid">
+        <div class="arch-card">
+          <div class="arch-num mono">Node 01</div>
+          <h4>Alfred Bot Core</h4>
+          <p>Written in Python 3.13 on Hikari and Lightbulb. Manages Discord events, autocomplete queries, user interaction buttons, and queue states.</p>
+        </div>
+
+        <div class="arch-card">
+          <div class="arch-num mono">Node 02</div>
+          <h4>Lavalink v4 Audio Node</h4>
+          <p>Java audio server powering audio decoding and voice channel streaming. Uses LavaSrc for multi-source playback and LavaSearch for live indexing.</p>
+        </div>
+
+        <div class="arch-card">
+          <div class="arch-num mono">Node 03</div>
+          <h4>yt-cipher HTTP Daemon</h4>
+          <p>Executes YouTube JavaScript signature decipher routines remotely, eliminating <code>Must find sig function</code> errors during stream extraction.</p>
+        </div>
+      </div>
+
+      <div class="cipher-callout">
+        <strong>Why yt-cipher matters:</strong> YouTube updates player scripts frequently to protect media URLs. Running yt-cipher in tandem with Lavalink guarantees smooth playback without needing manual library patches. For VPS IP blocks, YouTube OAuth is supported.
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= QUICKSTART SECTION ================= -->
+  <section id="quickstart" class="section-wrap">
+    <div class="container">
+      <div class="section-head">
+        <div class="section-tag mono">
+          <span class="color-sq sq-pink"></span> 04 / Quickstart
+        </div>
+        <h2 class="section-title">Up and running in three steps.</h2>
+        <p class="section-subtitle">
+          Choose Docker Compose for production deployments or uv for local development.
+        </p>
+      </div>
+
+      <div class="quickstart-card">
+        <div class="qs-tabs-header mono">
+          <div class="qs-tab-buttons">
+            <button class="qs-tab-btn active" onclick="switchTab('docker')">Docker Compose (Recommended)</button>
+            <button class="qs-tab-btn" onclick="switchTab('local')">Local Dev (uv + Java)</button>
+            <button class="qs-tab-btn" onclick="switchTab('vps')">VPS Deployment</button>
+          </div>
+          <div style="font-size: 11px; color: var(--code-muted); padding: 8px;">BASH / CLI</div>
+        </div>
+
+        <!-- DOCKER TAB -->
+        <div id="tab-docker" class="qs-tab-content active">
+          <div class="code-block-wrap">
+            <button class="copy-btn mono" onclick="copySnippet('docker-code')">
+              <span id="copy-docker-text">Copy</span>
+            </button>
+            <pre class="mono" id="docker-code"><span class="code-comment"># 1. Clone &amp; prepare environment files</span>
+<span class="code-cmd">cp</span> .env.example .env
+<span class="code-cmd">cp</span> lavalink/application.yml.example lavalink/application.yml
+
+<span class="code-comment"># 2. Set DISCORD_TOKEN &amp; CIPHER_PASSWORD in .env</span>
+<span class="code-comment"># Linux permissions (first run only):</span>
+<span class="code-cmd">chown</span> -R 322:322 lavalink/logs lavalink/plugins
+
+<span class="code-comment"># 3. Start all three services (yt-cipher, Lavalink, Alfred)</span>
+<span class="code-cmd">docker compose up</span> -d</pre>
+          </div>
+          <div class="qs-instructions">
+            <strong>Docker Compose</strong> automatically starts <code>yt-cipher</code>, <code>Lavalink</code>, and the <code>bot</code> in ordered sequence. To rebuild after local edits, run <code>docker compose up -d --build bot</code>.
+          </div>
+        </div>
+
+        <!-- LOCAL TAB -->
+        <div id="tab-local" class="qs-tab-content">
+          <div class="code-block-wrap">
+            <button class="copy-btn mono" onclick="copySnippet('local-code')">
+              <span id="copy-local-text">Copy</span>
+            </button>
+            <pre class="mono" id="local-code"><span class="code-comment"># Requires Java 21+ for Lavalink</span>
+<span class="code-cmd">winget install</span> --id Microsoft.OpenJDK.21 -e
+
+<span class="code-comment"># Terminal 1: Run Lavalink node</span>
+<span class="code-cmd">.\scripts\lavalink.ps1</span>
+
+<span class="code-comment"># Terminal 2: Run Alfred bot with uv</span>
+<span class="code-cmd">uv sync</span> --frozen
+<span class="code-cmd">uv run alfred</span></pre>
+          </div>
+          <div class="qs-instructions">
+            Running locally connects directly to <code>LAVALINK_HOST=127.0.0.1</code>. Run checks with <code>uv run pytest</code> and <code>uv run ruff check .</code>.
+          </div>
+        </div>
+
+        <!-- VPS TAB -->
+        <div id="tab-vps" class="qs-tab-content">
+          <div class="code-block-wrap">
+            <button class="copy-btn mono" onclick="copySnippet('vps-code')">
+              <span id="copy-vps-text">Copy</span>
+            </button>
+            <pre class="mono" id="vps-code"><span class="code-comment"># Check VPS deployment guide for machine hardening &amp; OAuth</span>
+<span class="code-cmd">git clone</span> https://github.com/nauqh/alfred.git /opt/alfred
+<span class="code-cmd">cd</span> /opt/alfred
+
+<span class="code-comment"># Follow docs/deploy.md for YouTube OAuth token generator</span>
+<span class="code-comment"># and systemd/docker restart configurations</span></pre>
+          </div>
+          <div class="qs-instructions">
+            When running on VPS host IPs flagged by YouTube, configure YouTube OAuth as documented in <a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank" style="color: var(--accent); text-decoration: underline;">docs/deploy.md</a>.
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DOCS & RESOURCES SECTION ================= -->
+  <section id="docs" class="section-wrap">
+    <div class="container">
+      <div class="section-head">
+        <div class="section-tag mono">
+          <span class="color-sq sq-orange"></span> 05 / Documentation & Guides
+        </div>
+        <h2 class="section-title">Deep dive into deployment and architecture.</h2>
+        <p class="section-subtitle">
+          Comprehensive guides covering production operations, internal design specs, and multi-node clusters.
+        </p>
+      </div>
+
+      <div class="docs-grid">
+        <a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank" class="doc-card">
+          <div>
+            <div class="doc-tag mono">Guide</div>
+            <h3>VPS Deployment</h3>
+            <p>Step-by-step VPS server preparation, secrets management, automatic updates, and YouTube OAuth authentication.</p>
+          </div>
+          <span class="doc-link mono">Read deploy.md &rarr;</span>
+        </a>
+
+        <a href="https://github.com/nauqh/alfred/blob/main/docs/design.md" target="_blank" class="doc-card">
+          <div>
+            <div class="doc-tag mono">Architecture</div>
+            <h3>Design Specifications</h3>
+            <p>In-depth architectural overview of state transitions, voice listener tracking, and Lavalink packet event handlers.</p>
+          </div>
+          <span class="doc-link mono">Read design.md &rarr;</span>
+        </a>
+
+        <a href="https://github.com/nauqh/alfred/blob/main/docs/prd.md" target="_blank" class="doc-card">
+          <div>
+            <div class="doc-tag mono">Product Spec</div>
+            <h3>PRD &amp; Acceptance</h3>
+            <p>Product requirements, acceptance criteria, test assertions, and source compatibility matrices.</p>
+          </div>
+          <span class="doc-link mono">Read prd.md &rarr;</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TEAK GRID FOOTER ================= -->
+  <footer class="footer-section">
+    <div class="container">
+
+      <!-- FRAMED GRID BOX -->
+      <div class="footer-grid-frame">
+
+        <!-- LEFT COLUMN: BRAND -->
+        <div class="footer-left-col">
+          <div>
+            <div class="footer-big-brand">
+              <img src="alfred_avatar.jpg" alt="Alfred" class="footer-big-avatar">
+              <div class="footer-brand-title">alfred</div>
+            </div>
+            <p class="footer-brand-desc">
+              The music bot for self-hosted servers. Zero spam, instant autocomplete search, and high-fidelity Lavalink streaming.
+            </p>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: NEWSLETTER + 2X2 LINKS -->
+        <div class="footer-right-col">
+
+          <!-- YELLOW NEWSLETTER BANNER -->
+          <div class="footer-newsletter-card">
+            <h3 class="newsletter-heading">Release wisdom straight to your inbox</h3>
+            <p class="newsletter-sub">Get the latest updates, deployment tips, and audio source fixes.</p>
+            <form class="newsletter-form" onsubmit="event.preventDefault(); alert('Subscribed for Alfred updates!');">
+              <input type="email" class="newsletter-input mono" placeholder="Enter your email" required>
+              <button type="submit" class="newsletter-btn mono">Subscribe</button>
+            </form>
+          </div>
+
+          <!-- 2X2 LINKS GRID -->
+          <div class="footer-links-grid">
+
+            <div class="footer-cell">
+              <h4 class="footer-cell-title">Product</h4>
+              <ul class="footer-cell-links mono">
+                <li><a href="#features">Why Alfred</a></li>
+                <li><a href="#commands">Commands</a></li>
+                <li><a href="#architecture">Architecture</a></li>
+                <li><a href="#quickstart">Quickstart</a></li>
+              </ul>
+            </div>
+
+            <div class="footer-cell">
+              <h4 class="footer-cell-title">Resources</h4>
+              <ul class="footer-cell-links mono">
+                <li><a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank">Docs ↗</a></li>
+                <li><a href="https://github.com/nauqh/alfred/blob/main/docs/design.md" target="_blank">Design Spec ↗</a></li>
+                <li><a href="https://github.com/nauqh/alfred/blob/main/docs/prd.md" target="_blank">PRD Spec ↗</a></li>
+                <li><a href="https://github.com/nauqh/alfred/issues" target="_blank">Contact Support ↗</a></li>
+              </ul>
+            </div>
+
+            <div class="footer-cell">
+              <h4 class="footer-cell-title">Company</h4>
+              <ul class="footer-cell-links mono">
+                <li><a href="#quickstart">About Alfred</a></li>
+                <li><a href="https://github.com/bachtran02/MusicCat" target="_blank">MusicCat Rewrite ↗</a></li>
+                <li><a href="https://github.com/nauqh/Ashema" target="_blank">Ashema Origin ↗</a></li>
+                <li><a href="https://github.com/nauqh/alfred/blob/main/pyproject.toml" target="_blank">MIT License ↗</a></li>
+              </ul>
+            </div>
+
+            <div class="footer-cell">
+              <h4 class="footer-cell-title">Find us</h4>
+              <ul class="footer-cell-links mono">
+                <li><a href="https://github.com/nauqh/alfred" target="_blank">GitHub ↗</a></li>
+                <li><a href="https://github.com/nauqh/alfred/issues" target="_blank">Issue Tracker ↗</a></li>
+                <li><a href="https://github.com/nauqh" target="_blank">Nauqh Profile ↗</a></li>
+              </ul>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- BOTTOM METADATA -->
+      <div class="footer-bottom-bar mono">
+        <div class="footer-copy">© 2026 Alfred. Rewrite of MusicCat, inspired by Ashema.</div>
+        <div class="footer-legal-links">
+          <a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank">Deploy Guide</a>
+          <a href="https://github.com/nauqh/alfred/blob/main/docs/design.md" target="_blank">Design Docs</a>
+          <a href="https://github.com/nauqh/alfred" target="_blank">GitHub</a>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Lenis Smooth Scroll Library -->
+  <script src="https://unpkg.com/lenis@1.1.20/dist/lenis.min.js"></script>
+
+  <!-- ================= INTERACTION SCRIPT ================= -->
+  <script>
+    // Initialize Lenis Smooth Scroll
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 2,
+    });
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+
+    // Lenis Smooth Scroll Anchor Navigation
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        const href = this.getAttribute('href');
+        if (href === '#' || !href) return;
+        const target = document.querySelector(href);
+        if (target) {
+          e.preventDefault();
+          lenis.scrollTo(target, { offset: -90, duration: 1.2 });
+        }
+      });
+    });
+
+    // Tab Switcher
+    function switchTab(tabId) {
+      document.querySelectorAll('.qs-tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.qs-tab-content').forEach(content => content.classList.remove('active'));
+
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+    }
+
+    // Snippet Copy
+    function copySnippet(elementId) {
+      const text = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const btnText = document.getElementById('copy-' + elementId.split('-')[0] + '-text');
+        if (btnText) {
+          const original = btnText.innerText;
+          btnText.innerText = 'Copied!';
+          setTimeout(() => { btnText.innerText = original; }, 2000);
+        }
+      });
+    }
+
+    // Interactive Discord Player Demo State
+    const tracks = [
+      { title: "1. Red Hot Chili Peppers - Can't Stop", time: "01:58", total: "04:29", progress: 42 },
+      { title: "2. Daft Punk - Instant Crush", time: "00:45", total: "05:37", progress: 14 },
+      { title: "3. Gorillaz - Feel Good Inc.", time: "02:10", total: "03:41", progress: 58 }
+    ];
+
+    let currentTrackIdx = 0;
+    let isPaused = false;
+    let loopModeIdx = 0;
+    const loopModes = ["off", "track", "queue"];
+
+    function togglePause() {
+      isPaused = !isPaused;
+      const pauseText = document.getElementById('pause-text');
+      const pauseIcon = document.getElementById('pause-icon');
+      const btn = document.getElementById('btn-pause');
+
+      if (isPaused) {
+        pauseText.innerText = 'Resume';
+        pauseIcon.innerText = '▶️';
+        btn.classList.add('btn-active');
+      } else {
+        pauseText.innerText = 'Pause';
+        pauseIcon.innerText = '⏸️';
+        btn.classList.remove('btn-active');
+      }
+    }
+
+    function skipTrack() {
+      currentTrackIdx = (currentTrackIdx + 1) % tracks.length;
+      updateTrackDisplay();
+    }
+
+    function cycleLoop() {
+      loopModeIdx = (loopModeIdx + 1) % loopModes.length;
+      const loopText = document.getElementById('loop-text');
+      const btn = document.getElementById('btn-loop');
+      const mode = loopModes[loopModeIdx];
+      loopText.innerText = 'Loop: ' + mode;
+
+      if (mode !== 'off') {
+        btn.classList.add('btn-active');
+      } else {
+        btn.classList.remove('btn-active');
+      }
+    }
+
+    function stopPlayer() {
+      const title = document.getElementById('sim-track-title');
+      const fill = document.getElementById('sim-progress-fill');
+      const curTime = document.getElementById('sim-time-current');
+      const totalTime = document.getElementById('sim-time-total');
+
+      title.innerText = '⏹️ Playback stopped. Queue cleared.';
+      title.style.color = 'var(--discord-text-muted)';
+      fill.style.width = '0%';
+      curTime.innerText = '00:00';
+      totalTime.innerText = '00:00';
+
+      setTimeout(() => {
+        title.style.color = '#00a8fc';
+        updateTrackDisplay();
+      }, 2500);
+    }
+
+    function updateTrackDisplay() {
+      const track = tracks[currentTrackIdx];
+      document.getElementById('sim-track-title').innerText = track.title;
+      document.getElementById('sim-progress-fill').style.width = track.progress + '%';
+      document.getElementById('sim-time-current').innerText = track.time;
+      document.getElementById('sim-time-total').innerText = track.total;
+    }
+  </script>
+</body>
+</html>
