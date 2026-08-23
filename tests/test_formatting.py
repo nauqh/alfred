@@ -49,18 +49,24 @@ def test_parse_time_splits_a_duration() -> None:
 
 
 def test_progress_bar_marks_where_playback_is() -> None:
-    from alfred.constants import EMOJI_RADIO_BUTTON
+    from alfred.constants import PROGRESS_BAR_EMPTY
+    from alfred.constants import PROGRESS_BAR_FILLED
 
-    assert progress_bar(0.0).startswith(EMOJI_RADIO_BUTTON)
-    assert progress_bar(1.0).endswith(EMOJI_RADIO_BUTTON)
-    assert progress_bar(0.5).startswith("▬" * (PROGRESS_BAR_WIDTH // 2) + EMOJI_RADIO_BUTTON)
+    assert progress_bar(0.0) == PROGRESS_BAR_EMPTY * PROGRESS_BAR_WIDTH
+    assert progress_bar(1.0) == PROGRESS_BAR_FILLED * PROGRESS_BAR_WIDTH
+    bar = progress_bar(0.5)
+    assert bar.count(PROGRESS_BAR_FILLED) == PROGRESS_BAR_WIDTH // 2
+    assert bar.count(PROGRESS_BAR_EMPTY) == PROGRESS_BAR_WIDTH - PROGRESS_BAR_WIDTH // 2
 
 
 @pytest.mark.parametrize("fraction", [-1.0, 0.0, 0.5, 1.0, 2.0])
 def test_progress_bar_stays_in_bounds(fraction: float) -> None:
+    from alfred.constants import PROGRESS_BAR_EMPTY
+    from alfred.constants import PROGRESS_BAR_FILLED
+
     bar = progress_bar(fraction)
 
-    assert bar.count("▬") == PROGRESS_BAR_WIDTH - 1
+    assert bar.count(PROGRESS_BAR_FILLED) + bar.count(PROGRESS_BAR_EMPTY) == PROGRESS_BAR_WIDTH
 
 
 def test_trim_only_shortens_what_is_too_long() -> None:

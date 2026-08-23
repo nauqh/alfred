@@ -1,14 +1,17 @@
 """Handling of the events Lavalink sends about players and nodes.
 
-Nothing here posts to Discord. The player announces itself through the reply to the command
-that queued it, and through `/queue`; the bot does not follow a queue around a channel with a
-message per track. What is left is the record of what the node is doing.
+Two jobs: keeping the now playing view in step with the player - a track starting posts the
+view, the queue ending removes it - and keeping a stuck player moving. Everything else is the
+record of what the node is doing.
 """
 
 from __future__ import annotations
 
 import lavalink
 from loguru import logger
+
+from alfred.nowplaying import NowPlayingManager
+from alfred.player import AlfredPlayer
 
 # How many times to re-queue a track that failed to load or stalled mid-play, before letting
 # the player move on to the next one. YouTube streams die transiently (rate limits, expired
@@ -19,19 +22,31 @@ MAX_RETRIES = 1
 
 class LavalinkEventHandler:
     """
-    Logs what the node reports, and keeps a stuck player moving.
+    Keeps the now playing view in step with the player, and a stuck player moving.
 
     Register it with `lavalink.Client.add_event_hooks`.
     """
+
+    def __init__(self, now_playing: NowPlayingManager) -> None:
+        self._now_playing = now_playing
 
     @lavalink.listener(lavalink.TrackStartEvent)
     async def on_track_start(self, event: lavalink.TrackStartEvent) -> None:
         logger.bind(track=True).info("{} - {} - {}", event.track.title, event.track.author, event.track.uri)
         logger.info("Track started on guild {}", event.player.guild_id)
 
+        assert isinstance(event.player, AlfredPlayer)
+        # `show` replaces whatever view is up, which covers every way a track can start:
+        # naturally, by skip, or by the retry below putting a failed track back on.
+        await self._now_playing.show(event.player)
+
     @lavalink.listener(lavalink.QueueEndEvent)
     async def on_queue_end(self, event: lavalink.QueueEndEvent) -> None:
         logger.info("Queue finished on guild {}", event.player.guild_id)
+
+        # Nothing left to control. `AlfredPlayer.stop` dispatches this too, so the view also
+        # goes when the bot leaves voice; handling must stay idempotent.
+        await self._now_playing.hide(event.player.guild_id)
 
     @lavalink.listener(lavalink.TrackEndEvent)
     async def on_track_end(self, event: lavalink.TrackEndEvent) -> None:

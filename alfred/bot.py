@@ -14,6 +14,7 @@ from alfred import responses
 from alfred.config import Config
 from alfred.events import LavalinkEventHandler
 from alfred.extensions import EXTENSIONS
+from alfred.nowplaying import NowPlayingManager
 from alfred.player import AlfredPlayer
 
 # GUILD_MESSAGES is deliberately not here: the bot posts only replies to commands and does
@@ -74,7 +75,7 @@ def build(config: Config) -> hikari.GatewayBot:
         )
 
         lavalink_client = build_lavalink_client(config, me.id)
-        lavalink_client.add_event_hooks(LavalinkEventHandler())
+        lavalink_client.add_event_hooks(LavalinkEventHandler(NowPlayingManager(bot, client, lavalink_client)))
 
         # Registered before the first command runs, which is the last moment the DI registry
         # is still open for writes.

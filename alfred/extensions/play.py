@@ -121,6 +121,7 @@ async def _play(
         result,
         guild_id=ctx.guild_id,
         requester_id=ctx.user.id,
+        channel_id=ctx.channel_id,
         query=query,
         play_next=play_next,
         loop=loop,

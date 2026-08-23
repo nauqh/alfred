@@ -17,8 +17,7 @@ This release rebuilds the bot on the current generation of its libraries, becaus
 the versions it was pinned to can no longer be upgraded, and fixes the defects
 that rebuild exposed.
 
-It also **narrows the surface from 18 commands to 8, and removes the player
-buttons entirely** (§4.1). That second half was not in the original scope — the
+It also **narrows the surface from 18 commands to 9** (§4.1). That second half was not in the original scope — the
 release began as a straight port and the narrowing was decided during it. Four
 capabilities were dropped rather than relocated, and §4.1 names each one.
 
@@ -83,7 +82,7 @@ pre-existing user-facing bugs, not new work:
 
 ### 4.1 What was cut, and where it went
 
-The legacy bot's 18 commands became 8. Some cuts moved elsewhere; some removed a
+The legacy bot's 18 commands became 9. Some cuts moved; some removed a
 capability outright. The difference matters, so both are listed.
 
 Moved rather than removed:
@@ -93,7 +92,7 @@ Moved rather than removed:
 | `/stop` | `/leave`, which disconnects and clears |
 | `/loop` | the `loop` option on `/play` and `/search` |
 | `/shuffle` | the `shuffle` option on `/play` and `/search` |
-| `/now` | `/queue`, whose panel opens with the current track |
+| `/now` | back as a command - `/now` shows the current track card on demand |
 | `/join` | `/play`, which connects on its own |
 
 Removed outright, with nothing replacing them:
@@ -237,7 +236,7 @@ needs a live Discord and Lavalink node.
 
 | Metric | Target | How measured |
 |---|---|---|
-| Scope held | 8 commands, no buttons; every removal deliberate and recorded | §4.1 |
+| Scope held | 9 commands; every removal deliberate and recorded | §4.1 |
 | Known defects shipped | 0 of the 5 in §2 | Each has a test or a documented manual check |
 | Dependencies on a pre-release or unmaintained version | 0 | `pyproject.toml` |
 | Automated test coverage of pure logic | Every non-I/O module has tests | 100 tests at time of writing |
@@ -266,7 +265,7 @@ M5 is the gate. Everything before it is verified offline only.
 | Plugin versions rot, and a stale client name silently degrades playback | Medium | Versions verified 2026-08-14 and dated in the config; the config warns against copying a client list from an older file |
 | `MenuHandle` cannot detach a persistent menu (`components/menus.py:579-587`), so `attach_persistent` leaks an entry per panel | Low | `/queue` blocks on `attach()` instead, which discards in a `finally`; noted in `design.md` so it is not undone by accident |
 | Two `/play` commands within the same moment could skip a track, because `is_playing` is false until the node confirms the track started | Low | Pre-existing in the legacy bot; window is milliseconds; not worth a lock |
-| ~~Custom emoji belong to one Discord application~~ | ~~Low~~ | **Closed.** Eight of the eleven went with the legacy buttons; the three the embed still draws with are Unicode, and the new buttons carry no emoji at all |
+| ~~Custom emoji belong to one Discord application~~ | ~~Low~~ | **Closed.** Eight of the eleven went with the legacy buttons; the three the embed still draws with are Unicode, and the new buttons carry Unicode media emoji |
 
 ## 12. Open questions
 

@@ -543,6 +543,87 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 
+  /* COMMACT CYBER DECK CARDS */
+  .cyber-card {
+    background: var(--discord-embed);
+    border-left: 4px solid var(--accent);
+    border-radius: 4px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+
+  .cyber-card.row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .cyber-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .cyber-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .cyber-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .cyber-card.now-playing {
+    border-left: 4px solid var(--discord-blurple);
+  }
+
+  .cyber-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--discord-text-header);
+    margin-bottom: 6px;
+  }
+
+  .cyber-track {
+    font-size: 13px;
+    font-weight: 600;
+    color: #00a8fc;
+    word-break: break-word;
+  }
+
+  .cyber-artist {
+    font-size: 12px;
+    color: var(--discord-text-normal);
+    margin-top: 2px;
+  }
+
+  .cyber-bar {
+    font-size: 12px;
+    color: var(--discord-text-normal);
+    margin-top: 8px;
+  }
+
+  .cyber-now {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--discord-text-header);
+    margin-bottom: 4px;
+  }
+
+  .cyber-sub {
+    font-size: 11px;
+    color: var(--discord-text-muted);
+    margin-top: 8px;
+    font-style: italic;
+  }
+
+
   .sim-channel-name {
     display: flex;
     align-items: center;
@@ -606,81 +687,6 @@
     color: var(--discord-text-muted);
   }
 
-  .discord-embed-card {
-    background: var(--discord-embed);
-    border-left: 4px solid var(--accent);
-    border-radius: 4px;
-    padding: 16px;
-    margin-top: 8px;
-  }
-
-  .embed-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--discord-text-header);
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .now-playing-title {
-    font-size: 14px;
-    color: #00a8fc;
-    font-weight: 600;
-    margin-bottom: 12px;
-    word-break: break-all;
-  }
-
-  .progress-wrap {
-    margin-bottom: 14px;
-  }
-
-  .progress-bar-bg {
-    width: 100%;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 999px;
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 4px;
-  }
-
-  .progress-bar-fill {
-    width: 42%;
-    height: 100%;
-    background: var(--accent);
-    border-radius: 999px;
-    transition: width 0.3s;
-  }
-
-  .progress-times {
-    display: flex;
-    justify-content: space-between;
-    font-size: 11px;
-    color: var(--discord-text-muted);
-  }
-
-  .queue-list-preview {
-    background: rgba(0, 0, 0, 0.15);
-    border-radius: 6px;
-    padding: 10px 12px;
-    font-size: 12px;
-    color: var(--discord-text-normal);
-    margin-bottom: 16px;
-  }
-
-  .queue-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 4px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  }
-
-  .queue-item:last-child {
-    border-bottom: none;
-  }
 
   /* INTERACTIVE DISCORD BUTTONS */
   .discord-button-row {
@@ -717,8 +723,14 @@
     background: var(--discord-blurple);
   }
 
-  .d-btn.btn-stop:hover {
-    background: var(--discord-btn-danger);
+  .d-btn.btn-success {
+    background: var(--discord-btn-success);
+  }
+
+  .d-btn.btn-link {
+    background: var(--discord-btn);
+    color: var(--discord-text-muted);
+    cursor: default;
   }
 
   .sim-hint {
@@ -1385,10 +1397,10 @@
 
         <div class="feature-card">
           <div class="feature-icon-box">🎛️</div>
-          <h3>Unified Queue Panel</h3>
-          <p>Single-message interactive UI. Pause, Skip, cycle Loop modes, and Stop using Discord buttons with instant state updates.</p>
+          <h3>Now Playing View</h3>
+          <p>One reactive card per track. Pause, Skip, and cycle Loop modes with Discord buttons and instant in-place state updates.</p>
           <div class="feature-pill-list mono">
-            <span class="source-pill">No Spam</span>
+            <span class="source-pill">Follows Track</span>
             <span class="source-pill">In-Place Redraw</span>
             <span class="source-pill">Button Actions</span>
           </div>
@@ -1397,7 +1409,7 @@
         <div class="feature-card">
           <div class="feature-icon-box">🔇</div>
           <h3>Zero Unprompted Spam</h3>
-          <p>Alfred never speaks unless spoken to. Every embed is a direct slash reply. Buttons expire cleanly after 3 minutes of inactivity.</p>
+          <p>Alfred never speaks unless spoken to. Every embed is its own reply, and the now playing view is replaced per track and deleted when the queue ends.</p>
           <div class="feature-pill-list mono">
             <span class="source-pill">Quiet Bot</span>
             <span class="source-pill">Clean Channels</span>
@@ -1434,7 +1446,7 @@
         <div class="section-tag mono">
           <span class="color-sq sq-blue"></span> 02 / Commands & Interactive UI
         </div>
-        <h2 class="section-title">Eight concise commands. One reactive interface.</h2>
+        <h2 class="section-title">Nine concise commands. One reactive interface.</h2>
         <p class="section-subtitle">
           `/play` connects to your voice channel automatically - no `/join` needed. Try clicking the buttons below to test the reactive panel state machine.
         </p>
@@ -1460,60 +1472,64 @@
                 <span class="msg-time mono">Today at 7:42 PM</span>
               </div>
 
-              <!-- EMBED -->
-              <div class="discord-embed-card">
-                <div class="embed-title">
-                  <span>🎶</span> Currently Playing
+              <!-- CARD 1: TRACK ADDED -->
+              <div class="cyber-card row">
+                <div class="cyber-body">
+                  <div class="cyber-title">Track added</div>
+                  <div class="cyber-track">Something in the Rain</div>
+                  <div class="cyber-sub mono">Artist • 04:11</div>
                 </div>
-                <div id="sim-track-title" class="now-playing-title">
-                  1. Red Hot Chili Peppers - Can't Stop
-                </div>
+                <img id="sim-thumb-added" class="cyber-thumb" alt="">
+              </div>
 
-                <div class="progress-wrap">
-                  <div class="progress-bar-bg">
-                    <div id="sim-progress-fill" class="progress-bar-fill"></div>
-                  </div>
-                  <div class="progress-times mono">
-                    <span id="sim-time-current">01:58</span>
-                    <span id="sim-time-total">04:29</span>
-                  </div>
+              <!-- CARD 2: NOW PLAYING (interactive) -->
+              <div class="cyber-card now-playing">
+                <div class="cyber-head">
+                  <div class="cyber-title">Now Playing</div>
+                  <img id="sim-thumb-now" class="cyber-thumb" alt="">
                 </div>
+                <div class="cyber-body">
+                  <div id="sim-track-title" class="cyber-track">▶️ Something in the Rain</div>
+                  <div id="sim-artist" class="cyber-artist">Artist</div>
+                  <div class="cyber-bar mono">
+                    <span id="sim-time-current">01:58</span> <span id="sim-progress-blocks">▰▰▰▰▰▱▱▱▱▱</span> <span id="sim-time-total">04:11</span> <span id="sim-percent">[ 42% ]</span>
+                  </div>
+                  <div id="sim-subtext" class="cyber-sub mono">-# Requested by @nauqh • 🎧 Playlist: Rainy Nights</div>
 
-                <div class="queue-list-preview mono">
-                  <div style="color: var(--discord-text-muted); margin-bottom: 6px; font-weight: 700;">UP NEXT (3 TRACKS):</div>
-                  <div class="queue-item">
-                    <span>2. Daft Punk - Instant Crush</span>
-                    <span style="color: var(--discord-text-muted);">05:37</span>
-                  </div>
-                  <div class="queue-item">
-                    <span>3. Gorillaz - Feel Good Inc.</span>
-                    <span style="color: var(--discord-text-muted);">03:41</span>
+                  <div class="discord-button-row mono">
+                    <button id="btn-pause" class="d-btn" onclick="togglePause()">
+                      <span id="pause-icon">⏸️</span> <span id="pause-text">Pause</span>
+                    </button>
+                    <button id="btn-skip" class="d-btn" onclick="skipTrack()">
+                      ⏭️ Skip
+                    </button>
+                    <button id="btn-loop" class="d-btn" onclick="cycleLoop()">
+                      <span id="loop-icon">🔁</span> <span id="loop-text">Loop: off</span>
+                    </button>
+                    <button class="d-btn btn-link" onclick="event.preventDefault()">
+                      🔗 Link
+                    </button>
                   </div>
                 </div>
+              </div>
 
-                <!-- BUTTON CONTROLS -->
-                <div class="discord-button-row mono">
-                  <button id="btn-pause" class="d-btn" onclick="togglePause()">
-                    <span id="pause-icon">⏸️</span> <span id="pause-text">Pause</span>
-                  </button>
-                  <button id="btn-skip" class="d-btn" onclick="skipTrack()">
-                    ⏭️ Skip
-                  </button>
-                  <button id="btn-loop" class="d-btn" onclick="cycleLoop()">
-                    🔁 <span id="loop-text">Loop: off</span>
-                  </button>
-                  <button id="btn-stop" class="d-btn btn-stop" onclick="stopPlayer()">
-                    ⏹️ Stop
-                  </button>
+              <!-- CARD 3: QUEUE -->
+              <div class="cyber-card row">
+                <div class="cyber-body">
+                  <div class="cyber-title">Queue</div>
+                  <div class="cyber-now mono">▶ Way Down We Go · Album</div>
+                  <div class="cyber-track">1. Rockstar 03:42</div>
+                  <div class="cyber-sub mono">-# Total: 3 tracks</div>
                 </div>
+                <img id="sim-thumb-queue" class="cyber-thumb" alt="">
               </div>
 
               <div class="sim-hint mono">
-                <span>💡</span> Press buttons to test reactive updates. Queue redraws in place on every click.
+                <span>💡</span> Press buttons to test reactive updates. The card redraws in place on every press.
               </div>
             </div>
           </div>
-        </div>
+          </div>
 
         <!-- COMMANDS TABLE -->
         <div>
@@ -1536,6 +1552,11 @@
                   <td><span class="cmd-group-tag">MUSIC</span></td>
                   <td><span class="cmd-badge">/search</span></td>
                   <td>Live autocomplete across tracks, artists, and playlists</td>
+                </tr>
+                <tr>
+                  <td><span class="cmd-group-tag">QUEUE</span></td>
+                  <td><span class="cmd-badge">/now</span></td>
+                  <td>Show the track playing right now as a card</td>
                 </tr>
                 <tr>
                   <td><span class="cmd-group-tag">QUEUE</span></td>
@@ -1925,16 +1946,27 @@ flowchart TD
     }
 
     // Interactive Discord Player Demo State
+    const THUMB_RAIN = 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2280%22%20height%3D%2280%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ff8fab%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23ffd2d8%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2280%22%20height%3D%2280%22%20rx%3D%2214%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2240%22%20y%3D%2246%22%20font-size%3D%2230%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3E%E2%98%94%3C/text%3E%3C/svg%3E';
+    const THUMB_WAY = 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2280%22%20height%3D%2280%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%231f3b57%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%234aa3a0%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2280%22%20height%3D%2280%22%20rx%3D%2214%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2240%22%20y%3D%2246%22%20font-size%3D%2230%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3E%E2%86%93%3C/text%3E%3C/svg%3E';
+    const THUMB_STAR = 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2280%22%20height%3D%2280%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%233b1f2f%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23f5c518%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2280%22%20height%3D%2280%22%20rx%3D%2214%22%20fill%3D%22url%28%23g%29%22/%3E%3Ctext%20x%3D%2240%22%20y%3D%2246%22%20font-size%3D%2230%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3E%E2%98%85%3C/text%3E%3C/svg%3E';
+
     const tracks = [
-      { title: "1. Red Hot Chili Peppers - Can't Stop", time: "01:58", total: "04:29", progress: 42 },
-      { title: "2. Daft Punk - Instant Crush", time: "00:45", total: "05:37", progress: 14 },
-      { title: "3. Gorillaz - Feel Good Inc.", time: "02:10", total: "03:41", progress: 58 }
+      { title: "Something in the Rain", artist: "Artist", time: "01:58", total: "04:11", progress: 42, thumb: THUMB_RAIN },
+      { title: "Way Down We Go", artist: "Album", time: "00:45", total: "03:42", progress: 14, thumb: THUMB_WAY },
+      { title: "Rockstar", artist: "Artist", time: "02:10", total: "03:22", progress: 58, thumb: THUMB_STAR }
     ];
+    const playlistName = "Rainy Nights";
 
     let currentTrackIdx = 0;
     let isPaused = false;
     let loopModeIdx = 0;
     const loopModes = ["off", "track", "queue"];
+    const loopEmojis = { off: "🔁", track: "🔂", queue: "🔁" };
+
+    // Seed thumbnails
+    document.getElementById('sim-thumb-added').src = THUMB_RAIN;
+    document.getElementById('sim-thumb-now').src = THUMB_RAIN;
+    document.getElementById('sim-thumb-queue').src = THUMB_WAY;
 
     function togglePause() {
       isPaused = !isPaused;
@@ -1945,11 +1977,11 @@ flowchart TD
       if (isPaused) {
         pauseText.innerText = 'Resume';
         pauseIcon.innerText = '▶️';
-        btn.classList.add('btn-active');
+        btn.classList.add('btn-success');
       } else {
         pauseText.innerText = 'Pause';
         pauseIcon.innerText = '⏸️';
-        btn.classList.remove('btn-active');
+        btn.classList.remove('btn-success');
       }
     }
 
@@ -1961,9 +1993,11 @@ flowchart TD
     function cycleLoop() {
       loopModeIdx = (loopModeIdx + 1) % loopModes.length;
       const loopText = document.getElementById('loop-text');
+      const loopIcon = document.getElementById('loop-icon');
       const btn = document.getElementById('btn-loop');
       const mode = loopModes[loopModeIdx];
       loopText.innerText = 'Loop: ' + mode;
+      loopIcon.innerText = loopEmojis[mode];
 
       if (mode !== 'off') {
         btn.classList.add('btn-active');
@@ -1972,30 +2006,17 @@ flowchart TD
       }
     }
 
-    function stopPlayer() {
-      const title = document.getElementById('sim-track-title');
-      const fill = document.getElementById('sim-progress-fill');
-      const curTime = document.getElementById('sim-time-current');
-      const totalTime = document.getElementById('sim-time-total');
-
-      title.innerText = '⏹️ Playback stopped. Queue cleared.';
-      title.style.color = 'var(--discord-text-muted)';
-      fill.style.width = '0%';
-      curTime.innerText = '00:00';
-      totalTime.innerText = '00:00';
-
-      setTimeout(() => {
-        title.style.color = '#00a8fc';
-        updateTrackDisplay();
-      }, 2500);
-    }
-
     function updateTrackDisplay() {
       const track = tracks[currentTrackIdx];
-      document.getElementById('sim-track-title').innerText = track.title;
-      document.getElementById('sim-progress-fill').style.width = track.progress + '%';
+      document.getElementById('sim-track-title').innerText = '▶️ ' + track.title;
+      document.getElementById('sim-artist').innerText = track.artist;
+      document.getElementById('sim-thumb-now').src = track.thumb;
+      document.getElementById('sim-subtext').innerText = '-# Requested by @nauqh • 🎧 ' + playlistName;
+      const filled = Math.round((track.progress / 100) * 10);
+      document.getElementById('sim-progress-blocks').innerText = '▰'.repeat(filled) + '▱'.repeat(10 - filled);
       document.getElementById('sim-time-current').innerText = track.time;
       document.getElementById('sim-time-total').innerText = track.total;
+      document.getElementById('sim-percent').innerText = '[ ' + track.progress + '% ]';
     }
   </script>
 

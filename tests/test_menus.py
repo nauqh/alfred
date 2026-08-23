@@ -1,16 +1,14 @@
-"""The buttons under `/queue`."""
+"""The buttons under the now playing view."""
 
 from __future__ import annotations
 
 from typing import Any
 
-import hikari
 import lavalink
 import pytest
 
-from alfred.menus import MENU_TIMEOUT
 from alfred.menus import NEXT_LOOP
-from alfred.menus import PlayerMenu
+from alfred.menus import NowPlayingMenu
 from alfred.player import AlfredPlayer
 from tests.conftest import confirm_playback
 from tests.conftest import make_track
@@ -75,7 +73,6 @@ class FakeContext:
         self.user = FakeUser(user_id)
         self.responses: list[dict[str, Any]] = []
         self.deferred = False
-        self.timeout: float | None = None
         self.interacting = True
 
     async def respond(self, content: Any = None, **kwargs: Any) -> None:
@@ -84,17 +81,8 @@ class FakeContext:
     async def defer(self, *, ephemeral: bool = False, edit: bool = False) -> None:
         self.deferred = True
 
-    def set_timeout(self, timeout: float) -> None:
-        self.timeout = timeout
-
     def stop_interacting(self) -> None:
         self.interacting = False
-
-
-@pytest.fixture(autouse=True)
-def no_waiting(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Skip does not wait on a node here - there is none to answer."""
-    monkeypatch.setattr("alfred.menus.TRACK_CHANGE_TIMEOUT", 0.0)
 
 
 @pytest.fixture
@@ -105,24 +93,26 @@ def playing_player(player: AlfredPlayer) -> AlfredPlayer:
     return player
 
 
-def build_menu(player: AlfredPlayer | None, states: dict[int, int | None]) -> PlayerMenu:
-    return PlayerMenu(FakeBot(states), FakeLavalinkClient(player), GUILD_ID)  # type: ignore[arg-type]
+def build_menu(player: AlfredPlayer | None, states: dict[int, int | None]) -> NowPlayingMenu:
+    return NowPlayingMenu(FakeBot(states), FakeLavalinkClient(player), GUILD_ID)  # type: ignore[arg-type]
 
 
 IN_CHANNEL = {BOT_ID: VOICE_CHANNEL_ID, LISTENER_ID: VOICE_CHANNEL_ID, OUTSIDER_ID: OTHER_CHANNEL_ID}
 
 
-def test_the_row_is_four_labelled_buttons(playing_player: AlfredPlayer) -> None:
+def test_the_row_is_three_labelled_buttons(playing_player: AlfredPlayer) -> None:
     menu = build_menu(playing_player, IN_CHANNEL)
 
-    assert [b.label for b in (menu.pause_button, menu.skip_button, menu.loop_button, menu.stop_button)] == [
+    assert [b.label for b in (menu.pause_button, menu.skip_button, menu.loop_button)] == [
         "Pause",
         "Skip",
         "Loop: off",
-        "Stop",
     ]
-    # Labels only - no emoji on any of them.
-    assert all(b.emoji is hikari.UNDEFINED for b in menu._rows[0])  # type: ignore[attr-defined]
+    assert [b.emoji for b in (menu.pause_button, menu.skip_button, menu.loop_button)] == [
+        "⏸️",
+        "⏭️",
+        "🔁",
+    ]
 
 
 def test_the_pause_label_follows_the_player(playing_player: AlfredPlayer) -> None:
@@ -196,6 +186,7 @@ async def test_pause_toggles_and_relabels(playing_player: AlfredPlayer, node: An
 
     assert playing_player.paused is True
     assert menu.pause_button.label == "Resume"
+    assert menu.pause_button.emoji == "▶️"
 
 
 @pytest.mark.asyncio
@@ -206,6 +197,7 @@ async def test_loop_advances_and_relabels(playing_player: AlfredPlayer) -> None:
 
     assert playing_player.loop == lavalink.DefaultPlayer.LOOP_SINGLE
     assert menu.loop_button.label == "Loop: track"
+    assert menu.loop_button.emoji == "🔂"
 
 
 @pytest.mark.asyncio
@@ -217,14 +209,15 @@ async def test_an_outsider_cannot_pause(playing_player: AlfredPlayer) -> None:
     assert playing_player.paused is False
 
 
-def test_the_panel_shows_the_queue(playing_player: AlfredPlayer) -> None:
+def test_the_panel_shows_the_current_track(playing_player: AlfredPlayer) -> None:
     playing_player.add(track=make_track("Up Next"), requester=LISTENER_ID)
 
     embed = build_menu(playing_player, IN_CHANNEL).embed()
 
-    assert embed.title == "Queue"
+    assert embed.title == "Now Playing"
     assert "Some Song" in embed.description
-    assert "Up Next" in embed.description
+    # The queue's list is `/queue`'s job; the view is only the track it sits under.
+    assert "Up Next" not in embed.description
 
 
 def test_the_panel_says_so_when_there_is_no_player() -> None:
@@ -234,7 +227,7 @@ def test_the_panel_says_so_when_there_is_no_player() -> None:
 
 
 @pytest.mark.asyncio
-async def test_a_press_redraws_the_panel_in_place(playing_player: AlfredPlayer) -> None:
+async def test_a_press_redraws_the_view_in_place(playing_player: AlfredPlayer) -> None:
     menu = build_menu(playing_player, IN_CHANNEL)
     ctx = FakeContext(LISTENER_ID)
 
@@ -242,16 +235,7 @@ async def test_a_press_redraws_the_panel_in_place(playing_player: AlfredPlayer) 
 
     assert ctx.responses[0]["edit"] is True
     assert ctx.responses[0]["components"] is menu
-    assert ctx.responses[0]["embed"].title == "Queue"
-
-
-@pytest.mark.asyncio
-async def test_a_press_keeps_the_buttons_alive(playing_player: AlfredPlayer) -> None:
-    ctx = FakeContext(LISTENER_ID)
-
-    await build_menu(playing_player, IN_CHANNEL).on_loop(ctx)  # type: ignore[arg-type]
-
-    assert ctx.timeout == MENU_TIMEOUT
+    assert ctx.responses[0]["embed"].title == "Now Playing"
 
 
 @pytest.mark.asyncio
@@ -262,30 +246,18 @@ async def test_skip_plays_the_next_track(playing_player: AlfredPlayer) -> None:
 
     await build_menu(playing_player, IN_CHANNEL).on_skip(ctx)  # type: ignore[arg-type]
 
-    # Deferred first, because waiting for the node takes longer than an interaction may go
-    # unanswered for.
+    # Deferred first, because waiting on the node takes longer than an interaction may go
+    # unanswered for. The track events replace the message, so the menu's work ends here.
     assert ctx.deferred is True
     assert playing_player._next is queued
+    assert ctx.interacting is False
 
 
 @pytest.mark.asyncio
-async def test_skipping_the_last_track_takes_the_buttons_away(playing_player: AlfredPlayer) -> None:
+async def test_skip_does_not_redraw(playing_player: AlfredPlayer) -> None:
     ctx = FakeContext(LISTENER_ID)
 
     await build_menu(playing_player, IN_CHANNEL).on_skip(ctx)  # type: ignore[arg-type]
 
-    assert ctx.responses[-1]["components"] == []
-    assert ctx.interacting is False
-
-
-@pytest.mark.asyncio
-async def test_stop_empties_the_player_and_takes_the_buttons_away(playing_player: AlfredPlayer) -> None:
-    playing_player.add(track=make_track("Up Next"), requester=LISTENER_ID)
-    ctx = FakeContext(LISTENER_ID)
-
-    await build_menu(playing_player, IN_CHANNEL).on_stop(ctx)  # type: ignore[arg-type]
-
-    assert playing_player.current is None
-    assert playing_player.queue == []
-    assert ctx.responses[-1]["components"] == []
-    assert ctx.interacting is False
+    # The view is replaced by the track-start event, not edited by the press.
+    assert ctx.responses == []

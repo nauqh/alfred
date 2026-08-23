@@ -58,13 +58,13 @@ uv run alfred                                 # second terminal, LAVALINK_HOST=1
 
 ## Commands
 
-Eight commands; `/play` connects to your voice channel on its own - there is
+Nine commands; `/play` connects to your voice channel on its own - there is
 no `/join`.
 
 | Group | Commands | |
 |---|---|---|
 | **Music** | `/play` `/search` | add a track, playlist or URL to the queue |
-| **Queue** | `/queue` `/skip` `/remove` | the panel, move past a track, drop something |
+| **Queue** | `/now` `/queue` `/skip` `/remove` | the current track, the list, move past a track, drop something |
 | **Voice** | `/leave` | disconnect and clear |
 | **Owner** | `/stats` `/info` | node health, and what the node is running |
 
@@ -72,21 +72,23 @@ no `/join`.
 |---|---|
 | Loop and shuffle are **options**, not commands | Set once as tracks are queued. Loop is also a button |
 | `/search` narrows by source and type | Track, artist, album or playlist |
-| `/queue` needs no voice check; its **buttons** do | Reading the queue is open to anyone; acting on the player is restricted to the bot's voice channel |
+| `/queue` and `/now` need no voice check | Reading what is playing is open to anyone; acting on the player is restricted to the bot's voice channel |
 | There is no `/pause` | Deafening yourself pauses playback when you are the only listener, and undeafening resumes it. The panel's Pause button is the only manual path |
 | The bot leaves when no one is left in the channel | Queue state is irrelevant - it stays even with nothing queued |
 
-### The panel
+### The now playing view
 
-`/queue` is the whole player interface: current track, progress, what's next,
-and four buttons. Each press redraws that message - never a second one.
+When a track starts, the bot posts a `Now Playing` card where it was queued and
+deletes it when the track ends - the next track replaces it with its own. The
+card carries the progress bar and the player's buttons; `/queue` is just the
+list of what follows.
 
 | Button | Does | Note |
 |---|---|---|
-| `Pause` / `Resume` | Toggles playback | Label follows the player |
-| `Skip` | Plays the next track | Defers first, so the redraw shows the new track |
-| `Loop: off` / `track` / `queue` | Cycles the loop mode | State lives in the label |
-| `Stop` | Clears the player | Then takes the buttons off the message |
+| `⏸️ Pause` / `▶️ Resume` | Toggles playback | Turns green while paused |
+| `⏭️ Skip` | Plays the next track | The card is replaced by the next track's card |
+| `🔁 Loop: off` / `track` / `queue` | Cycles the loop mode | Highlights blurple while on |
+| `🔗 Link` | Opens the track URL | Native Discord link button |
 
 Buttons go quiet after three minutes without a press (refreshed by every press)
 and are then removed; the embed stays as a readable snapshot of the queue.

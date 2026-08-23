@@ -6,13 +6,14 @@ from typing import TYPE_CHECKING
 from typing import Literal
 
 from alfred.constants import EMOJI_PAUSE_PLAYER
-from alfred.constants import EMOJI_RADIO_BUTTON
 from alfred.constants import EMOJI_RESUME_PLAYER
+from alfred.constants import PROGRESS_BAR_EMPTY
+from alfred.constants import PROGRESS_BAR_FILLED
 
 if TYPE_CHECKING:
     import lavalink
 
-PROGRESS_BAR_WIDTH = 12
+PROGRESS_BAR_WIDTH = 10
 
 
 def parse_time(milliseconds: int) -> tuple[int, int, int, int]:
@@ -60,13 +61,13 @@ def format_uptime(milliseconds: int) -> str:
 
 
 def progress_bar(fraction: float) -> str:
-    """Render a playback progress bar, with the marker placed at ``fraction`` of the way along."""
-    marker = min(int(max(fraction, 0.0) * PROGRESS_BAR_WIDTH), PROGRESS_BAR_WIDTH - 1)
-    return "".join(EMOJI_RADIO_BUTTON if i == marker else "▬" for i in range(PROGRESS_BAR_WIDTH))
+    """Render a filled/empty block pill, with ``fraction`` of the blocks filled (cyber deck style)."""
+    filled = min(max(round(fraction * PROGRESS_BAR_WIDTH), 0), PROGRESS_BAR_WIDTH)
+    return PROGRESS_BAR_FILLED * filled + PROGRESS_BAR_EMPTY * (PROGRESS_BAR_WIDTH - filled)
 
 
 def player_bar(player: lavalink.DefaultPlayer) -> str:
-    """Render the play/pause state, progress bar and elapsed time for the current track."""
+    """Render the cyber deck progress line: start/end times flanking a block pill, with a percentage."""
     current = player.current
     if current is None:
         return ""
@@ -74,10 +75,15 @@ def player_bar(player: lavalink.DefaultPlayer) -> str:
     play_pause = EMOJI_RESUME_PLAYER if player.paused else EMOJI_PAUSE_PLAYER
 
     if current.is_stream or not current.duration:
-        return f"{play_pause} {progress_bar(0.99)} `LIVE`"
+        return f"{play_pause} LIVE {progress_bar(0.99)}"
 
-    playtime = f"{format_time(player.position)} | {format_time(current.duration)}"
-    return f"{play_pause} {progress_bar(player.position / current.duration)} `{playtime}`"
+    current_time = format_time(player.position)
+    total_time = format_time(current.duration)
+    fraction = player.position / current.duration if current.duration > 0 else 0.0
+    percent = round(fraction * 100)
+    # Non-breaking spaces so Discord's markdown parser cannot trim the padding inside the
+    # brackets (it strips plain spaces; NBSP survives).
+    return f"{play_pause} {current_time} {progress_bar(fraction)} {total_time} [\u00a0{percent}%\u00a0]"
 
 
 def track_length(track: lavalink.AudioTrack) -> str:

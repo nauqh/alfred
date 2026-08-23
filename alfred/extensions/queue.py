@@ -2,24 +2,42 @@
 
 from __future__ import annotations
 
-import asyncio
-import contextlib
-
 import hikari
 import lavalink
 import lightbulb
 
+from alfred import constants
+from alfred import embeds
 from alfred import errors
 from alfred import hooks
 from alfred import responses
 from alfred import service
 from alfred.formatting import trim
-from alfred.menus import MENU_TIMEOUT
-from alfred.menus import PlayerMenu
 
 loader = lightbulb.Loader()
 
 MAX_CHOICES = 25
+
+QUEUE_TITLE = "Queue"
+QUEUE_PREVIEW_LENGTH = 10
+
+
+@loader.command
+class Now(
+    lightbulb.SlashCommand,
+    name="now",
+    description="Show the track that is playing now",
+    hooks=[hooks.guild_only, hooks.player_playing],
+):
+    @lightbulb.invoke
+    async def invoke(self, ctx: lightbulb.Context, lavalink_client: lavalink.Client = lightbulb.di.INJECTED) -> None:
+        assert ctx.guild_id is not None
+
+        player = service.get_player(lavalink_client, ctx.guild_id)
+        if player is None:
+            raise errors.PlayerNotPlaying
+
+        await responses.respond(ctx, embed=embeds.now_playing(player))
 
 
 @loader.command
@@ -41,41 +59,27 @@ class Skip(
         description = (
             f"⏭️ Skipped: [{skipped.title}]({skipped.uri})" if skipped is not None else "⏭️ Skipped the current track"
         )
-        await responses.respond(ctx, embed=hikari.Embed(description=description))
+        await responses.respond(ctx, embed=hikari.Embed(description=description, color=constants.COLOR_ALFRED))
 
 
 @loader.command
 class Queue(
     lightbulb.SlashCommand,
     name="queue",
-    description="Show the queue, with controls for the player",
+    description="Show the queue",
     hooks=[hooks.guild_only, hooks.player_playing],
 ):
     @lightbulb.invoke
-    async def invoke(
-        self,
-        ctx: lightbulb.Context,
-        client: lightbulb.Client = lightbulb.di.INJECTED,
-        bot: hikari.GatewayBot = lightbulb.di.INJECTED,
-        lavalink_client: lavalink.Client = lightbulb.di.INJECTED,
-    ) -> None:
+    async def invoke(self, ctx: lightbulb.Context, lavalink_client: lavalink.Client = lightbulb.di.INJECTED) -> None:
         assert ctx.guild_id is not None
 
         player = service.get_player(lavalink_client, ctx.guild_id)
         if player is None:
             raise errors.PlayerNotPlaying
 
-        menu = PlayerMenu(bot, lavalink_client, ctx.guild_id)
-        response = await ctx.respond(embed=menu.embed(), components=menu)
-
-        # This blocks until the last press times the menu out, or a press ends it. The buttons
-        # are then taken off the panel, so a dead panel cannot be pressed - the embed is left
-        # where it is, still readable as the queue it was when it went quiet.
-        with contextlib.suppress(asyncio.TimeoutError):
-            await menu.attach(client, timeout=MENU_TIMEOUT)
-
-        with contextlib.suppress(hikari.NotFoundError, hikari.ForbiddenError):
-            await ctx.edit_response(response, components=[])
+        # The controls live on the now playing view, which follows the current track; this
+        # panel is only the list of what is playing and what follows.
+        await ctx.respond(embed=embeds.queue(player, title=QUEUE_TITLE, preview_length=QUEUE_PREVIEW_LENGTH))
 
 
 @lightbulb.di.with_di
@@ -126,5 +130,8 @@ class Remove(
 
         await responses.respond(
             ctx,
-            embed=hikari.Embed(description=f"Removed: [{removed.title}]({removed.uri})"),
+            embed=hikari.Embed(
+                description=f"Removed: [{removed.title}]({removed.uri})",
+                color=constants.COLOR_ALFRED,
+            ),
         )

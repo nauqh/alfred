@@ -33,6 +33,13 @@ def get_playlist(track: lavalink.AudioTrack) -> PlaylistRef | None:
 class AlfredPlayer(lavalink.DefaultPlayer):
     """Adds to the default player a history-aware `stop` that resets rather than merely stopping."""
 
+    def __init__(self, guild_id: int, node: lavalink.Node) -> None:
+        super().__init__(guild_id, node)
+
+        # The text channel the now playing view is posted in - the channel of the last command
+        # that queued a track.
+        self.text_channel_id: int | None = None
+
     async def skip(self) -> lavalink.AudioTrack | None:
         """Play the next track, returning the one that was skipped."""
         skipped = self.current

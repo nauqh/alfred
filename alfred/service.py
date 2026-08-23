@@ -10,6 +10,7 @@ import hikari
 import lavalink
 from loguru import logger
 
+from alfred import constants
 from alfred import embeds
 from alfred import errors
 from alfred import sources
@@ -121,6 +122,7 @@ async def enqueue(
     *,
     guild_id: int,
     requester_id: hikari.Snowflakeish,
+    channel_id: int | None = None,
     query: str | None = None,
     play_next: bool = False,
     loop: bool = False,
@@ -133,6 +135,7 @@ async def enqueue(
         result: What `resolve` returned.
         guild_id: The guild to queue into.
         requester_id: The member who asked for the tracks.
+        channel_id: The channel the command ran in - where the now playing view is posted.
         query: The original query, used as the playlist link when the result has no richer one.
         play_next: Queue a single track at the front instead of the back.
         loop: Turn on track looping (single result) or queue looping (playlist).
@@ -151,6 +154,9 @@ async def enqueue(
     player = get_player(lavalink_client, guild_id)
     if player is None or not player.is_connected:
         player, _ = await join(bot, lavalink_client, guild_id, requester_id)
+
+    if channel_id is not None:
+        player.text_channel_id = channel_id
 
     if result.load_type is lavalink.LoadType.PLAYLIST:
         embed = _add_playlist(player, result, requester_id=requester_id, query=query, shuffle=shuffle)
@@ -179,6 +185,7 @@ def _add_track(
     return hikari.Embed(
         title="Track added",
         description=embeds.track_summary(track),
+        color=constants.COLOR_ALFRED,
     ).set_thumbnail(track.artwork_url)
 
 
@@ -215,4 +222,8 @@ def _add_playlist(
     else:
         description = f"Playlist [{name}]({url or '#'}) - {count} tracks\n\n<@{requester_id}>"
 
-    return hikari.Embed(title=f"{result_type.capitalize()} added", description=description).set_thumbnail(artwork_url)
+    return hikari.Embed(
+        title=f"{result_type.capitalize()} added",
+        description=description,
+        color=constants.COLOR_ALFRED,
+    ).set_thumbnail(artwork_url)

@@ -26,13 +26,14 @@ message state at all. _Avoid_: session, connection.
 `player.current` is separate, and Lavalink only sets it when the node confirms
 the track started.
 
-**Panel** — the reply to `/queue`: an embed describing the player, with a row of
-buttons under it. It is the only thing the bot renders that can be pressed, and
-it exists only because someone asked for it. _Avoid_: now-playing message,
-controller, view.
+**Now playing view** — the message the bot posts when a track starts: an embed
+describing the current track, with the player's buttons under it. It is the only
+thing the bot renders that can be pressed, and it lives exactly as long as its
+track: moving to the next track deletes it and posts the next track's view, and
+the queue ending deletes it outright. _Avoid_: panel, controller.
 
-The bot posts nothing unprompted. Every message it sends is the reply to a
-command someone ran.
+The view is the one message the bot posts unprompted. Everything else it sends
+is the reply to a command someone ran.
 
 **Source** — a search backend behind a Lavalink prefix (`ytsearch`, `dzsearch`,
 `spsearch`). Not every Source is **playable**: Spotify is mirrored onto another
@@ -57,7 +58,7 @@ which changes only how it is described, never how it is queued.
    ├──────────────────────────────────────────────┤
    │  alfred                                    │
    │     hooks ──► service ──► player             │
-   │     menus ──► embeds      events ──► log     │
+   │     menus ──► embeds    events ──► nowplaying │
    └───────────────┬──────────────────────────────┘
                    │ lavalink.py 5.11
    ┌───────────────▼──────────────────────────────┐
@@ -81,11 +82,12 @@ alfred/
 │   ├── config.py         the environment → a frozen Config
 │   ├── service.py        join · resolve · enqueue — the one seam
 │   ├── player.py         AlfredPlayer — the queue, and its tracks' origins
-│   ├── events.py         Lavalink events → the log
+│   ├── events.py         Lavalink events → the log, and the now playing view
 │   ├── hooks.py          the command checks
 │   ├── search.py         the LavaSearch plugin client
 │   ├── embeds.py         embed builders
-│   ├── menus.py          the buttons under /queue
+│   ├── nowplaying.py     the now playing view's lifecycle
+│   ├── menus.py          the buttons under the now playing view
 │   ├── formatting.py     durations, progress bar, trimming
 │   ├── responses.py      replying, and the self-deleting reply
 │   ├── errors.py         errors that carry a user-facing message
@@ -109,11 +111,12 @@ implementation.
 | `service` | `join()` · `resolve()` · `enqueue()` | voice connection, query prefixing, five load-result shapes, playlist metadata |
 | `AlfredPlayer` | `skip()` · `stop()` · `remove()` | resetting to a clean state even when the node is unreachable |
 | `LavalinkEventHandler` | nothing — it consumes events | what the node reports, and restarting a stuck player |
-| `PlayerMenu` | `embed()` · four button callbacks | who may press, and keeping the panel in step with the player |
+| `NowPlayingManager` | `show(player)` · `hide(guild_id)` | the view's message lifecycle, and the menu registry leak |
+| `NowPlayingMenu` | `embed()` · three button callbacks | who may press, and keeping the view in step with the player |
 | `search` | `load_search(node, query, types)` | the plugin's REST contract, its 204, its failures |
 | `hooks` | four execution hooks | voice-state cache lookups and dependency injection |
 | `responses` | `respond(ctx, **kwargs)` | the self-deleting reply lightbulb no longer provides |
-| `embeds` | four builders | every embed shape in the bot |
+| `embeds` | five builders | every embed shape in the bot |
 
 There is no persistence layer, no DTO layer and no repository. The player *is*
 the model, and `lavalink.AudioTrack` is the only track type that crosses a
@@ -149,7 +152,8 @@ both the player and the channel it joined.
 
 Subclasses `lavalink.DefaultPlayer`. What survives the trims is small: where a
 queued track came from, and a `stop()` that resets rather than merely stopping.
-It holds no message ids and no channel ids — nothing about Discord at all.
+The one piece of Discord it knows is `text_channel_id` — the channel of the last
+command that queued a track, which is where the now playing view is posted.
 
 **Loop constants are the library's.** The legacy player redefined them
 (`library/player.py:10-12`) as `LOOP_QUEUE = 1`, `LOOP_SINGLE = 2` — inverted
@@ -176,45 +180,60 @@ same event when it runs out of queue and *also* calls `stop()` on the way, so th
 event can arrive twice for one ending. Nothing hangs off it but a log line, so
 that costs nothing — but anything added here must stay idempotent.
 
-### `LavalinkEventHandler` — the log, and a stuck player
+### `LavalinkEventHandler` — the view, and a stuck player
 
-It posts nothing. Every listener writes a line; `TrackStuckEvent` additionally
-calls `play()` to move past the track the node cannot get through.
+Two jobs. `TrackStartEvent` posts the now playing view (`NowPlayingManager.show`,
+which first deletes whatever view is up), and `QueueEndEvent` takes it down -
+so the view follows the player no matter how the track changed: naturally, by
+skip, by stop, or by the retry logic putting a failed track back on. Because
+`AlfredPlayer.stop` also dispatches `QueueEndEvent`, leaving voice takes the
+view with it, and the handling stays idempotent against the double dispatch.
+
+Every listener also writes a log line; `TrackStuckEvent` additionally calls
+`play()` to move past the track the node cannot get through.
 
 An earlier revision of this rewrite posted a now-playing message per track and
-deleted it on the next one — an announcement the bot made whether or not anyone
-wanted it, and a second copy of what `/queue` already says. It is gone. What the
-bot renders, someone asked for.
+deleted it on the next one, and it was cut as an announcement nobody asked for.
+It is back - with the player's buttons on it, which is what makes a message per
+track worth posting: the view is the control surface, not a notification.
 
-### `PlayerMenu` — the buttons under `/queue`
+### `NowPlayingMenu` — the buttons under the view
 
-Four: pause/resume, skip, loop, stop. State lives in the label (`Loop: track`)
-rather than in a swapped emoji. The menu holds no player state — every press
-looks the player up again, so a panel left sitting in a channel acts on whatever
-is playing now rather than on what was playing when it was posted.
+Three interactive buttons and a track link: pause/resume, skip, loop, and an
+external link button to the track URL. State lives in the label (`Loop: track`)
+and matching emoji (`🔂`). The menu holds no player state — every press
+looks the player up again, so it acts on whatever is playing now rather than on
+what was playing when the view was posted.
 
 Access matches the commands: only members in the bot's voice channel may press,
 the rule `/skip` and `/leave` apply. A button and its command cannot disagree.
 
-The `/queue` command **blocks on `menu.attach(client, timeout=...)`** rather than
-using `attach_persistent`, which matters. `MenuHandle.__init__` accepts an `_am`
-argument and then assigns `self.__am = None`, discarding it
-(`lightbulb/components/menus.py:579-587`), so with `timeout=None` a persistent
-menu is never discarded from `client._attached_menus` — a set consulted on every
-component interaction, leaking one entry per panel. `attach` discards in a
-`finally`, so it cannot leak. When it returns, the command strips the components
-off the message: the embed stays readable, the dead buttons go.
+Pause and loop redraw the view in place — the same message, a new embed and
+labels. Skip does not: the track event it causes deletes this message and posts
+the next track's view, so that callback only `defer(edit=True)`s to answer the
+interaction in time and then steps aside. Redrawing a message the event handler
+is about to delete would be a race the bot loses.
 
-Two more things buttons need that commands do not:
+One more thing buttons need that commands do not: **a rejected press must still
+be answered.** A `check` that returns without responding shows the user
+"interaction failed"; every rejection replies ephemerally.
 
-- **Skip must defer.** `player.play()` only asks the node to change track;
-  `player.current` catches up when the node reports back over the websocket
-  (`lavalink/transport.py:316`). Redrawing immediately shows the track that was
-  just skipped. The callback `defer(edit=True)`s, waits up to two seconds for the
-  change, and then redraws.
-- **A rejected press must still be answered.** A `check` that returns without
-  responding shows the user "interaction failed"; every rejection replies
-  ephemerally.
+### `NowPlayingManager` — the view's lifecycle
+
+`show(player)` posts the view into the player's `text_channel_id`, replacing
+whatever is up; `hide(guild_id)` deletes it. Both are idempotent, because the
+events that drive them are not: `QueueEndEvent` can arrive twice for one ending.
+
+The buttons are attached with **`menu.attach(client, timeout=None)` on a
+cancelled-when-done task**, not `attach_persistent`, which matters.
+`MenuHandle.__init__` accepts an `_am` argument and then assigns
+`self.__am = None`, discarding it (`lightbulb/components/menus.py:579-587`), so
+with `timeout=None` a persistent menu is never removed from
+`client._attached_menus` — a set consulted on every component interaction,
+leaking one entry per track. `attach` discards in a `finally`, so it cannot
+leak: `hide` cancels the task and awaits it, and the registry is clean before
+the message is deleted. The view gets no timeout at all — it lives exactly as
+long as its track, which is exactly as long as there is something to control.
 
 ### `search` — the LavaSearch client
 
@@ -275,15 +294,15 @@ only weak references to tasks, so an unheld one can be collected mid-sleep.
 
 ## Command surface
 
-8 commands, in four extensions. Every one is a `lightbulb.SlashCommand`
+9 commands, in four extensions. Every one is a `lightbulb.SlashCommand`
 subclass registered on a `Loader`.
 
-The legacy bot had 18. `/now` went because `/queue` shows the current track at
-the top of the panel, `/restart` with `/seek`, and `/join` because `/play`
+The legacy bot had 18. `/restart` with `/seek`, and `/join` because `/play`
 connects on its own. `/shuffle` became an option on `/play` and `/search`, set
-once at queueing time; `/loop` is an option there too, and a button on the panel.
-`/stop` went because `/leave` covers it — disconnecting clears the player — and
-Stop is on the panel.
+once at queueing time; `/loop` is an option there too, and a button on the view.
+`/stop` went because `/leave` covers it — disconnecting clears the player.
+`/now` came back as a command: it shows the current track card on demand, a
+convenience that repeats what the now playing view already shows.
 
 `/seek`, `/effects` and `/pause` went last, and unlike the rest they were not
 redundant — they are out of scope for what this bot is now. `/seek` and
@@ -303,19 +322,24 @@ play       /play    query next loop shuffle       hooks: guild, voice
            /search  query type source + the above hooks: guild, voice
                     query autocompletes; type and source drive LavaSearch
 
-queue      /queue   + pause · skip · loop · stop  hooks: guild, playing
-                    buttons: bot's voice channel only
+queue      /now                                   hooks: guild, playing
+           /queue                                 hooks: guild, playing
            /skip                                  hooks: guild, voice, playing
            /remove  track       autocompletes from the live queue
 
 admin      /stats /info                           hooks: owner only
 ```
 
-`/queue` deliberately carries no voice check — reading what is playing is not a
-privileged act, and requiring channel membership to answer "what is this song"
-was friction with no threat behind it. Its **buttons** do carry one: acting on
-the player is privileged in a way that reading it is not, so `PlayerMenu.check`
-turns away anyone outside the bot's voice channel.
+The buttons — pause · skip · loop · link — are not a command: they sit under the
+now playing view, which the bot posts when a track starts and deletes when it
+ends. Acting on the player is privileged, so `NowPlayingMenu.check` turns away
+anyone outside the bot's voice channel.
+
+`/now` shows the track playing now as a full now playing card; it is the one
+convenience that repeats what the active view already says, kept because asking
+for it is cheap. `/queue` deliberately carries no voice check — reading what is
+playing is not a privileged act, and requiring channel membership to answer
+"what is this song" was friction with no threat behind it.
 
 `next`, `loop` and `shuffle` are **boolean options**. The legacy versions were
 string options constrained to `choices=['True']` and then parsed with
@@ -352,7 +376,7 @@ The node's own configuration is [`lavalink/application.yml.example`](../lavalink
 
 ## Testing
 
-100 tests, no network, ~2s. Each module is tested through the interface its
+108 tests, no network, ~2s. Each module is tested through the interface its
 callers use.
 
 - `Config` — the environment is a parameter, so every case is a dict.
@@ -364,8 +388,11 @@ callers use.
 - `hooks` — run through a real `linkd` container, so the test proves the
   injection works and not merely the logic.
 - `menus` — a fake menu context and voice-state cache; asserts who may press,
-  what each press does to the player, and that a press redraws the panel in
-  place rather than posting again.
+  what each press does to the player, and that pause and loop redraw the view in
+  place while skip defers to the track events.
+- `nowplaying` — a fake REST client; asserts a track posts a view with buttons,
+  the next track replaces it, and hiding it unregisters the menu rather than
+  leaking it.
 
 Two library behaviours the tests had to model rather than assume, both found by
 tests failing for the right reason:
@@ -381,7 +408,7 @@ tests failing for the right reason:
 
 There is no test that talks to Discord or to a Lavalink node. The offline
 ceiling is the command surface: a script builds the client, loads all four
-extensions and renders all 8 command builders exactly as Discord would receive
+extensions and renders all 9 command builders exactly as Discord would receive
 them — names, option types, required flags, autocomplete flags, choice counts —
 which catches the whole class of registration errors without a token.
 
@@ -456,8 +483,8 @@ performance or ergonomics, is the argument for this stack.
 
 `hikari-miru` · `bot.d` · a custom `AutocompleteChoice` class · a copied `play()`
 override · private `_transport` access · `eval` on options · hardcoded node
-config · application-specific emoji IDs · a message the bot posts unprompted · a
-database · a queue · a worker · persistence across restarts.
+config · application-specific emoji IDs · a database · a queue · a worker ·
+persistence across restarts.
 
 The emoji are the subtlest of those. The legacy bot carried eleven custom emojis
 belonging to its own Discord application, and **no other application can render
