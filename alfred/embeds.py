@@ -96,19 +96,17 @@ def _current_description(player: AlfredPlayer) -> str:
     author_line = f"by **{current.author}**" if current.author else ""
     bar = player_bar(player)
 
-    subtext_parts: list[str] = [f"👤 <@{current.requester}>"]
+    subtext_parts: list[str] = [f"Requested: <@{current.requester}>"]
     playlist = get_playlist(current)
     if playlist is not None:
-        subtext_parts.append(f"📑 [{playlist.name}]({playlist.url or '#'})")
+        subtext_parts.append(f"|| Playing [{playlist.name}]({playlist.url or '#'})")
 
     subtext = "-# " + " • ".join(subtext_parts)
 
     lines = [
         f"### [{current.title}]({current.uri})",
         author_line,
-        "",
         bar,
-        "",
         subtext,
     ]
-    return "\n".join(line for line in lines if line is not None and line != "")
+    return "\n".join(line for line in lines if line is not None)

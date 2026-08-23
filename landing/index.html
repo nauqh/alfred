@@ -1494,7 +1494,7 @@
                   <div class="cyber-bar mono">
                     <span id="sim-time-current">01:58</span> <span id="sim-progress-blocks">▰▰▰▰▰▱▱▱▱▱</span> <span id="sim-time-total">04:11</span> <span id="sim-percent">[ 42% ]</span>
                   </div>
-                  <div id="sim-subtext" class="cyber-sub mono">-# Requested by @nauqh • 🎧 Playlist: Rainy Nights</div>
+                  <div id="sim-subtext" class="cyber-sub mono">-# Requested: @nauqh • || Playing Rainy Nights</div>
 
                   <div class="discord-button-row mono">
                     <button id="btn-pause" class="d-btn" onclick="togglePause()">
@@ -2011,7 +2011,7 @@ flowchart TD
       document.getElementById('sim-track-title').innerText = '▶️ ' + track.title;
       document.getElementById('sim-artist').innerText = track.artist;
       document.getElementById('sim-thumb-now').src = track.thumb;
-      document.getElementById('sim-subtext').innerText = '-# Requested by @nauqh • 🎧 ' + playlistName;
+      document.getElementById('sim-subtext').innerText = '-# Requested: @nauqh • || Playing ' + playlistName;
       const filled = Math.round((track.progress / 100) * 10);
       document.getElementById('sim-progress-blocks').innerText = '▰'.repeat(filled) + '▱'.repeat(10 - filled);
       document.getElementById('sim-time-current').innerText = track.time;
