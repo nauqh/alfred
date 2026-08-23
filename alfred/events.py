@@ -10,8 +10,8 @@ from __future__ import annotations
 import lavalink
 from loguru import logger
 
-from alfred.nowplaying import NowPlayingManager
-from alfred.player import AlfredPlayer
+from alfred.music.player import AlfredPlayer
+from alfred.ui.nowplaying import NowPlayingManager
 
 # How many times to re-queue a track that failed to load or stalled mid-play, before letting
 # the player move on to the next one. YouTube streams die transiently (rate limits, expired

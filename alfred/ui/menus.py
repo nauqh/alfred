@@ -20,10 +20,10 @@ import lightbulb
 from loguru import logger
 
 from alfred import constants
-from alfred import embeds
 from alfred import errors
-from alfred import service
-from alfred.player import AlfredPlayer
+from alfred.music import service
+from alfred.music.player import AlfredPlayer
+from alfred.ui import embeds
 
 LOOP_LABELS = {
     lavalink.DefaultPlayer.LOOP_NONE: "Loop: off",

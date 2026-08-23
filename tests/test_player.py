@@ -3,7 +3,7 @@ from __future__ import annotations
 import lavalink
 import pytest
 
-from alfred.player import AlfredPlayer
+from alfred.music.player import AlfredPlayer
 from tests.conftest import FakeClient
 from tests.conftest import confirm_playback
 from tests.conftest import make_track

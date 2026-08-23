@@ -7,12 +7,12 @@ import lavalink
 import lightbulb
 
 from alfred import constants
-from alfred import embeds
 from alfred import errors
-from alfred import hooks
-from alfred import responses
-from alfred import service
-from alfred.formatting import trim
+from alfred.extensions import hooks
+from alfred.music import service
+from alfred.ui import embeds
+from alfred.ui import responses
+from alfred.ui.formatting import trim
 
 loader = lightbulb.Loader()
 

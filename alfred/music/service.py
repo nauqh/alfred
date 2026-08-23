@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import random
 import re
 from typing import Any
@@ -10,17 +11,47 @@ import hikari
 import lavalink
 from loguru import logger
 
-from alfred import constants
-from alfred import embeds
 from alfred import errors
-from alfred import sources
-from alfred.player import AlfredPlayer
-from alfred.player import PlaylistRef
-from alfred.player import set_playlist
+from alfred.music import sources
+from alfred.music.player import AlfredPlayer
+from alfred.music.player import PlaylistRef
+from alfred.music.player import set_playlist
 
 URL_RX = re.compile(r"https?://(?:www\.)?.+")
 
 RICH_PLAYLIST_TYPES = ("artist", "album", "playlist")
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class Queued:
+    """
+    What a call to `enqueue` put in the queue.
+
+    Returned instead of a rendered embed so that `alfred.music` owes nothing to `alfred.ui`.
+    Two callers render the same value differently: the slash commands turn it into the "Track
+    added" card, and the chat path describes it in a sentence. Neither reading belongs in here.
+    """
+
+    requester_id: int
+    tracks: tuple[lavalink.AudioTrack, ...]
+    playlist: PlaylistRef | None = None
+    result_type: str = "track"
+    """One of ``track``, ``playlist``, ``album`` or ``artist`` - how the source described it."""
+    artwork_url: str | None = None
+    author: str | None = None
+
+    @property
+    def is_playlist(self) -> bool:
+        return self.playlist is not None
+
+    @property
+    def track(self) -> lavalink.AudioTrack:
+        """The single track that was added. Only meaningful when `is_playlist` is false."""
+        return self.tracks[0]
+
+    @property
+    def count(self) -> int:
+        return len(self.tracks)
 
 
 def get_player(lavalink_client: lavalink.Client, guild_id: int) -> AlfredPlayer | None:
@@ -127,7 +158,7 @@ async def enqueue(
     play_next: bool = False,
     loop: bool = False,
     shuffle: bool = True,
-) -> hikari.Embed:
+) -> Queued:
     """
     Add a load result to the guild's queue, connecting to voice first if needed.
 
@@ -142,7 +173,7 @@ async def enqueue(
         shuffle: Shuffle a playlist's tracks as they are queued.
 
     Returns:
-        An embed describing what was added.
+        What was added, for the caller to render however it likes.
 
     Raises:
         NoResults: If the result holds no tracks.
@@ -159,18 +190,18 @@ async def enqueue(
         player.text_channel_id = channel_id
 
     if result.load_type is lavalink.LoadType.PLAYLIST:
-        embed = _add_playlist(player, result, requester_id=requester_id, query=query, shuffle=shuffle)
+        queued = _add_playlist(player, result, requester_id=requester_id, query=query, shuffle=shuffle)
         if loop:
             player.set_loop(player.LOOP_QUEUE)
     else:
-        embed = _add_track(player, result.tracks[0], requester_id=requester_id, play_next=play_next)
+        queued = _add_track(player, result.tracks[0], requester_id=requester_id, play_next=play_next)
         if loop:
             player.set_loop(player.LOOP_SINGLE)
 
     if not player.is_playing:
         await player.play()
 
-    return embed
+    return queued
 
 
 def _add_track(
@@ -179,14 +210,15 @@ def _add_track(
     *,
     requester_id: hikari.Snowflakeish,
     play_next: bool,
-) -> hikari.Embed:
+) -> Queued:
     player.add(track=track, requester=int(requester_id), index=0 if play_next else None)
 
-    return hikari.Embed(
-        title="Track added",
-        description=embeds.track_summary(track),
-        color=constants.COLOR_ALFRED,
-    ).set_thumbnail(track.artwork_url)
+    return Queued(
+        requester_id=int(requester_id),
+        tracks=(track,),
+        artwork_url=track.artwork_url,
+        author=track.author or None,
+    )
 
 
 def _add_playlist(
@@ -196,18 +228,16 @@ def _add_playlist(
     requester_id: hikari.Snowflakeish,
     query: str | None,
     shuffle: bool,
-) -> hikari.Embed:
+) -> Queued:
     plugin_info: dict[str, Any] = result.plugin_info or {}
     result_type = plugin_info.get("type") if plugin_info.get("type") in RICH_PLAYLIST_TYPES else "playlist"
 
     name = result.playlist_info.name or plugin_info.get("author") or "Unknown"
     url = plugin_info.get("url") or (query if query and URL_RX.match(query) else None)
-    artwork_url = plugin_info.get("artworkUrl")
-    author = plugin_info.get("author")
+    playlist = PlaylistRef(name=name, url=url)
 
     tracks = list(result.tracks)
-    count = len(tracks)
-    playlist = PlaylistRef(name=name, url=url)
+    queued = tuple(tracks)
 
     # Shuffling as tracks are queued keeps the shuffle stable, rather than re-rolling every skip.
     while tracks:
@@ -215,15 +245,11 @@ def _add_playlist(
         set_playlist(track, playlist)
         player.add(track=track, requester=int(requester_id))
 
-    if result_type == "artist":
-        description = f"[{(author or name).upper()}]({url or '#'}) - `{count} tracks`\n\n<@{requester_id}>"
-    elif author:
-        description = f"[{name}]({url or '#'}) `{count} track(s)`\n{author}\n\n<@{requester_id}>"
-    else:
-        description = f"Playlist [{name}]({url or '#'}) - {count} tracks\n\n<@{requester_id}>"
-
-    return hikari.Embed(
-        title=f"{result_type.capitalize()} added",
-        description=description,
-        color=constants.COLOR_ALFRED,
-    ).set_thumbnail(artwork_url)
+    return Queued(
+        requester_id=int(requester_id),
+        tracks=queued,
+        playlist=playlist,
+        result_type=result_type,
+        artwork_url=plugin_info.get("artworkUrl"),
+        author=plugin_info.get("author"),
+    )

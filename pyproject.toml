@@ -15,6 +15,10 @@ license = { text = "MIT" }
 # Floors, not pins - `uv.lock` holds the exact versions, and it is committed.
 # `uv sync --frozen` installs the lock verbatim; `uv lock --upgrade` moves it.
 dependencies = [
+    # Already installed as one of hikari's own requirements, but `alfred.chat.client` imports
+    # it directly - and a dependency you import is one you declare, or it disappears the day
+    # hikari swaps its HTTP client.
+    "aiohttp>=3.9",
     "hikari>=2.5.0",
     "hikari-lightbulb>=3.2.5",
     "lavalink>=5.11.0",

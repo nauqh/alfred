@@ -7,9 +7,9 @@ import lavalink
 import lightbulb
 from loguru import logger
 
-from alfred import hooks
-from alfred import responses
-from alfred import service
+from alfred.extensions import hooks
+from alfred.music import service
+from alfred.ui import responses
 
 loader = lightbulb.Loader()
 

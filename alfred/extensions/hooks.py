@@ -11,7 +11,7 @@ import lavalink
 import lightbulb
 
 from alfred import errors
-from alfred import service
+from alfred.music import service
 
 
 @lightbulb.hook(lightbulb.ExecutionSteps.CHECKS)

@@ -8,7 +8,7 @@ import pytest
 from alfred.events import MAX_RETRIES
 from alfred.events import RETRY_KEY
 from alfred.events import LavalinkEventHandler
-from alfred.player import AlfredPlayer
+from alfred.music.player import AlfredPlayer
 from tests.conftest import make_track
 
 

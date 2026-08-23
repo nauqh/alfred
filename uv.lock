@@ -192,6 +192,7 @@ name = "alfred"
 version = "2.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "aiohttp" },
     { name = "hikari" },
     { name = "hikari-lightbulb" },
     { name = "lavalink" },
@@ -213,6 +214,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiohttp", specifier = ">=3.9" },
     { name = "hikari", specifier = ">=2.5.0" },
     { name = "hikari", extras = ["speedups"], marker = "extra == 'speedups'", specifier = ">=2.5.0" },
     { name = "hikari-lightbulb", specifier = ">=3.2.5" },

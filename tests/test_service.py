@@ -4,10 +4,10 @@ import lavalink
 import pytest
 
 from alfred import errors
-from alfred import service
-from alfred import sources
-from alfred.player import AlfredPlayer
-from alfred.player import get_playlist
+from alfred.music import service
+from alfred.music import sources
+from alfred.music.player import AlfredPlayer
+from alfred.music.player import get_playlist
 from tests.conftest import confirm_playback
 from tests.conftest import make_track
 
@@ -117,15 +117,15 @@ async def test_a_blank_query_never_reaches_lavalink() -> None:
 
 
 @pytest.mark.asyncio
-async def test_queueing_a_track_starts_playback_and_describes_it(player: AlfredPlayer) -> None:
+async def test_queueing_a_track_starts_playback_and_records_what_it_queued(player: AlfredPlayer) -> None:
     client = FakeLavalinkClient(player=player)
     track = make_track("Some Song")
 
-    embed = await enqueue(client, lavalink.LoadResult.from_track(track))
+    queued = await enqueue(client, lavalink.LoadResult.from_track(track))
     confirm_playback(player)
 
-    assert embed.title == "Track added"
-    assert "Some Song" in embed.description
+    assert queued.track is track
+    assert not queued.is_playlist
     assert player.current is track
 
 
@@ -202,7 +202,7 @@ async def test_a_search_query_is_not_mistaken_for_a_playlist_link(player: Alfred
 
 
 @pytest.mark.asyncio
-async def test_a_plugin_album_is_described_as_an_album(player: AlfredPlayer) -> None:
+async def test_a_plugin_album_is_reported_as_an_album(player: AlfredPlayer) -> None:
     client = FakeLavalinkClient(player=player)
     plugin_info = {
         "type": "album",
@@ -211,22 +211,22 @@ async def test_a_plugin_album_is_described_as_an_album(player: AlfredPlayer) -> 
         "author": "Some Artist",
     }
 
-    embed = await enqueue(client, playlist_result([make_track("a")], name="An Album", plugin_info=plugin_info))
+    queued = await enqueue(client, playlist_result([make_track("a")], name="An Album", plugin_info=plugin_info))
 
-    assert embed.title == "Album added"
-    assert "Some Artist" in embed.description
-    assert embed.thumbnail is not None
+    assert queued.result_type == "album"
+    assert queued.author == "Some Artist"
+    assert queued.artwork_url == "https://example.com/art.png"
 
 
 @pytest.mark.asyncio
-async def test_a_plugin_artist_is_described_as_an_artist(player: AlfredPlayer) -> None:
+async def test_a_plugin_artist_is_reported_as_an_artist(player: AlfredPlayer) -> None:
     client = FakeLavalinkClient(player=player)
     plugin_info = {"type": "artist", "url": "https://open.spotify.com/artist/1", "author": "Some Artist"}
 
-    embed = await enqueue(client, playlist_result([make_track("a")], name="Top Tracks", plugin_info=plugin_info))
+    queued = await enqueue(client, playlist_result([make_track("a")], name="Top Tracks", plugin_info=plugin_info))
 
-    assert embed.title == "Artist added"
-    assert "SOME ARTIST" in embed.description
+    assert queued.result_type == "artist"
+    assert queued.author == "Some Artist"
 
 
 @pytest.mark.asyncio

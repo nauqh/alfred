@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-from alfred.nowplaying import NowPlayingManager
-from alfred.player import AlfredPlayer
+from alfred.music.player import AlfredPlayer
+from alfred.ui.nowplaying import NowPlayingManager
 from tests.conftest import confirm_playback
 from tests.conftest import make_track
 

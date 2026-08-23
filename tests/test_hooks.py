@@ -12,8 +12,8 @@ import linkd
 import pytest
 
 from alfred import errors
-from alfred import hooks
-from alfred.player import AlfredPlayer
+from alfred.extensions import hooks
+from alfred.music.player import AlfredPlayer
 from tests.conftest import make_track
 
 BOT_ID = 100

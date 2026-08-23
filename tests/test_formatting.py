@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from alfred.formatting import PROGRESS_BAR_WIDTH
-from alfred.formatting import format_time
-from alfred.formatting import format_uptime
-from alfred.formatting import parse_time
-from alfred.formatting import progress_bar
-from alfred.formatting import trim
+from alfred.ui.formatting import PROGRESS_BAR_WIDTH
+from alfred.ui.formatting import format_time
+from alfred.ui.formatting import format_uptime
+from alfred.ui.formatting import parse_time
+from alfred.ui.formatting import progress_bar
+from alfred.ui.formatting import trim
 
 
 @pytest.mark.parametrize(

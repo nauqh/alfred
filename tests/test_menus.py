@@ -7,9 +7,9 @@ from typing import Any
 import lavalink
 import pytest
 
-from alfred.menus import NEXT_LOOP
-from alfred.menus import NowPlayingMenu
-from alfred.player import AlfredPlayer
+from alfred.music.player import AlfredPlayer
+from alfred.ui.menus import NEXT_LOOP
+from alfred.ui.menus import NowPlayingMenu
 from tests.conftest import confirm_playback
 from tests.conftest import make_track
 

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from alfred import search
-from alfred.search import LavaSearchResult
-from alfred.search import SearchItem
+from alfred.music import search
+from alfred.music.search import LavaSearchResult
+from alfred.music.search import SearchItem
 
 TRACK_PAYLOAD = {
     "encoded": "encoded",

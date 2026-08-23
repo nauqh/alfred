@@ -15,7 +15,7 @@ import lavalink
 import lightbulb
 from loguru import logger
 
-from alfred.formatting import format_uptime
+from alfred.ui.formatting import format_uptime
 
 loader = lightbulb.Loader()
 

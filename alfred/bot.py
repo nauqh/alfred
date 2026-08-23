@@ -10,16 +10,20 @@ from loguru import logger
 from alfred import constants
 from alfred import errors
 from alfred import log_config
-from alfred import responses
+from alfred.chat.client import ChatClient
 from alfred.config import Config
 from alfred.events import LavalinkEventHandler
+from alfred.extensions import CHAT_EXTENSION
 from alfred.extensions import EXTENSIONS
-from alfred.nowplaying import NowPlayingManager
-from alfred.player import AlfredPlayer
+from alfred.music.player import AlfredPlayer
+from alfred.ui import responses
+from alfred.ui.nowplaying import NowPlayingManager
 
-# GUILD_MESSAGES is deliberately not here: the bot posts only replies to commands and does
-# not listen to ordinary channel traffic.
-INTENTS = hikari.Intents.GUILDS | hikari.Intents.GUILD_VOICE_STATES
+# GUILD_MESSAGES is what lets `alfred.extensions.chat` see an @mention. MESSAGE_CONTENT is
+# deliberately absent and not needed: it is privileged, and Discord exempts messages that
+# mention the bot from it - their content arrives populated regardless. The bot is therefore
+# blind to the text of every message that is not addressed to it, which is the intent.
+INTENTS = hikari.Intents.GUILDS | hikari.Intents.GUILD_VOICE_STATES | hikari.Intents.GUILD_MESSAGES
 
 
 @lightbulb.hook(lightbulb.ExecutionSteps.PRE_INVOKE)
@@ -55,6 +59,7 @@ def build(config: Config) -> hikari.GatewayBot:
 
     responses.configure(config.delete_after)
     lavalink_client: lavalink.Client | None = None
+    chat_client = ChatClient(config.chat) if config.chat is not None else None
 
     @client.error_handler
     async def on_error(exc: lightbulb.exceptions.ExecutionPipelineFailedException) -> bool:
@@ -82,7 +87,14 @@ def build(config: Config) -> hikari.GatewayBot:
         client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(lavalink.Client, lavalink_client)
         client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(Config, config)
 
-        await client.load_extensions(*EXTENSIONS)
+        extensions = EXTENSIONS
+        if chat_client is not None:
+            await chat_client.start()
+            client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(ChatClient, chat_client)
+            extensions += CHAT_EXTENSION
+            logger.info("Chat replies enabled, answering with {!r}", chat_client.model)
+
+        await client.load_extensions(*extensions)
         await client.start()
 
     @bot.listen(hikari.StoppingEvent)
@@ -90,6 +102,9 @@ def build(config: Config) -> hikari.GatewayBot:
         if lavalink_client is not None:
             await lavalink_client.close()
             logger.info("Closed the Lavalink client")
+
+        if chat_client is not None:
+            await chat_client.close()
 
     return bot
 

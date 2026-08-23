@@ -21,9 +21,9 @@ import lavalink
 import lightbulb
 from loguru import logger
 
-from alfred import embeds
-from alfred.menus import NowPlayingMenu
-from alfred.player import AlfredPlayer
+from alfred.music.player import AlfredPlayer
+from alfred.ui import embeds
+from alfred.ui.menus import NowPlayingMenu
 
 
 @dataclasses.dataclass(slots=True)

@@ -18,7 +18,8 @@ it what to do.
 - Music from **YouTube, Spotify and Deezer**, plus URL playback and playlists
 - `/search` with live autocomplete for tracks, artists, albums and playlists via [LavaSearch](https://github.com/topi314/LavaSearch)
 - Queue panel with Pause, Skip, Loop and Stop buttons
-- The bot posts nothing unprompted - every message is a reply to a command
+- **@mention it to ask a question, or to queue something** - "@Alfred play bohemian rhapsody" really queues it. Answered by a free [OpenRouter](https://openrouter.ai) model; off unless a key is set
+- The bot posts nothing unprompted - every message is a reply to a command or to a mention
 
 ## Quick start
 
@@ -126,6 +127,45 @@ Two worth knowing:
 
 - `DEFAULT_GUILDS` - register commands to named guilds while developing. Guild
   commands appear instantly; global ones take up to an hour to propagate.
+
+### Chat replies
+
+Set `OPENROUTER_API_KEY` ([get one](https://openrouter.ai/keys)) and the bot answers
+when someone @mentions it. Leave it blank and the listener is never registered, so the
+bot stays deaf to ordinary channel traffic.
+
+It can also *run* four of its commands when asked, through OpenRouter tool calling:
+
+| Ask it | Runs |
+|---|---|
+| "play never gonna give you up", "play `<url>`" | `/play` |
+| "what's playing" | `/now` |
+| "show me the queue" | `/queue` |
+| "skip this" | `/skip` |
+
+Asked for music without naming anything — "play something" — it asks what you want
+rather than picking for you.
+
+| | |
+|---|---|
+| **The model proposes, it does not decide** | A tool call is treated as a request from whoever sent the message, never as an instruction from the model. `alfred/actions.py` re-applies the same checks the equivalent slash command applies, so asking Alfred to skip is exactly as restricted as running `/skip`. The requester, guild and channel come from the message - nothing the model returns can change who a track is queued as |
+| **Checks are duplicated, not shared** | A `lightbulb` hook needs a `Context` and a message listener has none, so `actions.py` mirrors `hooks.py` rather than importing it. `tests/test_actions.py` asserts the pairs stay in step |
+| **No privileged intent needed** | Answering mentions needs `GUILD_MESSAGES`, not `MESSAGE_CONTENT` - Discord exempts messages that mention your bot from the content restriction. Nothing to toggle in the developer portal |
+| **Free model ids rot** | OpenRouter rotates which models carry a free tier, and a retired id 404s at request time rather than at startup. Current list: [openrouter.ai/models?q=free](https://openrouter.ai/models?q=free). Swap with `OPENROUTER_MODEL` |
+| **Prefer a non-reasoning model** | A reasoning model sits thinking for seconds before its first word. Measured across eight questions on 2026-08-23: the default answered in 1.7-5.8s, `nemotron-3.5-lightning` in 5-29s while burning ~1000 thinking tokens a reply. Latency is the thing to check when swapping |
+| **Context is the reply chain** | A cold mention is a fresh question. Reply to one of Alfred's answers and that exchange comes with it. Nothing is stored between messages, so a restart loses nothing and one person's conversation never leaks into another's |
+| **Reasoning models are muzzled** | Several free models think out loud, and their thinking is `content` unless you say otherwise - one posted its entire *"Here's a thinking process:"* monologue into a channel as the answer. Requests send `reasoning: {"exclude": true}`, and a completion that still opens with a monologue is refused rather than posted |
+| **The model picks the format** | Plain text for ordinary answers; an embed when the answer has structure worth laying out. It opts in by returning JSON with a title or fields - structure *is* the signal, so there is no separate flag for a weak model to get wrong. Anything unparseable is posted as the plain answer it looks like, rather than failing the reply |
+| **One reply per channel at a time** | Mentions arriving while one is in flight are dropped, not queued - the free tier is rate limited hard enough that a queued answer arrives after everyone has moved on |
+
+Every reply logs one line at `INFO` - model, latency, plain or embed, and token
+usage - so a truncated answer is visible as a completion count sitting exactly on
+`CHAT_MAX_TOKENS`. `LOG_LEVEL=DEBUG` adds the prompt turns and the raw completion,
+which is what explains a reply that came out plain when an embed was wanted.
+
+`CHAT_MAX_TOKENS`, `CHAT_TEMPERATURE` and `CHAT_TIMEOUT` tune the request.
+`CHAT_SYSTEM_PROMPT` replaces Alfred's persona *and* its knowledge of its own
+commands - the built-in prompt lists them, so an override drops that.
 
 ## Development
 

@@ -9,7 +9,7 @@ from typing import Any
 import lavalink
 import pytest
 
-from alfred.player import AlfredPlayer
+from alfred.music.player import AlfredPlayer
 
 _ids = itertools.count(1)
 

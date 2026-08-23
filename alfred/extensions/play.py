@@ -7,12 +7,13 @@ import lavalink
 import lightbulb
 
 from alfred import errors
-from alfred import hooks
-from alfred import responses
-from alfred import search
-from alfred import service
-from alfred import sources
-from alfred.formatting import trim
+from alfred.extensions import hooks
+from alfred.music import search
+from alfred.music import service
+from alfred.music import sources
+from alfred.ui import embeds
+from alfred.ui import responses
+from alfred.ui.formatting import trim
 
 loader = lightbulb.Loader()
 
@@ -115,7 +116,7 @@ async def _play(
     assert ctx.guild_id is not None
 
     result = await service.resolve(lavalink_client, query, source)
-    embed = await service.enqueue(
+    queued = await service.enqueue(
         bot,
         lavalink_client,
         result,
@@ -127,7 +128,7 @@ async def _play(
         loop=loop,
         shuffle=shuffle,
     )
-    await responses.respond(ctx, embed=embed)
+    await responses.respond(ctx, embed=embeds.queued(queued))
 
 
 @loader.command

@@ -79,26 +79,51 @@ which is the same behaviour the legacy bot had and has never been a complaint.
 alfred/
 ├── alfred/
 │   ├── bot.py            entrypoint: hikari bot, lightbulb client, Lavalink client
-│   ├── config.py         the environment → a frozen Config
-│   ├── service.py        join · resolve · enqueue — the one seam
-│   ├── player.py         AlfredPlayer — the queue, and its tracks' origins
 │   ├── events.py         Lavalink events → the log, and the now playing view
-│   ├── hooks.py          the command checks
-│   ├── search.py         the LavaSearch plugin client
-│   ├── embeds.py         embed builders
-│   ├── nowplaying.py     the now playing view's lifecycle
-│   ├── menus.py          the buttons under the now playing view
-│   ├── formatting.py     durations, progress bar, trimming
-│   ├── responses.py      replying, and the self-deleting reply
+│   ├── config.py         the environment → a frozen Config
 │   ├── errors.py         errors that carry a user-facing message
-│   ├── sources.py        the search sources and their prefixes
-│   ├── constants.py      the three embed emojis
+│   ├── constants.py      colours and the media emojis
 │   ├── log_config.py     loguru, and the bridge from the standard library
-│   └── extensions/       general · play · queue · admin
+│   │
+│   ├── music/            the player, and what fills it
+│   │   ├── service.py      join · resolve · enqueue — the one seam
+│   │   ├── player.py       AlfredPlayer — the queue, and its tracks' origins
+│   │   ├── sources.py      the search sources and their prefixes
+│   │   └── search.py       the LavaSearch plugin client
+│   │
+│   ├── ui/               everything Alfred renders and posts
+│   │   ├── embeds.py       embed builders, and Discord's limits
+│   │   ├── nowplaying.py   the now playing view's lifecycle
+│   │   ├── menus.py        the buttons under the now playing view
+│   │   ├── responses.py    replying, and the self-deleting reply
+│   │   └── formatting.py   durations, progress bar, trimming
+│   │
+│   ├── chat/             answering @mentions, and acting on them
+│   │   ├── client.py       talking to a model on OpenRouter
+│   │   ├── completions.py  turning a raw completion into something postable
+│   │   ├── actions.py      running commands from chat, behind the same checks
+│   │   └── prompt.py       the persona
+│   │
+│   └── extensions/       the slash commands, and their checks
+│       ├── hooks.py        the command checks
+│       └── general · play · queue · admin · chat
 ├── lavalink/             the node's application.yml
 ├── tests/
 └── docs/
 ```
+
+The packages are strictly layered, and nothing points back up:
+
+```
+wiring  →  extensions  →  chat  →  ui  →  music  →  errors · config · constants
+```
+
+`music` owes nothing to `ui`, which is why `service.enqueue` returns a **`Queued`**
+describing what it added rather than a rendered embed. Two callers read the same
+value differently: `/play` renders it as the "Track added" card, and the chat path
+describes it in a sentence. `events.py` sits at the top rather than inside `music/`
+because it is glue — Lavalink events driving the now playing view — and would
+otherwise be the one edge pointing back up.
 
 ## The modules
 
