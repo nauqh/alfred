@@ -132,12 +132,18 @@ class NowPlayingMenu(lightbulb.components.Menu):
         """
         Resolve the player for a press, once the presser is allowed to make it.
 
-        Only members in the bot's voice channel may press - the same rule the `/skip` and
-        `/leave` commands apply, so a button and its command cannot disagree.
+        Ownership is checked first and is absolute: only the bot's owner (and the team that
+        owns the application) may press - anyone else is turned away with a snarky reply and
+        never reaches the voice channel rule. The owner must still be in the bot's voice
+        channel, so a button and its command cannot disagree.
 
         Returns:
             The player, or `None` if the press was rejected and already answered.
         """
+        if not await self._is_owner(ctx):
+            await ctx.respond(f"{ctx.user.mention} {ctx.component.label} con cặc à?", ephemeral=True)
+            return None
+
         me = self._bot.get_me()
         bot_channel_id = service.voice_channel_of(self._bot, self._guild_id, me.id) if me is not None else None
         user_channel_id = service.voice_channel_of(self._bot, self._guild_id, ctx.user.id)
@@ -152,6 +158,22 @@ class NowPlayingMenu(lightbulb.components.Menu):
             return None
 
         return player
+
+    async def _is_owner(self, ctx: lightbulb.components.MenuContext) -> bool:
+        """
+        Whether the presser owns the bot's application.
+
+        Mirrors `lightbulb.prefab.owner_only` - the owner alone, plus any members of the team
+        that owns the application. The result is cached on the client so it is fetched once.
+        """
+        client = ctx.client
+        if client._owner_ids is None:
+            app = await client._ensure_application()
+            owner_ids: set[hikari.Snowflakeish] = {app.owner.id}
+            if app.team is not None:
+                owner_ids.update(app.team.members.keys())
+            client._owner_ids = owner_ids
+        return ctx.user.id in client._owner_ids
 
     async def on_pause(self, ctx: lightbulb.components.MenuContext) -> None:
         player = await self.check(ctx)
