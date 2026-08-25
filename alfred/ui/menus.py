@@ -141,7 +141,7 @@ class NowPlayingMenu(lightbulb.components.Menu):
             The player, or `None` if the press was rejected and already answered.
         """
         if not await self._is_owner(ctx):
-            await ctx.respond(f"{ctx.user.mention} {ctx.component.label} con cặc à?", ephemeral=True)
+            await ctx.respond(f"{ctx.user.mention} {ctx.component.label} con cặc à?")
             return None
 
         me = self._bot.get_me()

@@ -178,7 +178,6 @@ async def test_an_outsider_is_turned_away_with_the_snark(playing_player: AlfredP
     ctx = FakeContext(OUTSIDER_ID, label="Skip")
 
     assert await menu.check(ctx) is None  # type: ignore[arg-type]
-    assert ctx.responses[0]["ephemeral"] is True
     assert ctx.responses[0]["content"] == f"@{OUTSIDER_ID} Skip con cặc à?"
 
 
@@ -188,7 +187,6 @@ async def test_someone_in_no_channel_is_turned_away(playing_player: AlfredPlayer
     ctx = FakeContext(OUTSIDER_ID, label="Loop: off")
 
     assert await menu.check(ctx) is None  # type: ignore[arg-type]
-    assert ctx.responses[0]["ephemeral"] is True
     assert ctx.responses[0]["content"] == f"@{OUTSIDER_ID} Loop: off con cặc à?"
 
 
