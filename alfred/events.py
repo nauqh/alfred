@@ -13,12 +13,6 @@ from loguru import logger
 from alfred.music.player import AlfredPlayer
 from alfred.ui.nowplaying import NowPlayingManager
 
-# How many times to re-queue a track that failed to load or stalled mid-play, before letting
-# the player move on to the next one. YouTube streams die transiently (rate limits, expired
-# stream URLs) - re-queueing the same track once keeps the song going instead of skipping.
-RETRY_KEY = "alfred.retry_count"
-MAX_RETRIES = 1
-
 
 class LavalinkEventHandler:
     """
@@ -37,7 +31,7 @@ class LavalinkEventHandler:
 
         assert isinstance(event.player, AlfredPlayer)
         # `show` replaces whatever view is up, which covers every way a track can start:
-        # naturally, by skip, or by the retry below putting a failed track back on.
+        # naturally, by skip, or by a failed track being replaced with the next one.
         await self._now_playing.show(event.player)
 
     @lavalink.listener(lavalink.QueueEndEvent)
@@ -55,38 +49,31 @@ class LavalinkEventHandler:
     @lavalink.listener(lavalink.TrackExceptionEvent)
     async def on_track_exception(self, event: lavalink.TrackExceptionEvent) -> None:
         """
-        Log a failed track, and re-queue it once before the player advances past it.
+        Log a failed track, and let the player advance past it.
 
-        On `TrackExceptionEvent` the failed track is still the player's current track. Putting
-        it back at the front of the queue makes the player's own end-of-track handler (which runs
-        right after this on `TrackEndEvent`) pick the same track again, so a transient YouTube
-        failure retries the song rather than skipping to the next one. The retry is capped by
-        a counter on the track, so a genuinely dead track still moves on.
+        The failed track is still the player's current track - the next `TrackEndEvent` (with a
+        ``load_failed`` reason) follows immediately and makes lavalink's own handler pull the
+        next song off the queue. No replay here, so a dead or dying stream moves forward instead
+        of looping back onto itself.
         """
-        track = event.track
-        attempts = int(track.extra.get(RETRY_KEY, 0))
-        logger.warning(
-            "Track {!r} failed on guild {} (attempt {}): {}",
-            track.title,
-            event.player.guild_id,
-            attempts + 1,
-            event.message,
-        )
-
-        if attempts < MAX_RETRIES:
-            track.extra[RETRY_KEY] = attempts + 1
-            event.player.queue.insert(0, track)
-            logger.info("Retrying {!r} once on guild {}", track.title, event.player.guild_id)
+        logger.warning("Track {!r} failed on guild {}: {}", event.track.title, event.player.guild_id, event.message)
 
     @lavalink.listener(lavalink.TrackStuckEvent)
     async def on_track_stuck(self, event: lavalink.TrackStuckEvent) -> None:
+        """
+        Log a stalled track. Advancing is left to lavalink's own handler.
+
+        A stuck track is usually followed by no `TrackEndEvent`, so lavalink's
+        `player._handle_event` advances the player itself on `TrackStuckEvent`. Advancing here
+        too would fire `play()` twice - skipping two songs, or, with looping on, replaying the
+        stuck one - so this hook only reports it.
+        """
         logger.warning(
             "Track {!r} stuck for {}ms on guild {} - skipping",
             event.track.title,
             event.threshold,
             event.player.guild_id,
         )
-        await event.player.play()
 
     @lavalink.listener(lavalink.NodeConnectedEvent)
     async def on_node_connected(self, event: lavalink.NodeConnectedEvent) -> None:

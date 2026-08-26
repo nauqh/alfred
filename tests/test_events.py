@@ -1,12 +1,10 @@
-"""The Lavalink event handlers: the retry logic, and the now playing view's triggers."""
+"""The Lavalink event handlers: the now playing view's triggers."""
 
 from __future__ import annotations
 
 import lavalink
 import pytest
 
-from alfred.events import MAX_RETRIES
-from alfred.events import RETRY_KEY
 from alfred.events import LavalinkEventHandler
 from alfred.music.player import AlfredPlayer
 from tests.conftest import make_track
@@ -49,7 +47,7 @@ async def _raise_exception(handler: LavalinkEventHandler, player: AlfredPlayer, 
 
 
 @pytest.mark.asyncio
-async def test_first_failure_puts_the_track_back_at_the_front(
+async def test_a_failing_track_is_not_replayed(
     handler: LavalinkEventHandler, player: AlfredPlayer
 ) -> None:
     current = make_track("current")
@@ -59,22 +57,23 @@ async def test_first_failure_puts_the_track_back_at_the_front(
 
     await _raise_exception(handler, player, current)
 
-    assert player.queue[0] is current
-    assert current.extra[RETRY_KEY] == 1
-    assert player.queue[1] is upcoming
+    # A failing track must not be re-queued: the player advances to `upcoming` on its own.
+    assert player.queue == [upcoming]
 
 
 @pytest.mark.asyncio
-async def test_second_failure_lets_the_player_move_on(handler: LavalinkEventHandler, player: AlfredPlayer) -> None:
+async def test_a_stuck_track_is_not_advanced_here(
+    handler: LavalinkEventHandler, player: AlfredPlayer
+) -> None:
     current = make_track("current")
     upcoming = make_track("upcoming")
-    current.extra[RETRY_KEY] = MAX_RETRIES
     player.current = current
     player.queue.append(upcoming)
 
-    await _raise_exception(handler, player, current)
+    await handler.on_track_stuck(lavalink.TrackStuckEvent(player=player, track=current, threshold=100))
 
-    assert player.queue[0] is upcoming
+    # Advancing is lavalink's own handler's job; this hook must not touch the queue.
+    assert player.queue == [upcoming]
 
 
 @pytest.mark.asyncio
