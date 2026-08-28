@@ -156,3 +156,39 @@ def test_a_page_past_the_end_shows_the_last_one(player: AlfredPlayer) -> None:
 
 def test_the_queue_of_a_player_that_has_gone_says_nothing_is_playing() -> None:
     assert embeds.queue(None, title="Queue").description == "Nothing is playing."
+
+
+def test_the_startup_embed_carries_the_versions_and_the_commit() -> None:
+    info = embeds.StartupInfo(
+        bot_version="2.0.0",
+        lavalink_version="4.2.2",
+        plugins="youtube-plugin 1.18.2, lavasrc-plugin 4.8.3",
+        commit="46efb0f",
+        commit_date="2026-08-29",
+        started=None,
+    )
+
+    embed = embeds.startup_embed(info)
+
+    assert embed.title == "Bot restarted"
+    assert embed.description and "Alfred **2.0.0**" in embed.description
+    assert any("Lavalink `4.2.2`" in f.value for f in embed.fields)
+    assert any("youtube-plugin 1.18.2" in f.value for f in embed.fields)
+    assert any("`46efb0f` (2026-08-29)" in f.value for f in embed.fields)
+
+
+def test_the_startup_embed_tolerates_a_node_still_booting() -> None:
+    info = embeds.StartupInfo(
+        bot_version="2.0.0",
+        lavalink_version=embeds.UNKNOWN_VERSION,
+        plugins="none",
+        commit=None,
+        commit_date=None,
+        started=None,
+    )
+
+    embed = embeds.startup_embed(info)
+
+    assert embed.description and "Alfred **2.0.0**" in embed.description
+    assert any("Lavalink `unknown`" in f.value for f in embed.fields)
+    assert not any("Deploy" == f.name for f in embed.fields)

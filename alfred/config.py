@@ -62,6 +62,8 @@ class Config:
     log_dir: str | None
     chat: ChatConfig | None
     """`None` when `OPENROUTER_API_KEY` is unset, which leaves the bot deaf to ordinary messages."""
+    startup_channel_id: int | None
+    """Where the bot posts its restart view; `None` leaves it silent on restart."""
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Config:
@@ -94,6 +96,7 @@ class Config:
             log_level=env.get("LOG_LEVEL", "INFO").upper(),
             log_dir=env.get("LOG_DIR") or None,
             chat=_chat(env),
+            startup_channel_id=_optional_guild_id(env, "STARTUP_CHANNEL_ID"),
         )
 
 
@@ -166,6 +169,17 @@ def _guild_ids(env: Mapping[str, str]) -> tuple[int, ...]:
         return tuple(int(part) for part in raw.split(",") if part.strip())
     except ValueError as e:
         raise ConfigError(f"'DEFAULT_GUILDS' must be a comma separated list of guild IDs: {e}") from e
+
+
+def _optional_guild_id(env: Mapping[str, str], key: str) -> int | None:
+    """Parse a single optional guild/channel ID, or ``None`` when unset."""
+    raw = env.get(key, "").strip()
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except ValueError as e:
+        raise ConfigError(f"'{key}' must be an integer, got {raw!r}") from e
 
 
 def _int(env: Mapping[str, str], key: str, default: int) -> int:

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import dataclasses
+from datetime import datetime
+from typing import Final
 
 import hikari
 import lavalink
@@ -32,6 +34,50 @@ MAX_DESCRIPTION = 4096
 MAX_FIELDS = 25
 MAX_FIELD_NAME = 256
 MAX_FIELD_VALUE = 1024
+
+# What the startup view reports when node info has not arrived yet - a node mid-boot, or
+# one that is down. The same placeholder the node itself uses.
+UNKNOWN_VERSION: Final = "unknown"
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class StartupInfo:
+    """The versions a startup view can display."""
+
+    bot_version: str
+    lavalink_version: str = UNKNOWN_VERSION
+    plugins: str = "none"
+    commit: str | None = None
+    commit_date: str | None = None
+    started: datetime | None = None
+
+
+def startup_embed(info: StartupInfo) -> hikari.Embed:
+    """The embed a freshly started bot posts: who it is, and what it runs on."""
+    embed = hikari.Embed(
+        title="Bot restarted",
+        description=f"Alfred **{info.bot_version}** is back up.",
+        color=constants.COLOR_ALFRED,
+    )
+
+    # A one-row summary avoids the field sprawl of a real /stats, while carrying the same
+    # three numbers someone deploys to check.
+    summary = f"Lavalink `{info.lavalink_version}`"
+    if info.plugins != "none":
+        summary += f" · plugins: {info.plugins}"
+    embed.add_field(name="Status", value=summary, inline=False)
+
+    if info.commit:
+        embed.add_field(
+            name="Deploy",
+            value=f"`{info.commit[:7]}`" + (f" ({info.commit_date})" if info.commit_date else ""),
+            inline=False,
+        )
+
+    embed.set_footer("Alexa")
+    if info.started:
+        embed.timestamp = info.started
+    return embed
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

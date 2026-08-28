@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+import datetime as dt
+import importlib.metadata as _metadata
+import subprocess
+from pathlib import Path
+
 import hikari
 import lavalink
 import lightbulb
@@ -15,7 +21,9 @@ from alfred.config import Config
 from alfred.events import LavalinkEventHandler
 from alfred.extensions import CHAT_EXTENSION
 from alfred.extensions import EXTENSIONS
+from alfred.music import node as music_node
 from alfred.music.player import AlfredPlayer
+from alfred.ui import embeds
 from alfred.ui import responses
 from alfred.ui.nowplaying import NowPlayingManager
 
@@ -24,6 +32,36 @@ from alfred.ui.nowplaying import NowPlayingManager
 # mention the bot from it - their content arrives populated regardless. The bot is therefore
 # blind to the text of every message that is not addressed to it, which is the intent.
 INTENTS = hikari.Intents.GUILDS | hikari.Intents.GUILD_VOICE_STATES | hikari.Intents.GUILD_MESSAGES
+
+
+def _in_git_repo() -> bool:
+    """Whether the working tree is a git checkout at all."""
+    return (Path(__file__).resolve().parent.parent / ".git").exists()
+
+
+def _git_commit() -> str | None:
+    """The current commit's short hash, or `None` when it cannot be read."""
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError) as e:
+        logger.warning("Could not read the git commit for the startup view: {}", e)
+        return None
+    return out.stdout.strip() or None
+
+
+# The embed every meaningful restart posts. The working tree may be a git checkout (dev, VPS)
+# but is not obliged to be one - the image runs from a Docker build context that dockerignore
+# strips of .git, so the commit line is optional.
+_ROBOT_COMMIT_SHA = _git_commit() if _in_git_repo() else None
+
+# Fire-and-forget startup tasks, kept referenced so the event loop does not collect them.
+_background_tasks: set[asyncio.Task[None]] = set()
 
 
 @lightbulb.hook(lightbulb.ExecutionSteps.PRE_INVOKE)
@@ -87,6 +125,8 @@ def build(config: Config) -> hikari.GatewayBot:
         client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(lavalink.Client, lavalink_client)
         client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(Config, config)
 
+        await _post_startup_view(bot, config, lavalink_client)
+
         extensions = EXTENSIONS
         if chat_client is not None:
             await chat_client.start()
@@ -107,6 +147,75 @@ def build(config: Config) -> hikari.GatewayBot:
             await chat_client.close()
 
     return bot
+
+
+async def _post_startup_view(
+    bot: hikari.GatewayBot,
+    config: Config,
+    lavalink_client: lavalink.Client,
+) -> None:
+    """
+    Post the restart embed to the configured channel, if one is configured.
+
+    The post is deliberately not awaited beyond a best-effort send: the node may still be
+    booting when the bot comes up, so its versions load in behind the first embed, and a
+    channel that vanished between config and post must not take the bot down.
+    """
+    if config.startup_channel_id is None:
+        return
+
+    started = dt.datetime.now(dt.timezone.utc)
+    info = embeds.StartupInfo(
+        bot_version=_bot_version(),
+        lavalink_version=music_node.node_semver(lavalink_client),
+        plugins=music_node.node_plugins(lavalink_client),
+        commit=_ROBOT_COMMIT_SHA,
+        commit_date=_commit_date(),
+        started=started,
+    )
+    embed = embeds.startup_embed(info)
+
+    try:
+        await bot.rest.create_message(config.startup_channel_id, embed=embed)
+    except hikari.HikariError as e:
+        logger.warning(
+            "Failed to post the startup view to channel {}: {}",
+            config.startup_channel_id,
+            e,
+        )
+        return
+
+    logger.info("Posted the startup view to channel {}", config.startup_channel_id)
+    # Fire-and-forget, matching `alfred.ui.responses`' pattern: keep a reference so the
+    # event loop does not collect the task mid-request, and drop it when it finishes.
+    task = asyncio.create_task(music_node.refresh_node_info(lavalink_client))
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+
+def _bot_version() -> str:
+    """The installed package version, read from the metadata, not a constant."""
+    try:
+        return _metadata.version("alfred")
+    except _metadata.PackageNotFoundError:
+        return "unknown"
+
+
+def _commit_date() -> str | None:
+    """The current commit's author date, or `None` when it cannot be read."""
+    if _ROBOT_COMMIT_SHA is None:
+        return None
+    try:
+        out = subprocess.run(
+            ["git", "show", "-s", "--format=%cs", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.stdout.strip() or None
 
 
 def build_lavalink_client(config: Config, user_id: hikari.Snowflake) -> lavalink.Client:
