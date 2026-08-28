@@ -10,6 +10,7 @@ import pytest
 from alfred.music.player import AlfredPlayer
 from alfred.ui.menus import NEXT_LOOP
 from alfred.ui.menus import NowPlayingMenu
+from alfred.ui.menus import QueuePanelMenu
 from tests.conftest import confirm_playback
 from tests.conftest import make_track
 
@@ -95,6 +96,7 @@ class FakeContext:
         self.responses: list[dict[str, Any]] = []
         self.deferred = False
         self.interacting = True
+        self.timeouts: list[float] = []
 
     async def respond(self, content: Any = None, **kwargs: Any) -> None:
         self.responses.append({"content": content, **kwargs})
@@ -105,17 +107,29 @@ class FakeContext:
     def stop_interacting(self) -> None:
         self.interacting = False
 
+    def set_timeout(self, timeout: float) -> None:
+        self.timeouts.append(timeout)
 
-@pytest.fixture
-def playing_player(player: AlfredPlayer) -> AlfredPlayer:
-    player.add(track=make_track("Some Song"), requester=OWNER_ID)
+
+def start_track(player: AlfredPlayer, requester_id: int, title: str = "Some Song") -> AlfredPlayer:
+    """Put a track on the player and make it the current one, as the node confirming it would."""
+    player.add(track=make_track(title), requester=requester_id)
     player._next = player.queue.pop(0)
     confirm_playback(player)
     return player
 
 
+@pytest.fixture
+def playing_player(player: AlfredPlayer) -> AlfredPlayer:
+    return start_track(player, OWNER_ID)
+
+
 def build_menu(player: AlfredPlayer | None, states: dict[int, int | None]) -> NowPlayingMenu:
     return NowPlayingMenu(FakeBot(states), FakeLavalinkClient(player), GUILD_ID)  # type: ignore[arg-type]
+
+
+def build_panel(player: AlfredPlayer | None, *, page_size: int = 10) -> QueuePanelMenu:
+    return QueuePanelMenu(FakeLavalinkClient(player), GUILD_ID, page_size=page_size)  # type: ignore[arg-type]
 
 
 IN_CHANNEL = {BOT_ID: VOICE_CHANNEL_ID, OWNER_ID: VOICE_CHANNEL_ID, OUTSIDER_ID: OTHER_CHANNEL_ID}
@@ -173,7 +187,7 @@ async def test_a_listener_in_the_channel_may_press(playing_player: AlfredPlayer)
 
 @pytest.mark.asyncio
 async def test_an_outsider_is_turned_away_with_the_snark(playing_player: AlfredPlayer) -> None:
-    # In the bot's channel and at a live player - it is still not the owner's press.
+    # In the bot's channel and at a live player - but the owner queued this track, not them.
     menu = build_menu(playing_player, ALL_IN_VOICE)
     ctx = FakeContext(OUTSIDER_ID, label="Skip")
 
@@ -196,6 +210,36 @@ async def test_the_owner_still_needs_the_bots_channel(playing_player: AlfredPlay
     # still answered with the voice rule rather than the snark.
     menu = build_menu(playing_player, {BOT_ID: VOICE_CHANNEL_ID, OWNER_ID: OTHER_CHANNEL_ID})
     ctx = FakeContext(OWNER_ID)
+
+    assert await menu.check(ctx) is None  # type: ignore[arg-type]
+    assert "same voice channel" in ctx.responses[0]["content"]
+
+
+@pytest.mark.asyncio
+async def test_whoever_queued_the_track_may_press_it(player: AlfredPlayer) -> None:
+    # Not the owner, but this is their track playing, so the panel is theirs to work.
+    start_track(player, OUTSIDER_ID)
+    menu = build_menu(player, ALL_IN_VOICE)
+
+    assert await menu.check(FakeContext(OUTSIDER_ID)) is player  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+async def test_the_claim_covers_the_current_track_only(player: AlfredPlayer) -> None:
+    # Queueing something does not buy the panel while somebody else's track is playing.
+    start_track(player, OWNER_ID)
+    player.add(track=make_track("Theirs, Later"), requester=OUTSIDER_ID)
+    ctx = FakeContext(OUTSIDER_ID, label="Skip")
+
+    assert await build_menu(player, ALL_IN_VOICE).check(ctx) is None  # type: ignore[arg-type]
+    assert ctx.responses[0]["content"] == f"@{OUTSIDER_ID} Skip con cặc à?"
+
+
+@pytest.mark.asyncio
+async def test_the_requester_still_needs_the_bots_channel(player: AlfredPlayer) -> None:
+    start_track(player, OUTSIDER_ID)
+    menu = build_menu(player, {BOT_ID: VOICE_CHANNEL_ID, OUTSIDER_ID: OTHER_CHANNEL_ID})
+    ctx = FakeContext(OUTSIDER_ID)
 
     assert await menu.check(ctx) is None  # type: ignore[arg-type]
     assert "same voice channel" in ctx.responses[0]["content"]
@@ -293,3 +337,76 @@ async def test_skip_does_not_redraw(playing_player: AlfredPlayer) -> None:
 
     # The view is replaced by the track-start event, not edited by the press.
     assert ctx.responses == []
+
+
+def queued_panel(player: AlfredPlayer, tracks: int, *, page_size: int = 10) -> QueuePanelMenu:
+    """A panel over a player playing one track with ``tracks`` more waiting."""
+    start_track(player, OWNER_ID)
+    for i in range(tracks):
+        player.add(track=make_track(f"Queued {i}"), requester=OWNER_ID)
+    return build_panel(player, page_size=page_size)
+
+
+def test_a_queue_that_fits_on_one_page_offers_no_paging(player: AlfredPlayer) -> None:
+    panel = queued_panel(player, tracks=4)
+
+    assert panel.pages() == 1
+    assert (panel.prev_button.disabled, panel.next_button.disabled) == (True, True)
+
+
+def test_the_first_page_can_go_forwards_but_not_back(player: AlfredPlayer) -> None:
+    panel = queued_panel(player, tracks=25)
+
+    assert panel.pages() == 3
+    assert (panel.prev_button.disabled, panel.next_button.disabled) == (True, False)
+
+
+@pytest.mark.asyncio
+async def test_paging_to_the_end_greys_out_next(player: AlfredPlayer) -> None:
+    panel = queued_panel(player, tracks=25)
+
+    await panel.on_next(FakeContext(OUTSIDER_ID))  # type: ignore[arg-type]
+    await panel.on_next(FakeContext(OUTSIDER_ID))  # type: ignore[arg-type]
+
+    assert panel.page == 2
+    assert (panel.prev_button.disabled, panel.next_button.disabled) == (False, True)
+
+
+@pytest.mark.asyncio
+async def test_anyone_may_page(player: AlfredPlayer) -> None:
+    # Reading the queue is open to anyone, exactly as `/queue` is - no voice or owner check.
+    panel = queued_panel(player, tracks=25)
+    ctx = FakeContext(OUTSIDER_ID)
+
+    await panel.on_next(ctx)  # type: ignore[arg-type]
+
+    assert panel.page == 1
+    assert ctx.responses[0]["edit"] is True
+
+
+@pytest.mark.asyncio
+async def test_a_press_redraws_the_panel_and_extends_its_life(player: AlfredPlayer) -> None:
+    panel = queued_panel(player, tracks=25)
+    ctx = FakeContext(OWNER_ID)
+
+    await panel.on_next(ctx)  # type: ignore[arg-type]
+
+    assert ctx.responses[0]["components"] is panel
+    assert "Page 2/3" in ctx.responses[0]["embed"].description
+    # Reset, not extended: the panel goes quiet a fixed while after the last press.
+    assert ctx.timeouts == [180.0]
+
+
+def test_a_page_past_the_end_is_clamped_rather_than_rendered_empty(player: AlfredPlayer) -> None:
+    # The queue moves under an open panel: what was page 3 may not exist by the next press.
+    panel = queued_panel(player, tracks=25)
+    panel.page = 2
+    del player.queue[10:]
+
+    panel.refresh_buttons()
+
+    assert (panel.page, panel.pages()) == (0, 1)
+
+
+def test_a_panel_outliving_its_player_says_nothing_is_playing() -> None:
+    assert build_panel(None).embed().description == "Nothing is playing."

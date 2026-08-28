@@ -19,6 +19,7 @@ import hikari
 import lavalink
 from loguru import logger
 
+from alfred import constants
 from alfred import errors
 from alfred.chat.completions import ToolCall
 from alfred.music import service
@@ -92,9 +93,6 @@ TOOL_NAMES: Final = frozenset({PLAY, NOW_PLAYING, SHOW_QUEUE, SKIP})
 # The API wants a tool call and its result tied together by id. Only one call is ever in
 # flight, and the pair is built and sent in a single request, so a constant does the job.
 TOOL_CALL_ID: Final = "alfred-action"
-
-QUEUE_TITLE: Final = "Queue"
-QUEUE_PREVIEW_LENGTH: Final = 10
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -215,7 +213,9 @@ def _now_playing(context: Invocation) -> Result:
 def _show_queue(context: Invocation) -> Result:
     """`/queue`, from chat. Checks match `Queue`: guild_only, player_playing - no voice check."""
     player = _require_playing(context)
-    return Result(embed=embeds.queue(player, title=QUEUE_TITLE, preview_length=QUEUE_PREVIEW_LENGTH))
+    # The first page only. Chat has nowhere to put paging buttons, and someone who wants the
+    # rest of a long queue is better served by `/queue`, which does.
+    return Result(embed=embeds.queue(player, title=constants.QUEUE_TITLE, page_size=constants.QUEUE_PAGE_SIZE))
 
 
 async def _skip(context: Invocation) -> Result:

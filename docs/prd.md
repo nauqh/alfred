@@ -4,9 +4,14 @@
 |---|---|
 | **Status** | Implemented, unverified against live Discord |
 | **Author** | — |
-| **Last updated** | 2026-08-14 |
+| **Last updated** | 2026-08-28 |
 | **Engineering design** | [design.md](design.md) |
 | **Supersedes** | [`bachtran02/MusicCat@legacy-python`](https://github.com/bachtran02/MusicCat/tree/legacy-python) |
+
+Requirements have been edited since the 2.0 release where the shipped behaviour
+moved on - the player's buttons left `/queue` for the now playing card, and who
+may press them changed. The goals, non-goals and §4.1 record the release as it
+was decided and are left alone.
 
 ## 1. Summary
 
@@ -185,15 +190,17 @@ needs a live Discord and Lavalink node.
 | ID | Requirement | Pri | Verified |
 |---|---|---|---|
 | FR-21 | The bot posts nothing unprompted — every message it sends is the reply to a command | P0 | code review |
-| FR-22 | `/queue`'s panel carries Pause, Skip, Loop and Stop, and each press redraws the panel in place | P0 | `test_menus` |
-| FR-23 | Only members in the bot's voice channel may press; anyone else is answered ephemerally | P0 | `test_menus` |
-| FR-24 | The buttons go quiet after 3 minutes without a press, and are removed from the message | P1 | manual |
+| FR-22 | The now playing card carries Pause, Skip and Loop, and each press redraws the card in place | P0 | `test_menus` |
+| FR-23 | The bot's owner, or whoever queued the track that is playing, may press - and only from the bot's voice channel. Anyone else is turned away | P0 | `test_menus` |
+| FR-24 | The card's buttons have no timeout: they live exactly as long as the track | P1 | `test_nowplaying` |
+| FR-25 | The card's progress bar is re-drawn while the track plays; a paused track and a stream are left alone | P1 | `test_nowplaying` |
 
 ### Queue
 
 | ID | Requirement | Pri | Verified |
 |---|---|---|---|
-| FR-30 | `/queue` shows the current track and the next 10 | P0 | manual |
+| FR-30 | `/queue` shows the current track and the next 10, and pages through the rest with Prev/Next when there are more | P0 | `test_embeds` · `test_menus` |
+| FR-30a | Paging is open to anyone, as `/queue` itself is; the panel's buttons are removed 3 minutes after the last press | P2 | `test_menus` |
 | FR-31 | `/remove` autocompletes from the live queue and removes by position | P1 | manual |
 | FR-32 | `/queue` does not require voice channel membership | P2 | offline command render |
 
@@ -239,7 +246,7 @@ needs a live Discord and Lavalink node.
 | Scope held | 9 commands; every removal deliberate and recorded | §4.1 |
 | Known defects shipped | 0 of the 5 in §2 | Each has a test or a documented manual check |
 | Dependencies on a pre-release or unmaintained version | 0 | `pyproject.toml` |
-| Automated test coverage of pure logic | Every non-I/O module has tests | 100 tests at time of writing |
+| Automated test coverage of pure logic | Every non-I/O module has tests | 198 tests at time of writing |
 | Time for a new operator to first playback | < 15 minutes from clone | README walkthrough, unmeasured |
 | Post-cutover regressions reported in the first week | 0 | User reports |
 
@@ -299,14 +306,21 @@ M5 is the gate. Everything before it is verified offline only.
 
 ### Buttons
 
-Four, on the reply to `/queue`. Each press redraws that message; none of them
-posts anything new.
+Two sets. The player's controls sit on the now playing card, which follows the
+current track; `/queue`'s only buttons move its own window over the queue.
+Neither posts anything new - every press redraws the message it is on.
 
-| Button | Style | Effect |
-|---|---|---|
-| `Pause` / `Resume` | secondary | toggles playback; the label follows the player |
-| `Skip` | secondary | plays the next track, and waits for the node to confirm before redrawing |
-| `Loop: off` / `track` / `queue` | secondary | cycles the loop mode |
-| `Stop` | danger | clears the player, then takes the buttons off the message |
+| Button | On | Style | Effect |
+|---|---|---|---|
+| `Pause` / `Resume` | the card | secondary | toggles playback; the label follows the player |
+| `Skip` | the card | secondary | plays the next track, and waits for the node to confirm before redrawing |
+| `Loop: off` / `track` / `queue` | the card | secondary | cycles the loop mode |
+| `Link` | the card | link | opens the track URL |
+| `Prev` / `Next` | `/queue` | secondary | pages the queue; greyed out at the ends |
 
-All four require membership of the bot's voice channel.
+The card's three require the bot's voice channel *and* a claim on the track -
+the owner, or whoever queued it. `/queue`'s two require nothing: paging is
+reading, and reading the queue is open to anyone.
+
+`Stop` was on this list when the panel lived on `/queue`. It went with that
+panel; `/leave` is what clears the player.

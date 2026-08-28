@@ -98,17 +98,35 @@ def now_playing(player: AlfredPlayer | None) -> hikari.Embed:
     return embed
 
 
-def queue(player: AlfredPlayer, *, title: str, preview_length: int = 0) -> hikari.Embed:
+def queue_pages(track_count: int, page_size: int) -> int:
+    """
+    How many pages ``track_count`` queued tracks fill, at ``page_size`` per page.
+
+    Never less than one: a queue with nothing waiting still has a page, the one showing the
+    track that is playing. Defined here rather than in the menu because it has to agree with
+    how `queue` slices - a Next button that offers a page the embed renders empty is worse
+    than no button.
+    """
+    if page_size <= 0:
+        return 1
+    return max(1, -(-track_count // page_size))
+
+
+def queue(player: AlfredPlayer | None, *, title: str, page_size: int = 0, page: int = 0) -> hikari.Embed:
     """
     The embed behind ``/queue``: the current track, then a numbered list of what follows.
 
     Args:
-        player: The player to describe.
+        player: The player to describe, or `None` if the guild no longer has one - which an
+            open panel can outlive, exactly as `now_playing` can.
         title: The embed title.
-        preview_length: How many queued tracks to list.
+        page_size: How many queued tracks to list at once.
+        page: Which page of the queue to list, counted from zero. Out of range values are
+            clamped rather than rejected - the queue moves on while a panel is open, and a
+            page that was real when the button was drawn may not be by the time it is pressed.
     """
-    current = player.current
-    if current is None:
+    current = player.current if player is not None else None
+    if current is None or player is None:
         return hikari.Embed(
             title=title,
             description="Nothing is playing.",
@@ -121,14 +139,22 @@ def queue(player: AlfredPlayer, *, title: str, preview_length: int = 0) -> hikar
         + (f" • {current.author}" if current.author else ""),
     ]
 
-    upcoming = list(player.queue[: max(preview_length, 0)])
+    size = max(page_size, 0)
+    pages = queue_pages(len(player.queue), size)
+    page = min(max(page, 0), pages - 1)
+    start = page * size
+
+    upcoming = list(player.queue[start : start + size]) if size else []
     if upcoming:
         lines.append("\n**Up next:**")
-        for i, track in enumerate(upcoming, start=1):
+        for i, track in enumerate(upcoming, start=start + 1):
             lines.append(f"`{i}.` " + track_line(track))
 
     total_count = len(player.queue) + 1
-    lines.append(f"\n-# Total: {total_count} track{'s' if total_count != 1 else ''}")
+    footer = f"\n-# Total: {total_count} track{'s' if total_count != 1 else ''}"
+    if pages > 1:
+        footer += f" • Page {page + 1}/{pages}"
+    lines.append(footer)
 
     return hikari.Embed(
         title=title,

@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import pytest
 
+from alfred.music.player import AlfredPlayer
 from alfred.music.player import PlaylistRef
 from alfred.music.service import Queued
 from alfred.ui import embeds
+from tests.conftest import confirm_playback
 from tests.conftest import make_track
 
 REQUESTER = 42
@@ -88,3 +90,69 @@ def test_the_requester_is_always_mentioned(result_type: str) -> None:
     )
 
     assert embed.description is not None and f"<@{REQUESTER}>" in embed.description
+
+
+def playing(player: AlfredPlayer, queued: int) -> AlfredPlayer:
+    """A player on its first track, with ``queued`` more waiting behind it."""
+    player.add(track=make_track("Playing Now"), requester=REQUESTER)
+    player._next = player.queue.pop(0)
+    confirm_playback(player)
+    for i in range(queued):
+        player.add(track=make_track(f"Queued {i}"), requester=REQUESTER)
+    return player
+
+
+@pytest.mark.parametrize(
+    ("tracks", "page_size", "expected"),
+    [(0, 10, 1), (1, 10, 1), (10, 10, 1), (11, 10, 2), (25, 10, 3), (5, 0, 1)],
+)
+def test_the_page_count_never_drops_below_one(tracks: int, page_size: int, expected: int) -> None:
+    assert embeds.queue_pages(tracks, page_size) == expected
+
+
+def test_the_first_page_lists_the_first_tracks(player: AlfredPlayer) -> None:
+    embed = embeds.queue(playing(player, 25), title="Queue", page_size=10)
+
+    assert embed.description is not None
+    assert "`1.` [Queued 0]" in embed.description
+    assert "`10.` [Queued 9]" in embed.description
+    assert "Queued 10" not in embed.description
+
+
+def test_a_later_page_lists_the_tracks_that_page_covers(player: AlfredPlayer) -> None:
+    """
+    The number and the track have to move together.
+
+    Asserting on the numbering alone passes even when every page renders the same ten tracks,
+    which is exactly the bug a paging slice invites - so each is pinned to its title.
+    """
+    embed = embeds.queue(playing(player, 25), title="Queue", page_size=10, page=1)
+
+    assert embed.description is not None
+    assert "`11.` [Queued 10]" in embed.description
+    assert "`20.` [Queued 19]" in embed.description
+    assert "Queued 0]" not in embed.description
+
+
+def test_the_footer_counts_pages_only_when_there_is_more_than_one(player: AlfredPlayer) -> None:
+    many = embeds.queue(playing(player, 25), title="Queue", page_size=10, page=2)
+
+    assert many.description is not None and "Page 3/3" in many.description
+
+
+def test_a_single_page_queue_is_not_paginated(player: AlfredPlayer) -> None:
+    embed = embeds.queue(playing(player, 4), title="Queue", page_size=10)
+
+    assert embed.description is not None
+    assert "Page" not in embed.description
+    assert "Total: 5 tracks" in embed.description
+
+
+def test_a_page_past_the_end_shows_the_last_one(player: AlfredPlayer) -> None:
+    embed = embeds.queue(playing(player, 25), title="Queue", page_size=10, page=99)
+
+    assert embed.description is not None and "Page 3/3" in embed.description
+
+
+def test_the_queue_of_a_player_that_has_gone_says_nothing_is_playing() -> None:
+    assert embeds.queue(None, title="Queue").description == "Nothing is playing."

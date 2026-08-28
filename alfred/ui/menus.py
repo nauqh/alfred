@@ -1,4 +1,4 @@
-"""The buttons under the now playing view.
+"""The buttons Alfred posts: the now playing controls, and the queue panel's paging.
 
 Built on `lightbulb.components`, which ships with lightbulb 3 - the legacy bot's buttons were
 hikari-miru views, and miru is not part of this stack.
@@ -24,6 +24,9 @@ from alfred import errors
 from alfred.music import service
 from alfred.music.player import AlfredPlayer
 from alfred.ui import embeds
+
+QUEUE_PREV_LABEL = "Prev"
+QUEUE_NEXT_LABEL = "Next"
 
 LOOP_LABELS = {
     lavalink.DefaultPlayer.LOOP_NONE: "Loop: off",
@@ -132,15 +135,25 @@ class NowPlayingMenu(lightbulb.components.Menu):
         """
         Resolve the player for a press, once the presser is allowed to make it.
 
-        Ownership is checked first and is absolute: only the bot's owner (and the team that
-        owns the application) may press - anyone else is turned away with a snarky reply and
-        never reaches the voice channel rule. The owner must still be in the bot's voice
-        channel, so a button and its command cannot disagree.
+        Three gates, in this order. There has to be something playing - the panel outlives
+        its track by the moment it takes the track event to arrive. Then the press has to be
+        allowed: the owner may press anything, and whoever queued the track that is playing
+        may control that track. Anyone else is turned away with a snarky reply and never
+        reaches the voice rule. Last, whoever passed must still be in the bot's voice channel,
+        so a button and its command cannot disagree.
+
+        The player is resolved first because the requester is read off the current track, so
+        there is nobody to recognise until there is a track.
 
         Returns:
             The player, or `None` if the press was rejected and already answered.
         """
-        if not await self._is_owner(ctx):
+        player = self.player()
+        if player is None or not player.is_playing:
+            await ctx.respond(errors.PlayerNotPlaying.default_message, ephemeral=True)
+            return None
+
+        if not await self._may_control(ctx, player):
             await ctx.respond(f"{ctx.user.mention} {ctx.component.label} con cặc à?")
             return None
 
@@ -152,12 +165,23 @@ class NowPlayingMenu(lightbulb.components.Menu):
             await ctx.respond(errors.NotSameVoice.default_message, ephemeral=True)
             return None
 
-        player = self.player()
-        if player is None or not player.is_playing:
-            await ctx.respond(errors.PlayerNotPlaying.default_message, ephemeral=True)
-            return None
-
         return player
+
+    async def _may_control(self, ctx: lightbulb.components.MenuContext, player: AlfredPlayer) -> bool:
+        """
+        Whether this press is allowed at all.
+
+        The requester is checked before the owner because it costs nothing: the track already
+        carries the ID of whoever queued it, while the owner list may need fetching the
+        application the first time it is asked for.
+
+        The claim only ever covers the track that is playing. Queueing a song does not buy the
+        rest of the queue - once it moves on, so does the right to control it.
+        """
+        current = player.current
+        if current is not None and ctx.user.id == current.requester:
+            return True
+        return await self._is_owner(ctx)
 
     async def _is_owner(self, ctx: lightbulb.components.MenuContext) -> bool:
         """
@@ -207,4 +231,94 @@ class NowPlayingMenu(lightbulb.components.Menu):
     async def redraw(self, ctx: lightbulb.components.MenuContext) -> None:
         """Redraw the view with an embed and labels matching the player."""
         self.refresh_labels()
+        await ctx.respond(embed=self.embed(), components=self, edit=True)
+
+
+class QueuePanelMenu(lightbulb.components.Menu):
+    """
+    The paging buttons under ``/queue``.
+
+    Nothing here acts on the player, so nothing here is restricted: reading what is queued is
+    open to anyone, exactly as the command is. A press only moves this message's own window
+    over the queue.
+
+    Like `NowPlayingMenu` it keeps no copy of the queue - each press re-renders from the live
+    player, so a panel left open shows what is queued now rather than what was queued when it
+    was posted. The page is the one piece of state it does own, because it is a property of
+    this message rather than of the player.
+    """
+
+    def __init__(self, lavalink_client: lavalink.Client, guild_id: int, *, page_size: int) -> None:
+        super().__init__()
+
+        self._lavalink = lavalink_client
+        self._guild_id = guild_id
+        self._page_size = page_size
+        self.page = 0
+
+        self.prev_button = self.add_interactive_button(
+            hikari.ButtonStyle.SECONDARY,
+            self.on_prev,
+            label=QUEUE_PREV_LABEL,
+            emoji=constants.EMOJI_PREV_PAGE,
+            disabled=True,
+        )
+        self.next_button = self.add_interactive_button(
+            hikari.ButtonStyle.SECONDARY,
+            self.on_next,
+            label=QUEUE_NEXT_LABEL,
+            emoji=constants.EMOJI_NEXT_PAGE,
+        )
+        self.refresh_buttons()
+
+    def player(self) -> AlfredPlayer | None:
+        """The guild's player, or `None` if it has gone away since the panel was posted."""
+        return service.get_player(self._lavalink, self._guild_id)
+
+    def pages(self) -> int:
+        """How many pages the queue currently fills."""
+        player = self.player()
+        return embeds.queue_pages(len(player.queue) if player is not None else 0, self._page_size)
+
+    def embed(self) -> hikari.Embed:
+        """The panel this menu sits under: one page of the queue."""
+        return embeds.queue(
+            self.player(),
+            title=constants.QUEUE_TITLE,
+            page_size=self._page_size,
+            page=self.page,
+        )
+
+    def refresh_buttons(self) -> None:
+        """
+        Clamp the page to what the queue now holds, and grey out the ends.
+
+        Called before every render, because the queue moves underneath an open panel: tracks
+        play out and the last page stops existing, so the page a button was drawn for may be
+        past the end by the time it is pressed.
+        """
+        pages = self.pages()
+        self.page = min(max(self.page, 0), pages - 1)
+
+        self.prev_button.disabled = self.page == 0
+        self.next_button.disabled = self.page >= pages - 1
+
+    async def on_prev(self, ctx: lightbulb.components.MenuContext) -> None:
+        self.page -= 1
+        await self.redraw(ctx)
+
+    async def on_next(self, ctx: lightbulb.components.MenuContext) -> None:
+        self.page += 1
+        await self.redraw(ctx)
+
+    async def redraw(self, ctx: lightbulb.components.MenuContext) -> None:
+        """
+        Redraw the panel in place, and give the presser a full timeout to read the new page.
+
+        `set_timeout`, not `extend_timeout`: extending *shifts* the existing deadline, so ten
+        presses would buy half an hour. The panel should go quiet a fixed while after the last
+        press, however many came before it.
+        """
+        self.refresh_buttons()
+        ctx.set_timeout(constants.QUEUE_PANEL_TIMEOUT)
         await ctx.respond(embed=self.embed(), components=self, edit=True)

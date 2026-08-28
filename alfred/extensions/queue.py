@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+
 import hikari
 import lavalink
 import lightbulb
+from loguru import logger
 
 from alfred import constants
 from alfred import errors
@@ -13,13 +17,11 @@ from alfred.music import service
 from alfred.ui import embeds
 from alfred.ui import responses
 from alfred.ui.formatting import trim
+from alfred.ui.menus import QueuePanelMenu
 
 loader = lightbulb.Loader()
 
 MAX_CHOICES = 25
-
-QUEUE_TITLE = "Queue"
-QUEUE_PREVIEW_LENGTH = 10
 
 
 @loader.command
@@ -77,9 +79,40 @@ class Queue(
         if player is None:
             raise errors.PlayerNotPlaying
 
-        # The controls live on the now playing view, which follows the current track; this
-        # panel is only the list of what is playing and what follows.
-        await ctx.respond(embed=embeds.queue(player, title=QUEUE_TITLE, preview_length=QUEUE_PREVIEW_LENGTH))
+        # The player controls live on the now playing view, which follows the current track.
+        # The only buttons here move this message's window over the queue.
+        menu = QueuePanelMenu(lavalink_client, ctx.guild_id, page_size=constants.QUEUE_PAGE_SIZE)
+
+        # A queue that fits on one page has nothing to page through, so it is posted as a
+        # plain embed - two permanently greyed-out buttons say only that they do nothing.
+        if menu.pages() <= 1:
+            await ctx.respond(embed=menu.embed())
+            return
+
+        response_id = await ctx.respond(embed=menu.embed(), components=menu)
+        await _run_panel(ctx, menu, response_id)
+
+
+async def _run_panel(ctx: lightbulb.Context, menu: QueuePanelMenu, response_id: hikari.Snowflakeish) -> None:
+    """
+    Keep the panel's buttons live until nobody has pressed one for a while, then take them off.
+
+    `attach` blocks until the timeout rather than running in the background: it discards the
+    menu from the client's registry in a `finally`, which `attach_persistent` never does - see
+    the note in `alfred.ui.nowplaying` and the risk recorded in `docs/prd.md`.
+
+    The embed is deliberately left behind. Buttons that no longer answer are worse than none,
+    but the page someone stopped on is still a readable snapshot of the queue.
+    """
+    with contextlib.suppress(asyncio.TimeoutError):
+        await menu.attach(ctx.client, timeout=constants.QUEUE_PANEL_TIMEOUT)
+
+    try:
+        await ctx.edit_response(response_id, components=None)
+    except (hikari.NotFoundError, hikari.ForbiddenError):
+        pass  # Someone deleted the message, or the bot lost the channel. Either way the buttons are gone.
+    except hikari.HikariError as e:
+        logger.debug("Failed to retire the queue panel's buttons: {}", e)
 
 
 @lightbulb.di.with_di

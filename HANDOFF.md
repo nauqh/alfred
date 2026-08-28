@@ -3,25 +3,28 @@
 Working notes for picking this up cold. Not documentation — `docs/` and the code comments
 are that. This is the context that would otherwise have to be re-derived.
 
-Last updated: 2026-08-20.
+Last updated: 2026-08-28.
 
 ## Where things stand
 
-Alfred plays music. Speech was removed — the whole talking feature set (`/say`, `@Alfred`
-mentions, the OpenRouter answerer, Flowery TTS) is out of the tree and the node's
-`application.yml` no longer enables `flowerytts`. The bot is back to being a music bot:
-8 commands in four extensions.
+Alfred plays music, and answers when you @mention it. Nine commands in five extensions.
 
 | | State |
 |---|---|
-| Play / search / queue / skip / remove / leave | Working |
+| Play / search / now / queue / skip / remove / leave | Working |
 | `/stats` / `/info` | Working |
 | Hearing you | Not possible — see below |
-| Speech / mentions / LLM answering | Removed 2026-08-20. `git log` has it all if it ever comes back |
+| Answering @mentions, and running four commands from chat | Working, off unless `OPENROUTER_API_KEY` is set |
+| Speaking (`/say`, TTS) | Removed 2026-08-20 and not back. The node no longer enables `flowerytts` |
 
-`git revert` will not cleanly bring the speech work back (later non-speech commits touch
-the same files); `git log --oneline 5d3dd6e..HEAD` names the speech commits if you ever
-want them cherry-picked.
+Text speech came back on 2026-08-24 (`9fdcd98`), four days after the whole talking feature set
+was cut. What returned is the answerer only: `alfred/chat/` hears an @mention, asks a free
+OpenRouter model, and can run `/play`, `/now`, `/queue` and `/skip` through tool calling. What
+did **not** come back is voice - no `/say`, no TTS, no hearing. The removal note in `git log`
+reads as though speech is gone entirely; it is not.
+
+`git revert` will not cleanly undo any of this (later commits touch the same files);
+`git log --oneline 5d3dd6e..HEAD` names the original speech commits.
 
 ## Voice: what is settled, and why
 
@@ -50,6 +53,19 @@ Consequences that were checked and are not worth rechecking:
   losing playback. A separate discord.py process with `discord-ext-voice-recv` (real-time
   per-packet `write()`, speaker attached; pycord's sinks buffer until recording stops, so
   they are the wrong shape for always-on listening).
+
+## Decisions that have been made, so they are not re-opened
+
+- **The bot stays in the voice channel when the queue ends.** It leaves only when nobody is
+  left in the channel. This is deliberate: rejoining is churn, and the server's convention is
+  that everyone listens in one channel. An idle-disconnect timer was proposed on 2026-08-28
+  and rejected. The knock-on was accepted for the same reason: an idle bot in one channel
+  refuses `/play` from another, because `hooks.valid_user_voice` asks whether the bot is *in*
+  a channel and never whether it is busy. One channel, so it does not arise.
+- **Who may press the now playing buttons**: the owner, or whoever queued the track that is
+  playing, and only from the bot's voice channel. Settled 2026-08-28, replacing the
+  owner-only rule of `0ef8fe7` (2026-08-26), which the docs had never matched. The claim is
+  on the track, not on the queue.
 
 ## Facts worth not re-deriving
 

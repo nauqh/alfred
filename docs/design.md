@@ -82,7 +82,7 @@ alfred/
 │   ├── events.py         Lavalink events → the log, and the now playing view
 │   ├── config.py         the environment → a frozen Config
 │   ├── errors.py         errors that carry a user-facing message
-│   ├── constants.py      colours and the media emojis
+│   ├── constants.py      colours, the media emojis, and the queue panel's shape
 │   ├── log_config.py     loguru, and the bridge from the standard library
 │   │
 │   ├── music/            the player, and what fills it
@@ -94,7 +94,7 @@ alfred/
 │   ├── ui/               everything Alfred renders and posts
 │   │   ├── embeds.py       embed builders, and Discord's limits
 │   │   ├── nowplaying.py   the now playing view's lifecycle
-│   │   ├── menus.py        the buttons under the now playing view
+│   │   ├── menus.py        the now playing controls, and the queue panel's paging
 │   │   ├── responses.py    replying, and the self-deleting reply
 │   │   └── formatting.py   durations, progress bar, trimming
 │   │
@@ -127,7 +127,7 @@ otherwise be the one edge pointing back up.
 
 ## The modules
 
-Eight that matter, each stated as its interface. Everything else is
+The ones that matter, each stated as its interface. Everything else is
 implementation.
 
 | Module | Interface | What it hides |
@@ -136,12 +136,13 @@ implementation.
 | `service` | `join()` · `resolve()` · `enqueue()` | voice connection, query prefixing, five load-result shapes, playlist metadata |
 | `AlfredPlayer` | `skip()` · `stop()` · `remove()` | resetting to a clean state even when the node is unreachable |
 | `LavalinkEventHandler` | nothing — it consumes events | what the node reports, and restarting a stuck player |
-| `NowPlayingManager` | `show(player)` · `hide(guild_id)` | the view's message lifecycle, and the menu registry leak |
+| `NowPlayingManager` | `show(player)` · `hide(guild_id)` | the view's message lifecycle, the menu registry leak, and the bar's refresh |
 | `NowPlayingMenu` | `embed()` · three button callbacks | who may press, and keeping the view in step with the player |
+| `QueuePanelMenu` | `embed()` · `pages()` · two button callbacks | where a page starts and ends, and a queue that moves under an open panel |
 | `search` | `load_search(node, query, types)` | the plugin's REST contract, its 204, its failures |
 | `hooks` | four execution hooks | voice-state cache lookups and dependency injection |
 | `responses` | `respond(ctx, **kwargs)` | the self-deleting reply lightbulb no longer provides |
-| `embeds` | five builders | every embed shape in the bot |
+| `embeds` | one builder per card, plus `queue_pages` | every embed shape in the bot, and Discord's limits on them |
 
 There is no persistence layer, no DTO layer and no repository. The player *is*
 the model, and `lavalink.AudioTrack` is the only track type that crosses a
@@ -230,8 +231,16 @@ and matching emoji (`🔂`). The menu holds no player state — every press
 looks the player up again, so it acts on whatever is playing now rather than on
 what was playing when the view was posted.
 
-Access matches the commands: only members in the bot's voice channel may press,
-the rule `/skip` and `/leave` apply. A button and its command cannot disagree.
+Access is two rules, checked in that order. **Who may press**: the bot's owner,
+or whoever queued the track that is playing. The claim is on the track, not on
+the queue - once it moves on, so does the right to control it, which is what
+stops "I queued something an hour ago" becoming a permanent hold on the panel.
+**Where from**: whoever passes must still be in the bot's voice channel, the
+rule `/skip` and `/leave` apply. A button and its command cannot disagree.
+
+The player is therefore resolved *before* either rule, which is the opposite of
+the obvious order: the requester is read off the current track, so there is
+nobody to recognise until there is a track.
 
 Pause and loop redraw the view in place — the same message, a new embed and
 labels. Skip does not: the track event it causes deletes this message and posts
@@ -259,6 +268,35 @@ leaking one entry per track. `attach` discards in a `finally`, so it cannot
 leak: `hide` cancels the task and awaits it, and the registry is clean before
 the message is deleted. The view gets no timeout at all — it lives exactly as
 long as its track, which is exactly as long as there is something to control.
+
+A second task re-draws the embed every `REFRESH_INTERVAL` seconds, because
+`player.position` is read when the embed is built and the bar would otherwise
+show one moment of the track for the whole track. It edits the embed alone:
+hikari leaves an unspecified component list untouched, so the buttons keep the
+custom IDs they were posted with and the menu stays the only thing that moves
+their labels. A paused player and a stream are skipped rather than drawn - the
+bar does not move for either - and a message that has been deleted ends the
+loop instead of raising the same error every tick. `hide` cancels this alongside
+the buttons.
+
+### `QueuePanelMenu` — paging `/queue`
+
+`/queue` renders one page and offers Prev/Next when there is more than one.
+Nothing here touches the player, so nothing here is restricted: reading the
+queue is open to anyone, exactly as the command is.
+
+Two things it must get right. The **page count lives in `embeds.queue_pages`**,
+next to the slicing it has to agree with - a Next button offering a page the
+embed renders empty is worse than no button. And the **queue moves underneath an
+open panel**: tracks play out, the last page stops existing, so every render
+clamps the page to what is there now rather than trusting what the button was
+drawn for.
+
+Unlike the now playing view, this panel has no natural end, so it gets a
+timeout, refreshed by each press. When it expires the buttons come off and the
+embed stays: a page someone stopped on is still a readable snapshot, but a
+button that no longer answers is worse than none. `/queue` blocks on `attach`
+for the same registry reason the view does.
 
 ### `search` — the LavaSearch client
 

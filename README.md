@@ -17,7 +17,8 @@ it what to do.
 
 - Music from **YouTube, Spotify and Deezer**, plus URL playback and playlists
 - `/search` with live autocomplete for tracks, artists, albums and playlists via [LavaSearch](https://github.com/topi314/LavaSearch)
-- Queue panel with Pause, Skip, Loop and Stop buttons
+- Now playing card with Pause, Skip and Loop buttons, and a progress bar that keeps moving
+- `/queue` pages through the whole queue, ten tracks at a time
 - **@mention it to ask a question, or to queue something** - "@Alfred play bohemian rhapsody" really queues it. Answered by a free [OpenRouter](https://openrouter.ai) model; off unless a key is set
 - The bot posts nothing unprompted - every message is a reply to a command or to a mention
 
@@ -73,7 +74,7 @@ no `/join`.
 |---|---|
 | Loop and shuffle are **options**, not commands | Set once as tracks are queued. Loop is also a button |
 | `/search` narrows by source and type | Track, artist, album or playlist |
-| `/queue` and `/now` need no voice check | Reading what is playing is open to anyone; acting on the player is restricted to the bot's voice channel |
+| `/queue` and `/now` need no voice check | Reading what is playing is open to anyone, including paging through the queue; acting on the player is restricted to the bot's voice channel |
 | There is no `/pause` | Deafening yourself pauses playback when you are the only listener, and undeafening resumes it. The panel's Pause button is the only manual path |
 | The bot leaves when no one is left in the channel | Queue state is irrelevant - it stays even with nothing queued |
 
@@ -84,6 +85,10 @@ deletes it when the track ends - the next track replaces it with its own. The
 card carries the progress bar and the player's buttons; `/queue` is just the
 list of what follows.
 
+The bar is re-drawn every 15 seconds, so it shows where the track has actually
+reached rather than where it was when the card went up. A paused track and a
+live stream are left alone - neither has a bar that moves.
+
 | Button | Does | Note |
 |---|---|---|
 | `⏸️ Pause` / `▶️ Resume` | Toggles playback | Turns green while paused |
@@ -91,8 +96,24 @@ list of what follows.
 | `🔁 Loop: off` / `track` / `queue` | Cycles the loop mode | Highlights blurple while on |
 | `🔗 Link` | Opens the track URL | Native Discord link button |
 
-Buttons go quiet after three minutes without a press (refreshed by every press)
-and are then removed; the embed stays as a readable snapshot of the queue.
+**Who may press:** the bot's owner, or whoever queued the track that is playing -
+and they have to be in the bot's voice channel, the same rule `/skip` applies.
+The claim is on the track, not on the queue: once it moves on, so does the right
+to control it. Anyone else gets a reply telling them where to go.
+
+The buttons have no timeout. They live exactly as long as the track does, which
+is exactly as long as there is anything to control.
+
+### The queue panel
+
+`/queue` shows the current track and the next ten, with `⬅️ Prev` and `➡️ Next`
+when there are more. Paging is open to anyone - it only moves your view of the
+queue. The numbering keeps counting across pages, so `11.` is the eleventh track
+in the queue rather than the first one on page two.
+
+A queue that fits on one page gets no buttons. The ones it does get go quiet
+three minutes after the last press and are then removed; the embed stays as a
+readable snapshot of the page it was left on.
 
 ## YouTube playback needs a cipher server
 
