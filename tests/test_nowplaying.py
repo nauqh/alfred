@@ -5,12 +5,14 @@ from __future__ import annotations
 import types
 from typing import Any
 
+import hikari
 import pytest
 
 from alfred.music.player import AlfredPlayer
 from alfred.ui.nowplaying import NowPlayingManager
 from tests.conftest import confirm_playback
 from tests.conftest import make_track
+from tests.conftest import set_position
 
 TEXT_CHANNEL_ID = 42
 GUILD_ID = 1
@@ -27,6 +29,8 @@ class FakeRest:
     def __init__(self) -> None:
         self.created: list[dict[str, Any]] = []
         self.deleted: list[tuple[int, int]] = []
+        self.edited: list[dict[str, Any]] = []
+        self.edit_raises: Exception | None = None
         self._next_id = 1000
 
     async def create_message(self, channel: int, **kwargs: Any) -> FakeMessage:
@@ -36,6 +40,11 @@ class FakeRest:
 
     async def delete_message(self, channel: int, message: int) -> None:
         self.deleted.append((channel, message))
+
+    async def edit_message(self, channel: int, message: int, **kwargs: Any) -> None:
+        if self.edit_raises is not None:
+            raise self.edit_raises
+        self.edited.append({"channel": channel, "message": message, **kwargs})
 
 
 class FakeBot:
@@ -136,3 +145,67 @@ async def test_nothing_is_posted_without_a_channel(manager: NowPlayingManager, p
     await manager.show(player)
 
     assert manager._bot.rest.created == []
+
+
+@pytest.mark.asyncio
+async def test_a_refresh_redraws_the_bar_where_playback_has_reached(
+    manager: NowPlayingManager, playing_player: AlfredPlayer
+) -> None:
+    await manager.show(playing_player)
+    view = manager._views[GUILD_ID]
+    set_position(playing_player, 100_000)
+
+    assert await manager._redraw(playing_player, view.channel_id, view.message_id) is True
+
+    edit = manager._bot.rest.edited[0]
+    assert (edit["channel"], edit["message"]) == (TEXT_CHANNEL_ID, view.message_id)
+    assert "1:40" in edit["embed"].description
+    # The buttons are not re-sent: hikari leaves an unspecified component list alone, and
+    # replacing them here would fight the menu for the labels.
+    assert "components" not in edit
+
+
+@pytest.mark.asyncio
+async def test_a_paused_player_is_not_redrawn(manager: NowPlayingManager, playing_player: AlfredPlayer) -> None:
+    """The bar does not move while paused, so an edit would spend rate limit on the same embed."""
+    await manager.show(playing_player)
+    view = manager._views[GUILD_ID]
+    playing_player.paused = True
+
+    assert await manager._redraw(playing_player, view.channel_id, view.message_id) is True
+    assert manager._bot.rest.edited == []
+
+
+@pytest.mark.asyncio
+async def test_a_stream_is_not_redrawn(manager: NowPlayingManager, player: AlfredPlayer) -> None:
+    player.text_channel_id = TEXT_CHANNEL_ID
+    player.add(track=make_track("A Broadcast", seekable=False), requester=1)
+    player._next = player.queue.pop(0)
+    confirm_playback(player)
+    await manager.show(player)
+    view = manager._views[GUILD_ID]
+
+    assert await manager._redraw(player, view.channel_id, view.message_id) is True
+    assert manager._bot.rest.edited == []
+
+
+@pytest.mark.asyncio
+async def test_refreshing_stops_when_the_message_is_gone(
+    manager: NowPlayingManager, playing_player: AlfredPlayer
+) -> None:
+    """Someone deleted the view by hand. Every later tick would raise the same error."""
+    await manager.show(playing_player)
+    view = manager._views[GUILD_ID]
+    manager._bot.rest.edit_raises = hikari.NotFoundError(url="", headers={}, raw_body=b"")
+
+    assert await manager._redraw(playing_player, view.channel_id, view.message_id) is False
+
+
+@pytest.mark.asyncio
+async def test_hiding_stops_the_refresh(manager: NowPlayingManager, playing_player: AlfredPlayer) -> None:
+    await manager.show(playing_player)
+    refresh = manager._views[GUILD_ID].refresh
+
+    await manager.hide(GUILD_ID)
+
+    assert refresh.cancelled()

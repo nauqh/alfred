@@ -17,6 +17,8 @@ EMOJI_SKIP: Final = "⏭️"
 EMOJI_LOOP: Final = "🔁"
 EMOJI_LOOP_SINGLE: Final = "🔂"
 EMOJI_LINK: Final = "🔗"
+EMOJI_PREV_PAGE: Final = "⬅️"
+EMOJI_NEXT_PAGE: Final = "➡️"
 
 # The symbols the progress bar draws with - a filled/empty block pill (cyber deck style).
 PROGRESS_BAR_FILLED: Final = "▰"
@@ -26,3 +28,13 @@ EMOJI_RESUME_PLAYER: Final = "▶️"
 EMOJI_PAUSE_PLAYER: Final = "⏸️"
 
 ACTIVITY_NAME: Final = "https://nauqh.github.io/alfred/"
+
+# The queue panel. Both `/queue` and the same view reached by asking Alfred in chat render
+# through these, so the two cannot drift into showing different amounts of the same queue.
+QUEUE_TITLE: Final = "Queue"
+QUEUE_PAGE_SIZE: Final = 10
+
+# How long the queue panel's paging buttons stay live without a press. Unlike the now playing
+# view - which lives exactly as long as its track - this panel has no natural end, so it gets
+# a timeout and gives its buttons back when it expires.
+QUEUE_PANEL_TIMEOUT: Final = 180.0
