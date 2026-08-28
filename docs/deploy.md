@@ -38,8 +38,10 @@ cp lavalink/application.yml.example lavalink/application.yml
 `application.yml` is ready to run as-is for a standard deployment. Two
 deploy-specific cases:
 
-- Running the node outside Docker: `remoteCipher.url` must not point at the
-  shared `cipher.kikkia.dev`.
+- Running the node outside Docker: set `CIPHER_URL` to a yt-cipher you run yourself (the
+  compose default, `http://yt-cipher:8001`, only resolves on the compose network) and set
+  `CIPHER_PASSWORD` to its `API_TOKEN`. Otherwise the node falls back to the shared
+  `cipher.kikkia.dev` - rate limited to 10 req/s across everyone using it.
 - Deezer: leave `deezer: false` unless `masterDecryptionKey` **and** `arl` are
   filled in - LavaSrc otherwise refuses to start and the node exits before
   binding a port.

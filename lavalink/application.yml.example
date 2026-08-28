@@ -48,6 +48,13 @@ lavalink:
       channelMix: false
       lowPass: false
     bufferDurationMs: 400
+    # yt-cipher's README recommends raising these from their defaults: a slow cipher answer
+    # otherwise surfaces as a read/connection timeout, and `trackStuckThresholdMs` below then
+    # misfires on a stream that is merely being resolved slowly.
+    timeouts:
+      connectTimeoutMs: 10000
+      connectionRequestTimeoutMs: 10000
+      socketTimeoutMs: 10000
     frameBufferDurationMs: 5000
     opusEncodingQuality: 10
     resamplingQuality: LOW
@@ -103,20 +110,19 @@ plugins:
     # is that this is the supported fix, not a release to wait for.
     #   https://github.com/kikkia/yt-cipher
     #
-    # `docker compose up` runs one as the `yt-cipher` service, which is what this points at.
-    # Running the node on its own instead (scripts/lavalink.ps1)? Either start that service
-    # with `docker compose up yt-cipher`, or - for a laptop, not for a deployment - borrow the
-    # author's public instance, which needs no password and is rate limited to 10 req/s across
-    # everyone using it:
-    #
-    #   url: "https://cipher.kikkia.dev"
-    #   userAgent: "alfred"
+    # `docker compose up` runs one as the `yt-cipher` service and hands the node its address
+    # through `CIPHER_URL`; the fallback is the author's public instance, which needs no
+    # password, is rate limited to 10 req/s across everyone using it, and is fine only for a
+    # node that is explicitly pointed at it - never for a deployment. Set `CIPHER_URL` to a
+    # service you run yourself wherever the fallback is unacceptable.
+    #   https://github.com/kikkia/yt-cipher
     #
     # `${CIPHER_PASSWORD}` is resolved by Spring from the node's environment, so the password
-    # lives in .env next to the bot's, not in this file.
+    # lives in .env next to the bot's, not in this file. The empty default sends no
+    # Authorization header, which is what the public instance expects.
     remoteCipher:
-      url: "http://yt-cipher:8001"
-      password: "${CIPHER_PASSWORD}"
+      url: "${CIPHER_URL:https://cipher.kikkia.dev}"
+      password: "${CIPHER_PASSWORD:}"
       userAgent: "alfred"
 
     # The cipher server above solves the signature errors. It does not solve

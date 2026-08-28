@@ -40,6 +40,9 @@ services:
       # the node's own environment, not from the compose file, so it has to be handed to
       # this container as well as to yt-cipher - without it the node fails to start at all.
       - CIPHER_PASSWORD=${CIPHER_PASSWORD:?set CIPHER_PASSWORD in .env}
+      # Where the node's `remoteCipher.url` placeholder resolves. The service is only exposed on
+      # the compose network, not published to the host, so the hostname is the container name.
+      - CIPHER_URL=http://yt-cipher:8001
     volumes:
       # `sudo chown -R 322:322 lavalink/logs lavalink/plugins` before the first run.
       - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
