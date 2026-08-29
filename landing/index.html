@@ -1355,7 +1355,7 @@
         </h1>
 
         <p class="hero-desc">
-          Play music from YouTube, Spotify, and Deezer directly in your Discord voice channels. Fast autocomplete search, clean single-message button controls, and zero channel spam.
+          Play music from YouTube, Spotify, and Deezer right in your voice channel - or @mention Alfred to queue a song by name. Fast autocomplete search, clean single-message controls, and a recap every Sunday.
         </p>
 
         <div class="hero-ctas">
@@ -1430,11 +1430,11 @@
 
         <div class="feature-card">
           <div class="feature-icon-box">🔇</div>
-          <h3>Zero Unprompted Spam</h3>
-          <p>Alfred never speaks unless spoken to. Every embed is its own reply, and the now playing view is replaced per track and deleted when the queue ends.</p>
+          <h3>Quiet Unless Asked</h3>
+          <p>Commands and mentions get replies; a change log on restart and the weekly recap land in a channel you choose. Nothing else is ever posted unprompted.</p>
           <div class="feature-pill-list mono">
-            <span class="source-pill">Quiet Bot</span>
-            <span class="source-pill">Clean Channels</span>
+            <span class="source-pill">No Spam</span>
+            <span class="source-pill">Opt-In Posts</span>
           </div>
         </div>
 
@@ -1457,20 +1457,49 @@
             <span class="source-pill">Docker Ready</span>
           </div>
         </div>
+        <div class="feature-card">
+          <div class="feature-icon-box">🦇</div>
+          <h3>Weekly Recap</h3>
+          <p>Every Sunday morning Alfred posts a card of the week: top five tracks, total listening time, and the top listener. A quiet week gets a quiet line instead of silence.</p>
+          <div class="feature-pill-list mono">
+            <span class="source-pill">Top Tracks</span>
+            <span class="source-pill">Listening Time</span>
+            <span class="source-pill">Scheduled</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-box">💬</div>
+          <h3>AI Butler</h3>
+          <p>@mention Alfred to ask a question or queue something in plain words - "@Alfred play bohemian rhapsody" really queues it. It can search, show the queue, and skip, all from chat.</p>
+          <div class="feature-pill-list mono">
+            <span class="source-pill">@mention</span>
+            <span class="source-pill">Tool Calling</span>
+            <span class="source-pill">Chat Search</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-box">🎧</div>
+          <h3>Song in the Sidebar</h3>
+          <p>While a track plays, Alfred's status shows the song and artist under its name, so a glance at the member list tells you what is on. It reverts to the default when the queue ends.</p>
+          <div class="feature-pill-list mono">
+            <span class="source-pill">Rich Presence</span>
+            <span class="source-pill">Auto Revert</span>
+          </div>
+        </div>
       </div>
     </div>
   </section>
-
-  <!-- ================= COMMANDS & INTERACTIVE PLAYGROUND ================= -->
   <section id="commands" class="section-wrap">
     <div class="container">
       <div class="section-head">
         <div class="section-tag mono">
           <span class="color-sq sq-blue"></span> 02 / Commands & Interactive UI
         </div>
-        <h2 class="section-title">Nine concise commands. One reactive interface.</h2>
+        <h2 class="section-title">Nine concise slash commands. An AI butler on top.</h2>
         <p class="section-subtitle">
-          `/play` connects to your voice channel automatically - no `/join` needed. Try clicking the buttons below to test the reactive panel state machine.
+          `/play` connects to your voice channel automatically - no `/join` needed. Prefer typing? @mention Alfred and ask in plain words; it answers, and runs these commands for you. Try the buttons below to test the reactive panel state machine.
         </p>
       </div>
 
@@ -1575,6 +1604,11 @@
                 </tr>
               </thead>
               <tbody class="mono">
+                <tr>
+                  <td><span class="cmd-group-tag">CHAT</span></td>
+                  <td><span class="cmd-badge">@Alfred</span></td>
+                  <td>Ask, search or queue by mention - runs /play, /search, /now, /queue, /skip for you</td>
+                </tr>
                 <tr>
                   <td><span class="cmd-group-tag">MUSIC</span></td>
                   <td><span class="cmd-badge">/play</span></td>
@@ -1841,7 +1875,7 @@ flowchart TD
               <div class="footer-brand-title">alfred</div>
             </div>
             <p class="footer-brand-desc">
-              The music bot for self-hosted servers. Zero spam, instant autocomplete search, and high-fidelity Lavalink streaming.
+              The music bot for self-hosted servers. Play by command or by @mention, with a weekly recap every Sunday and a quiet-but-present change log.
             </p>
           </div>
         </div>
@@ -1852,7 +1886,7 @@ flowchart TD
           <!-- YELLOW NEWSLETTER BANNER -->
           <div class="footer-newsletter-card">
             <h3 class="newsletter-heading">Release wisdom straight to your inbox</h3>
-            <p class="newsletter-sub">Get the latest updates, deployment tips, and audio source fixes.</p>
+            <p class="newsletter-sub">Get the latest updates, deployment tips, weekly recaps, and audio source fixes.</p>
             <form class="newsletter-form" onsubmit="event.preventDefault(); alert('Subscribed for Alfred updates!');">
               <input type="email" class="newsletter-input mono" placeholder="Enter your email" required>
               <button type="submit" class="newsletter-btn mono">Subscribe</button>
@@ -1876,6 +1910,7 @@ flowchart TD
               <h4 class="footer-cell-title">Resources</h4>
               <ul class="footer-cell-links mono">
                 <li><a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank">Docs ↗</a></li>
+                <li><a href="https://github.com/nauqh/alfred/blob/main/CHANGELOG.md" target="_blank">Changelog ↗</a></li>
                 <li><a href="https://github.com/nauqh/alfred/blob/main/docs/design.md" target="_blank">Design Spec ↗</a></li>
                 <li><a href="https://github.com/nauqh/alfred/blob/main/docs/prd.md" target="_blank">PRD Spec ↗</a></li>
                 <li><a href="https://github.com/nauqh/alfred/issues" target="_blank">Contact Support ↗</a></li>
