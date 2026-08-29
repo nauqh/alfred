@@ -79,6 +79,9 @@ Deploys are manual. The appropriate command depends on what changed:
 | `.env` | `docker compose up -d` |
 | `lavalink/application.yml` | `docker compose restart lavalink` (bind mount) |
 
+> The play-history database for the weekly recap lives in `./data`, mounted into the bot and
+> gitignored. A `docker compose down` does **not** delete it; only `rm -rf data/` resets it.
+
 Only the bot is built from source; the source is baked into the image at build
 time, so `git pull` alone does not affect a running stack. The node and
 yt-cipher are pinned images - update them by deliberately editing the tag or

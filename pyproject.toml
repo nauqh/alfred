@@ -26,6 +26,9 @@ dependencies = [
     # All of the bot's own logging. hikari and lavalink still log through the standard
     # library; `log_config` bridges them into loguru so there is one stream, one format.
     "loguru>=0.7.3",
+    # Timezone data for `zoneinfo` - the slim image and Windows have no system tz database,
+    # and the weekly recap needs RECAP_TIMEZONE (e.g. Asia/Ho_Chi_Minh) to resolve.
+    "tzdata>=2025.1",
 ]
 
 [project.optional-dependencies]

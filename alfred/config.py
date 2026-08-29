@@ -51,6 +51,16 @@ class ChatConfig:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
+class RecapConfig:
+    """The weekly recap: where to post, when, and who it is for."""
+
+    channel_id: int
+    guild_id: int
+    hour: int
+    timezone: str
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
 class Config:
     """Everything the bot needs to know before it connects to anything."""
 
@@ -64,6 +74,8 @@ class Config:
     """`None` when `OPENROUTER_API_KEY` is unset, which leaves the bot deaf to ordinary messages."""
     startup_channel_id: int | None
     """Where the bot posts its restart view; `None` leaves it silent on restart."""
+    recap: RecapConfig | None = None
+    """The weekly recap, or `None` when it is not configured."""
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Config:
@@ -97,6 +109,7 @@ class Config:
             log_dir=env.get("LOG_DIR") or None,
             chat=_chat(env),
             startup_channel_id=_optional_guild_id(env, "STARTUP_CHANNEL_ID"),
+            recap=_recap(env),
         )
 
 
@@ -112,6 +125,32 @@ class Config:
 # Latency is the thing to watch when swapping: a reasoning model spends seconds thinking
 # before its first word, which is a long time to sit in a chat channel.
 DEFAULT_CHAT_MODEL = "dots-studio/dots-3-note-preview:free"
+
+
+def _recap(env: Mapping[str, str]) -> RecapConfig | None:
+    """
+    Build the weekly recap settings.
+
+    The channel falls back to `STARTUP_CHANNEL_ID` when `RECAP_CHANNEL_ID` is unset, so a
+    server that already shows the changelog gets the recap in the same place with one less
+    variable to set. The guild is the first of `DEFAULT_GUILDS` - the bot is single-server,
+    and a recap with nowhere to post is off.
+    """
+    channel_id = _optional_guild_id(env, "RECAP_CHANNEL_ID") or _optional_guild_id(env, "STARTUP_CHANNEL_ID")
+    guilds = _guild_ids(env)
+    if channel_id is None or not guilds:
+        return None
+
+    hour = _int(env, "RECAP_HOUR", 9)
+    if not 0 <= hour <= 23:
+        raise ConfigError(f"'RECAP_HOUR' must be between 0 and 23, got {hour}")
+
+    return RecapConfig(
+        channel_id=channel_id,
+        guild_id=guilds[0],
+        hour=hour,
+        timezone=env.get("RECAP_TIMEZONE", "UTC").strip() or "UTC",
+    )
 
 
 def _chat(env: Mapping[str, str]) -> ChatConfig | None:

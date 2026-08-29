@@ -16,6 +16,7 @@ from alfred.music import sources
 from alfred.music.player import AlfredPlayer
 from alfred.music.player import get_playlist
 from alfred.music.service import Queued
+from alfred.ui.formatting import format_time
 from alfred.ui.formatting import player_bar
 from alfred.ui.formatting import track_length
 
@@ -315,3 +316,61 @@ def _current_description(player: AlfredPlayer) -> str:
         subtext,
     ]
     return "\n".join(line for line in lines if line is not None)
+
+
+def recap_embed(plays: list[tuple], *, since: datetime, now: datetime) -> hikari.Embed:
+    """
+    The embed behind the Sunday weekly recap.
+
+    Top five tracks of the seven days up to `since`, then totals - song count, listening time,
+    top listener (by plays). An empty week posts the same card with a "quiet week" line in
+    place of the top tracks, because a week without music is still worth a word.
+
+    Args:
+        plays: Rows from `PlayStore.weekly`, newest first.
+        since: The start of the window, for the footer's date range.
+        now: When the recap is posted, for the timestamp and the window's end.
+    """
+    title: Final = "🦇 Weekly recap"
+    embed = hikari.Embed(title=title, color=constants.COLOR_ALFRED, timestamp=now)
+
+    if not plays:
+        embed.description = "Quiet week - no music played."
+    else:
+        # Row: title, author, uri, duration_ms, requester_id, played_at.
+        by_track: dict[str, int] = {}
+        durations: list[int] = []
+        by_listener: dict[int, int] = {}
+        for title_, _author, _uri, duration_ms, requester_id, _played_at in plays:
+            by_track[title_] = by_track.get(title_, 0) + 1
+            if duration_ms:
+                durations.append(duration_ms)
+            by_listener[requester_id] = by_listener.get(requester_id, 0) + 1
+
+        top = sorted(by_track.items(), key=lambda item: item[1], reverse=True)[:5]
+        lines = [
+            f"{i}. **{title_}** - {count} play{'s' if count != 1 else ''}"
+            for i, (title_, count) in enumerate(top, start=1)
+        ]
+        embed.add_field(name="🎵 Top tracks", value="\n".join(lines) or "...", inline=False)
+
+        total = len(plays)
+        listening = format_time(sum(durations))
+        embed.add_field(
+            name="📊 This week",
+            value=f"{total} song{'s' if total != 1 else ''}, {listening} listening",
+            inline=False,
+        )
+
+        if by_listener:
+            top_listener, listener_plays = max(by_listener.items(), key=lambda item: item[1])
+            embed.add_field(
+                name="👥 Top listener",
+                value=f"<@{top_listener}> ({listener_plays} plays)",
+                inline=False,
+            )
+
+    since_s = since.strftime("%d %b") if since else ""
+    now_s = now.strftime("%d %b")
+    embed.set_footer(f"{since_s} - {now_s}" if since_s else now_s, icon=constants.CHANGELOG_FOOTER_ICON)
+    return embed

@@ -10,3 +10,6 @@ lavalink/plugins/
 lavalink/Lavalink.jar
 .pytest_cache/
 .ruff_cache/
+
+# The weekly recap's play-history database, written at runtime.
+data/
