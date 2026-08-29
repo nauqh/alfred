@@ -262,10 +262,63 @@ def test_every_offered_tool_is_implemented() -> None:
     assert offered == set(actions.TOOL_NAMES)
 
 
-def test_play_is_the_only_tool_taking_an_argument() -> None:
+def test_only_playing_and_searching_take_an_argument() -> None:
     """Anything else taking arguments would be a new path for the model to put words into."""
     with_arguments = {
         tool["function"]["name"] for tool in actions.TOOLS if tool["function"]["parameters"].get("properties")
     }
 
-    assert with_arguments == {actions.PLAY}
+    assert with_arguments == {actions.PLAY, actions.SEARCH}
+
+
+async def test_search_without_a_query_asks_instead_of_guessing() -> None:
+    """Same backstop as `play` - asking beats inventing a search nobody asked for."""
+    with pytest.raises(errors.AlfredError, match="What would you like me to search for"):
+        await actions.run(call(actions.SEARCH, query="   "), invocation())
+
+
+async def test_search_lists_numbered_candidates_without_queueing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    A search proposes matches with their URLs, and does not touch the queue or voice.
+
+    The numbered list is what the follow-up pick reads back through the reply chain, so it is
+    a `notice` - posted verbatim - rather than a model paraphrase.
+    """
+    tracks = [
+        make_track("Never Gonna Give You Up"),
+        make_track("Never Gonna Let You Down"),
+        make_track("Never Gonna Run Around"),
+    ]
+
+    async def fake_resolve(client: Any, query: str, source: Any) -> FakeLoadResult:
+        return FakeLoadResult(tracks)
+
+    monkeypatch.setattr(actions.service, "resolve", fake_resolve)
+
+    # No voice at all - searching is a lookup, so it needs no *channel*. The `play` the pick
+    # leads to is where the voice check applies, and `_require_user_voice` covers it there.
+    result = await actions.run(call(actions.SEARCH, query="rick astley"), invocation(user_voice=None))
+
+    assert result.embed is None
+    assert result.summary is None
+    assert result.notice is not None
+    for i, track in enumerate(tracks, start=1):
+        assert f"{i}. {track.title}" in result.notice
+        assert track.uri in result.notice
+    assert "Reply with the number" in result.notice
+
+
+async def test_search_caps_the_list_at_five(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Only the top matches are listed - five is enough to choose from, few enough to scan."""
+    tracks = [make_track(f"t{i}") for i in range(20)]
+
+    async def fake_resolve(client: Any, query: str, source: Any) -> FakeLoadResult:
+        return FakeLoadResult(tracks)
+
+    monkeypatch.setattr(actions.service, "resolve", fake_resolve)
+
+    result = await actions.run(call(actions.SEARCH, query="something"), invocation())
+
+    assert result.notice is not None
+    assert result.notice.count("https://") == actions.SEARCH_CANDIDATES
+    assert "6." not in result.notice

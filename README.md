@@ -155,7 +155,7 @@ Set `OPENROUTER_API_KEY` ([get one](https://openrouter.ai/keys)) and the bot ans
 when someone @mentions it. Leave it blank and the listener is never registered, so the
 bot stays deaf to ordinary channel traffic.
 
-It can also *run* four of its commands when asked, through OpenRouter tool calling:
+It can also *run* five of its commands when asked, through OpenRouter tool calling:
 
 | Ask it | Runs |
 |---|---|
@@ -163,9 +163,12 @@ It can also *run* four of its commands when asked, through OpenRouter tool calli
 | "what's playing" | `/now` |
 | "show me the queue" | `/queue` |
 | "skip this" | `/skip` |
+| "search for spider man: across the spider verse" | `/search` - lists the top matches, numbered |
 
 Asked for music without naming anything — "play something" — it asks what you want
-rather than picking for you.
+rather than picking for you. Asked to *search*, it lists the top five matches with their
+links, numbered, and plays the one you reply with - the list is posted as-is so the
+follow-up "play 2" can find the match again, no stored state involved.
 
 | | |
 |---|---|

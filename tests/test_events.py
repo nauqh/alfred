@@ -24,14 +24,33 @@ class FakeNowPlaying:
         self.hidden.append(guild_id)
 
 
+class FakePresence:
+    """Records which tracks the presence was told about (or told to go quiet)."""
+
+    def __init__(self) -> None:
+        self.started: list[lavalink.AudioTrack] = []
+        self.quieted: int = 0
+
+    async def track_started(self, track: lavalink.AudioTrack) -> None:
+        self.started.append(track)
+
+    async def quiet(self) -> None:
+        self.quieted += 1
+
+
 @pytest.fixture
 def now_playing() -> FakeNowPlaying:
     return FakeNowPlaying()
 
 
 @pytest.fixture
-def handler(now_playing: FakeNowPlaying) -> LavalinkEventHandler:
-    return LavalinkEventHandler(now_playing)  # type: ignore[arg-type]
+def presence() -> FakePresence:
+    return FakePresence()
+
+
+@pytest.fixture
+def handler(now_playing: FakeNowPlaying, presence: FakePresence) -> LavalinkEventHandler:
+    return LavalinkEventHandler(now_playing, presence)  # type: ignore[arg-type]
 
 
 async def _raise_exception(handler: LavalinkEventHandler, player: AlfredPlayer, track: lavalink.AudioTrack) -> None:
@@ -78,7 +97,10 @@ async def test_a_stuck_track_is_not_advanced_here(
 
 @pytest.mark.asyncio
 async def test_a_track_starting_shows_its_view(
-    handler: LavalinkEventHandler, now_playing: FakeNowPlaying, player: AlfredPlayer
+    handler: LavalinkEventHandler,
+    now_playing: FakeNowPlaying,
+    presence: FakePresence,
+    player: AlfredPlayer,
 ) -> None:
     track = make_track("current")
     player.current = track
@@ -86,12 +108,17 @@ async def test_a_track_starting_shows_its_view(
     await handler.on_track_start(lavalink.TrackStartEvent(player=player, track=track))
 
     assert now_playing.shown == [player]
+    assert presence.started == [track]
 
 
 @pytest.mark.asyncio
 async def test_the_queue_ending_takes_the_view_down(
-    handler: LavalinkEventHandler, now_playing: FakeNowPlaying, player: AlfredPlayer
+    handler: LavalinkEventHandler,
+    now_playing: FakeNowPlaying,
+    presence: FakePresence,
+    player: AlfredPlayer,
 ) -> None:
     await handler.on_queue_end(lavalink.QueueEndEvent(player=player))
 
     assert now_playing.hidden == [player.guild_id]
+    assert presence.quieted == 1

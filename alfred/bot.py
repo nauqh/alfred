@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-import datetime as dt
-import importlib.metadata as _metadata
-import subprocess
 from pathlib import Path
 
 import hikari
@@ -13,7 +9,7 @@ import lavalink
 import lightbulb
 from loguru import logger
 
-from alfred import constants
+from alfred import dev_log
 from alfred import errors
 from alfred import log_config
 from alfred.chat.client import ChatClient
@@ -21,9 +17,8 @@ from alfred.config import Config
 from alfred.events import LavalinkEventHandler
 from alfred.extensions import CHAT_EXTENSION
 from alfred.extensions import EXTENSIONS
-from alfred.music import node as music_node
 from alfred.music.player import AlfredPlayer
-from alfred.ui import embeds
+from alfred.presence import Presence
 from alfred.ui import responses
 from alfred.ui.nowplaying import NowPlayingManager
 
@@ -32,36 +27,6 @@ from alfred.ui.nowplaying import NowPlayingManager
 # mention the bot from it - their content arrives populated regardless. The bot is therefore
 # blind to the text of every message that is not addressed to it, which is the intent.
 INTENTS = hikari.Intents.GUILDS | hikari.Intents.GUILD_VOICE_STATES | hikari.Intents.GUILD_MESSAGES
-
-
-def _in_git_repo() -> bool:
-    """Whether the working tree is a git checkout at all."""
-    return (Path(__file__).resolve().parent.parent / ".git").exists()
-
-
-def _git_commit() -> str | None:
-    """The current commit's short hash, or `None` when it cannot be read."""
-    try:
-        out = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-    except (OSError, subprocess.SubprocessError) as e:
-        logger.warning("Could not read the git commit for the startup view: {}", e)
-        return None
-    return out.stdout.strip() or None
-
-
-# The embed every meaningful restart posts. The working tree may be a git checkout (dev, VPS)
-# but is not obliged to be one - the image runs from a Docker build context that dockerignore
-# strips of .git, so the commit line is optional.
-_ROBOT_COMMIT_SHA = _git_commit() if _in_git_repo() else None
-
-# Fire-and-forget startup tasks, kept referenced so the event loop does not collect them.
-_background_tasks: set[asyncio.Task[None]] = set()
 
 
 @lightbulb.hook(lightbulb.ExecutionSteps.PRE_INVOKE)
@@ -110,22 +75,20 @@ def build(config: Config) -> hikari.GatewayBot:
         me = bot.get_me()
         assert me is not None, "the bot must know its own user before Lavalink can be set up"
 
-        await bot.update_presence(
-            activity=hikari.Activity(
-                name=constants.ACTIVITY_NAME,
-                type=hikari.ActivityType.LISTENING,
-            ),
-        )
+        presence = Presence(bot)
+        await presence.start()
 
         lavalink_client = build_lavalink_client(config, me.id)
-        lavalink_client.add_event_hooks(LavalinkEventHandler(NowPlayingManager(bot, client, lavalink_client)))
+        lavalink_client.add_event_hooks(
+            LavalinkEventHandler(NowPlayingManager(bot, client, lavalink_client), presence)
+        )
 
         # Registered before the first command runs, which is the last moment the DI registry
         # is still open for writes.
         client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(lavalink.Client, lavalink_client)
         client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(Config, config)
 
-        await _post_startup_view(bot, config, lavalink_client)
+        await _post_dev_log(bot, config)
 
         extensions = EXTENSIONS
         if chat_client is not None:
@@ -149,73 +112,42 @@ def build(config: Config) -> hikari.GatewayBot:
     return bot
 
 
-async def _post_startup_view(
-    bot: hikari.GatewayBot,
-    config: Config,
-    lavalink_client: lavalink.Client,
-) -> None:
+async def _post_dev_log(bot: hikari.GatewayBot, config: Config) -> None:
     """
-    Post the restart embed to the configured channel, if one is configured.
+    Post the newest dev log to the configured channel, if one is configured.
 
-    The post is deliberately not awaited beyond a best-effort send: the node may still be
-    booting when the bot comes up, so its versions load in behind the first embed, and a
-    channel that vanished between config and post must not take the bot down.
+    The post replaces the old restart embed: instead of a card of versions, the channel gets
+    the day's dev log - prose someone can read. A missing folder, an unreadable log, or a
+    channel that vanished between config and post are all best-effort failures: they are
+    logged, and never take the bot down.
     """
     if config.startup_channel_id is None:
         return
 
-    started = dt.datetime.now(dt.timezone.utc)
-    info = embeds.StartupInfo(
-        bot_version=_bot_version(),
-        lavalink_version=music_node.node_semver(lavalink_client),
-        plugins=music_node.node_plugins(lavalink_client),
-        commit=_ROBOT_COMMIT_SHA,
-        commit_date=_commit_date(),
-        started=started,
-    )
-    embed = embeds.startup_embed(info)
-
-    try:
-        await bot.rest.create_message(config.startup_channel_id, embed=embed)
-    except hikari.HikariError as e:
-        logger.warning(
-            "Failed to post the startup view to channel {}: {}",
-            config.startup_channel_id,
-            e,
+    docs_dir = Path(__file__).resolve().parent.parent / "docs"
+    log_path = dev_log.newest_dev_log(docs_dir)
+    if log_path is None:
+        logger.info(
+            "No dev log to post on startup - {} is empty",
+            docs_dir / dev_log.LOGS_DIRNAME,
         )
         return
 
-    logger.info("Posted the startup view to channel {}", config.startup_channel_id)
-    # Fire-and-forget, matching `alfred.ui.responses`' pattern: keep a reference so the
-    # event loop does not collect the task mid-request, and drop it when it finishes.
-    task = asyncio.create_task(music_node.refresh_node_info(lavalink_client))
-    _background_tasks.add(task)
-    task.add_done_callback(_background_tasks.discard)
-
-
-def _bot_version() -> str:
-    """The installed package version, read from the metadata, not a constant."""
     try:
-        return _metadata.version("alfred")
-    except _metadata.PackageNotFoundError:
-        return "unknown"
+        content = log_path.read_text(encoding="utf-8")
+    except OSError as e:
+        logger.warning("Could not read the newest dev log {}: {}", log_path, e)
+        return
 
+    title = f"Alfred dev log - {log_path.stem}"
+    for message in dev_log.format_messages(content, title=title):
+        try:
+            await bot.rest.create_message(config.startup_channel_id, content=message)
+        except hikari.HikariError as e:
+            logger.warning("Failed to post the dev log to channel {}: {}", config.startup_channel_id, e)
+            return
 
-def _commit_date() -> str | None:
-    """The current commit's author date, or `None` when it cannot be read."""
-    if _ROBOT_COMMIT_SHA is None:
-        return None
-    try:
-        out = subprocess.run(
-            ["git", "show", "-s", "--format=%cs", "HEAD"],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    return out.stdout.strip() or None
+    logger.info("Posted the newest dev log {} to channel {}", log_path.name, config.startup_channel_id)
 
 
 def build_lavalink_client(config: Config, user_id: hikari.Snowflake) -> lavalink.Client:

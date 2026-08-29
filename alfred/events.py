@@ -11,6 +11,7 @@ import lavalink
 from loguru import logger
 
 from alfred.music.player import AlfredPlayer
+from alfred.presence import Presence
 from alfred.ui.nowplaying import NowPlayingManager
 
 
@@ -21,8 +22,9 @@ class LavalinkEventHandler:
     Register it with `lavalink.Client.add_event_hooks`.
     """
 
-    def __init__(self, now_playing: NowPlayingManager) -> None:
+    def __init__(self, now_playing: NowPlayingManager, presence: Presence) -> None:
         self._now_playing = now_playing
+        self._presence = presence
 
     @lavalink.listener(lavalink.TrackStartEvent)
     async def on_track_start(self, event: lavalink.TrackStartEvent) -> None:
@@ -33,6 +35,7 @@ class LavalinkEventHandler:
         # `show` replaces whatever view is up, which covers every way a track can start:
         # naturally, by skip, or by a failed track being replaced with the next one.
         await self._now_playing.show(event.player)
+        await self._presence.track_started(event.track)
 
     @lavalink.listener(lavalink.QueueEndEvent)
     async def on_queue_end(self, event: lavalink.QueueEndEvent) -> None:
@@ -41,6 +44,7 @@ class LavalinkEventHandler:
         # Nothing left to control. `AlfredPlayer.stop` dispatches this too, so the view also
         # goes when the bot leaves voice; handling must stay idempotent.
         await self._now_playing.hide(event.player.guild_id)
+        await self._presence.quiet()
 
     @lavalink.listener(lavalink.TrackEndEvent)
     async def on_track_end(self, event: lavalink.TrackEndEvent) -> None:

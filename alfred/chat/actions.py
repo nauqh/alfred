@@ -29,9 +29,13 @@ from alfred.ui import embeds
 from alfred.ui.formatting import track_length
 
 PLAY: Final = "play"
+SEARCH: Final = "search"
 NOW_PLAYING: Final = "now_playing"
 SHOW_QUEUE: Final = "show_queue"
 SKIP: Final = "skip"
+
+# How many matches a chat search lists: few enough to scan, numbered for the follow-up pick.
+SEARCH_CANDIDATES: Final = 5
 
 # The tools offered to the model. They live here, with the rest of the model contract, and
 # `alfred.actions` implements them - the dependency runs one way, because `actions` reaches
@@ -49,6 +53,28 @@ TOOLS: Final = [
                 "Queue a track, playlist or URL and start playing it. Only call this when the "
                 "user has actually named a track, artist or link. If they asked for music "
                 "without naming anything, do not call this - ask them what they want to hear."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The URL or search term the user named. Never invent one.",
+                    }
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": SEARCH,
+            "description": (
+                "Look up something the user named and list the top matches, numbered, without "
+                "playing anything. Use this when they want to choose between matches or are "
+                "unsure of an exact title, so they can reply with a number to play one. Only "
+                "call this when the user has actually named something to look up."
             ),
             "parameters": {
                 "type": "object",
@@ -88,7 +114,7 @@ TOOLS: Final = [
     },
 ]
 
-TOOL_NAMES: Final = frozenset({PLAY, NOW_PLAYING, SHOW_QUEUE, SKIP})
+TOOL_NAMES: Final = frozenset({PLAY, SEARCH, NOW_PLAYING, SHOW_QUEUE, SKIP})
 
 # The API wants a tool call and its result tied together by id. Only one call is ever in
 # flight, and the pair is built and sent in a single request, so a constant does the job.
@@ -100,7 +126,7 @@ class Result:
     """
     What an action produced.
 
-    Two shapes, because the actions divide in two. One kind *does* something - queueing,
+    Three shapes, because the actions divide in three. One kind *does* something - queueing,
     skipping - and what matters is that it happened, so it carries a `summary` for the model
     to confirm in a sentence. The slash commands post a "Track added" card for these, but in
     chat that card is noise: the now playing view appears on its own when the track starts,
@@ -108,9 +134,16 @@ class Result:
 
     The other kind *shows* something, where the embed is the entire answer and there is nothing
     to add in words.
+
+    `notice` is a third shape for what is neither an embed nor a chat confirmation: a reply
+    whose exact text is the point - a numbered list the user has to act on. It is posted
+    verbatim rather than rephrased by the model, because the mapping between the numbers and
+    the results is what the follow-up "play 2" depends on, and a model paraphrase would
+    happily drop it.
     """
 
     embed: hikari.Embed | None = None
+    notice: str | None = None
     summary: str | None = None
 
 
@@ -146,11 +179,13 @@ async def run(call: ToolCall, context: Invocation) -> Result:
         call.name,
         context.user_id,
         context.guild_id,
-        f" - query {call.query!r}" if call.name == PLAY else "",
+        f" - query {call.query!r}" if call.name in (PLAY, SEARCH) else "",
     )
 
     if call.name == PLAY:
         return await _play(call, context)
+    if call.name == SEARCH:
+        return await _search(call, context)
     if call.name == NOW_PLAYING:
         return _now_playing(context)
     if call.name == SHOW_QUEUE:
@@ -203,6 +238,37 @@ def _queued_summary(queued: service.Queued) -> str:
     length = track_length(track)
     author = f" by {track.author}" if track.author else ""
     return f'Queued "{track.title}"{author} ({length}).'
+
+
+async def _search(call: ToolCall, context: Invocation) -> Result:
+    """
+    `/search`, from chat: list matches so the user can pick one.
+
+    Nothing is queued and no voice is needed - this is a lookup, and the same `valid_user_voice`
+    check the slash command runs is applied later, on the `play` the pick leads to.
+
+    The result is a `notice` rather than an embed or a summary: the numbered list is what the
+    user picks from, and it must survive into the message exactly. The reply-chain context the
+    next mention carries is the only state - the model reads the list back, maps "the second
+    one" to its URL, and calls `play` with it.
+    """
+    query = call.query
+    if not query:
+        # Same backstop as `play`: asking beats inventing a search nobody asked for.
+        raise errors.AlfredError("What would you like me to search for? Give me a track, artist or link.")
+
+    result = await service.resolve(context.lavalink_client, query, sources.YOUTUBE)
+    candidates = result.tracks[:SEARCH_CANDIDATES]
+    if not candidates:
+        raise errors.NoResults
+
+    lines = [f'Here is what I found for "{query}":']
+    for i, track in enumerate(candidates, start=1):
+        author = f" - {track.author}" if track.author else ""
+        lines.append(f"{i}. {track.title}{author} ({track_length(track)})")
+        lines.append(f"   {track.uri}")
+    lines.append("Reply with the number you want and I will play it.")
+    return Result(notice="\n".join(lines))
 
 
 def _now_playing(context: Invocation) -> Result:

@@ -140,7 +140,13 @@ async def _run_action(
         await _post(event.message, embed=result.embed)
         return
 
-    assert result.summary is not None, "an action returns either an embed or a summary"
+    if result.notice is not None:
+        # Posted verbatim, not rephrased by the model: the numbered list is what the user
+        # picks from, and the follow-up "play 2" reads it back through the reply chain.
+        await _post(event.message, content=result.notice)
+        return
+
+    assert result.summary is not None, "an action returns an embed, a notice, or a summary"
     async with bot.rest.trigger_typing(event.channel_id):
         confirmation = await chat_client.confirm(turns, call, result.summary)
     await _post(event.message, content=confirmation)
