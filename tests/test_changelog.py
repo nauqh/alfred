@@ -1,101 +1,92 @@
-"""The change log picker (newest file) and the markdown parser."""
+"""The change log parser: keep-a-changelog entries into plain data."""
 
 from __future__ import annotations
 
 from alfred import changelog
 
 LOG = (
-    "# 2026-08-28\n"
+    "# Changelog\n"
     "\n"
-    "## Queue is now paginated\n"
-    "Long queues are one page at a time.\n"
+    "All notable changes to this project will be documented in this file.\n"
     "\n"
-    "## The bar keeps moving\n"
-    "It catches up every 15 seconds.\n"
+    "The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).\n"
+    "\n"
+    "## [Unreleased]\n"
+    "\n"
+    "## [2.0.1] - 2026-08-29\n"
+    "\n"
+    "### Added\n"
+    "- Post the changelog on restart\n"
+    "- Chat search\n"
+    "\n"
+    "## [2.0.0] - 2026-08-28\n"
+    "\n"
+    "### Added\n"
+    "- Paginated queue\n"
+    "\n"
+    "### Fixed\n"
+    "- Stuck-track loops\n"
 )
 
 
-def _write(docs_dir, name: str, text: str) -> None:
-    logs_dir = docs_dir / "changelogs"
-    logs_dir.mkdir(parents=True, exist_ok=True)
-    (logs_dir / name).write_text(text, encoding="utf-8")
+def test_newest_entry_skips_unreleased_and_takes_the_first_dated_entry() -> None:
+    entry = changelog.newest_entry(LOG)
+
+    assert entry is not None
+    assert entry.version == "[2.0.1]"
+    assert entry.date == "2026-08-29"
 
 
-# --- newest_change_log ------------------------------------------------------------------------
+def test_newest_entry_prefers_dated_over_unreleased() -> None:
+    content = (
+        "## [Unreleased]\n\n### Added\n- WIP\n\n"
+        "## [2.0.0] - 2026-08-28\n\n### Fixed\n- X\n"
+    )
+
+    entry = changelog.newest_entry(content)
+
+    assert entry is not None
+    assert entry.date == "2026-08-28"
 
 
-def test_newest_change_log_picks_the_latest_date(tmp_path) -> None:
-    _write(tmp_path, "2026-08-26.md", LOG)
-    _write(tmp_path, "2026-08-29.md", LOG)
-    _write(tmp_path, "2026-08-28.md", LOG)
+def test_newest_entry_falls_back_to_unreleased_when_nothing_is_dated() -> None:
+    entry = changelog.newest_entry("## [Unreleased]\n\n### Added\n- WIP\n")
 
-    assert changelog.newest_change_log(tmp_path).name == "2026-08-29.md"
-
-
-def test_newest_change_log_ignores_non_dated_files(tmp_path) -> None:
-    _write(tmp_path, "notes.md", LOG)
-    _write(tmp_path, "2026-08-29.md", LOG)
-
-    assert changelog.newest_change_log(tmp_path).name == "2026-08-29.md"
+    assert entry is not None
+    assert entry.date is None
+    assert entry.version == "[Unreleased]"
 
 
-def test_newest_change_log_is_none_when_there_is_no_folder(tmp_path) -> None:
-    assert changelog.newest_change_log(tmp_path) is None
+def test_newest_entry_is_none_when_there_is_no_entry() -> None:
+    assert changelog.newest_entry("# Changelog\n\nJust prose, no versions.\n") is None
 
 
-def test_newest_change_log_is_none_when_no_dated_files_exist(tmp_path) -> None:
-    _write(tmp_path, "2026-08-29.txt", LOG)
-    (tmp_path / "changelogs" / "archive").mkdir(parents=True)
-    (tmp_path / "changelogs" / "archive" / "2026-08-28.md").write_text(LOG, encoding="utf-8")
+def test_categories_carry_their_items() -> None:
+    entry = changelog.newest_entry(LOG)
+    assert entry is not None
 
-    assert changelog.newest_change_log(tmp_path) is None
-
-
-# --- parse ---------------------------------------------------------------------------------
+    assert [category.name for category in entry.categories] == ["Added"]
+    assert entry.categories[0].items == ("Post the changelog on restart", "Chat search")
 
 
-def test_parse_reads_the_title_and_the_sections() -> None:
-    parsed = changelog.parse(LOG)
+def test_parse_entries_returns_every_entry_in_order() -> None:
+    entries = changelog.parse_entries(LOG)
 
-    assert parsed.title == "2026-08-28"
-    assert parsed.description == ""
-    assert [s.heading for s in parsed.sections] == ["Queue is now paginated", "The bar keeps moving"]
-    assert parsed.sections[0].body == "Long queues are one page at a time."
-    assert parsed.sections[1].body == "It catches up every 15 seconds."
-
-
-def test_parse_puts_prose_before_the_first_section_in_the_description() -> None:
-    parsed = changelog.parse("# 2026-08-29\n\nA short intro line.\n\n## A section\nBody here.\n")
-
-    assert parsed.title == "2026-08-29"
-    assert parsed.description == "A short intro line."
-    assert parsed.sections[0].body == "Body here."
+    # Entries include the undated [Unreleased] section, in file order.
+    assert [e.date for e in entries] == [None, "2026-08-29", "2026-08-28"]
+    assert entries[2].categories[1].name == "Fixed"
+    assert entries[2].categories[1].items == ("Stuck-track loops",)
 
 
-def test_parse_handles_deeper_headings() -> None:
-    parsed = changelog.parse("# 2026-08-29\n\n### Deep heading\nDeep body.\n")
+def test_an_entry_without_version_brackets_is_still_parsed() -> None:
+    entry = changelog.newest_entry("## 2.0.0 - 2026-08-29\n\n### Added\n- A\n")
 
-    assert parsed.sections[0].heading == "Deep heading"
-    assert parsed.sections[0].body == "Deep body."
-
-
-def test_parse_drops_blank_padding_and_heading_marks() -> None:
-    parsed = changelog.parse("# 2026-08-29\n\n\n##  A heading  \n\n  trimmed prose  \n\n\n")
-
-    assert parsed.title == "2026-08-29"
-    assert parsed.sections[0].heading == "A heading"
-    assert parsed.sections[0].body == "trimmed prose"
+    assert entry is not None
+    assert entry.version == "2.0.0"
+    assert entry.date == "2026-08-29"
 
 
-def test_parse_keeps_multiline_prose() -> None:
-    parsed = changelog.parse("# 2026-08-29\n\n## A section\nfirst line\nsecond line\n")
+def test_prose_without_an_entry_is_ignored() -> None:
+    entry = changelog.newest_entry("# Changelog\n\n### Added\n- Orphan bullets outside an entry\n")
 
-    assert parsed.sections[0].body == "first line\nsecond line"
-
-
-def test_parse_of_empty_content_has_no_parts() -> None:
-    parsed = changelog.parse("")
-
-    assert parsed.title == ""
-    assert parsed.description == ""
-    assert parsed.sections == ()
+    assert entry is None or entry.categories == ()

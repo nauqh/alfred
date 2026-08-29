@@ -75,7 +75,7 @@ Deploys are manual. The appropriate command depends on what changed:
 | Changed | Command |
 |---|---|
 | Code | `git pull && docker compose up -d --build bot` |
-| Change log (in `docs/changelogs/`) | `git pull && docker compose restart bot` - `docs/` is mounted in, so a new day's log reaches the bot without a rebuild |
+| Change log (`CHANGELOG.md`) | `git pull && docker compose restart bot` - the file is mounted in, so a new entry reaches the bot without a rebuild |
 | `.env` | `docker compose up -d` |
 | `lavalink/application.yml` | `docker compose restart lavalink` (bind mount) |
 

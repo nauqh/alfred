@@ -86,8 +86,8 @@ services:
         condition: service_healthy
     volumes:
       - ./logs:/app/logs
-      # `docs/` is gitignored from the image, but the dev log the bot posts on restart is
-      # in it - so the checkout's docs are mounted instead of baked. The log updates on
-      # restart without a rebuild, and a new day's log only needs a git pull.
-      - ./docs:/app/docs:ro
+      # The change log the bot posts on restart lives at the repo root, next to this file.
+      # It is mounted rather than baked so an edit reaches the bot on `restart` - the same
+      # way the log used to arrive when it lived under docs/.
+      - ./CHANGELOG.md:/app/CHANGELOG.md:ro
     restart: unless-stopped

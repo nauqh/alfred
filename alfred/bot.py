@@ -126,33 +126,31 @@ async def _post_changelog(bot: hikari.GatewayBot, config: Config) -> None:
     if config.startup_channel_id is None:
         return
 
-    docs_dir = Path(__file__).resolve().parent.parent / "docs"
-    log_path = changelog.newest_change_log(docs_dir)
-    if log_path is None:
-        logger.info(
-            "No change log to post on startup - {} is empty",
-            docs_dir / changelog.LOGS_DIRNAME,
-        )
+    root = Path(__file__).resolve().parent.parent
+    log_path = changelog.newest_change_log_path(root)
+    if not log_path.is_file():
+        logger.info("No {} to post on startup", log_path)
         return
 
     try:
         content = log_path.read_text(encoding="utf-8")
     except OSError as e:
-        logger.warning("Could not read the newest change log {}: {}", log_path, e)
+        logger.warning("Could not read the change log {}: {}", log_path, e)
         return
 
-    title = log_path.stem
-    parsed = changelog.parse(content)
-    log = changelog.ChangeLog(title=parsed.title or title, description=parsed.description, sections=parsed.sections)
+    entry = changelog.newest_entry(content)
+    if entry is None:
+        logger.info("No entry to post in {}", log_path)
+        return
 
-    for embed in embeds.changelog_embeds(log):
+    for embed in embeds.changelog_embeds(entry):
         try:
             await bot.rest.create_message(config.startup_channel_id, embed=embed)
         except hikari.HikariError as e:
             logger.warning("Failed to post the change log to channel {}: {}", config.startup_channel_id, e)
             return
 
-    logger.info("Posted the newest change log {} to channel {}", log_path.name, config.startup_channel_id)
+    logger.info("Posted the newest change log entry {} to channel {}", entry.version, config.startup_channel_id)
 
 
 def build_lavalink_client(config: Config, user_id: hikari.Snowflake) -> lavalink.Client:
