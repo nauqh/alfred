@@ -89,14 +89,14 @@ def changelog_embeds(entry: Entry) -> tuple[hikari.Embed, ...]:
     """
     The embed(s) behind the restart change-log post.
 
-    The title is brief - "Changelog - <date>" - with a thumbnail and a footer counting the
-    listed changes. Each category of the newest entry becomes a field: `### Added` becomes
+    The title is brief - "🦇 Changelog - <date>" - with a footer counting the listed changes.
+    Each category of the newest entry becomes a field: `### Added` becomes
     the field name, its bullet items the value. A log with more content than one embed can
     carry is split across several: Discord caps an embed at 25 fields and 6000 characters
     total, and no individual field may exceed 1024 characters, so a category longer than
     that is itself split across numbered "part" fields.
     """
-    title: Final = f"Changelog - {entry.date}" if entry.date else "Changelog"
+    title: Final = f"🦇 Changelog - {entry.date}" if entry.date else "🦇 Changelog"
     timestamp = _log_timestamp(entry.date)
     total = sum(len(category.items) for category in entry.categories)
     embeds_: list[hikari.Embed] = []
@@ -106,7 +106,6 @@ def changelog_embeds(entry: Entry) -> tuple[hikari.Embed, ...]:
     def start() -> None:
         nonlocal current, budget
         embed = hikari.Embed(title=title, color=constants.COLOR_ALFRED, timestamp=timestamp)
-        embed.set_thumbnail(constants.CHANGELOG_THUMBNAIL)
         # A brief footer: who posted, and how much is in the log. Overflow embeds say
         # "continued" so the recap count is not silently repeated.
         text = "Alfred · continued" if embeds_ else "Alfred" + (f" · {total} updates" if total else "")

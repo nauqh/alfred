@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import pytest
 
-from alfred import constants
 from alfred.changelog import Category
 from alfred.changelog import Entry
 from alfred.music.player import AlfredPlayer
@@ -175,15 +174,14 @@ def test_a_change_log_renders_one_embed_with_a_category_per_field() -> None:
         change_entry([("Added", ["Chat search", "Sidebar"])])
     )
 
-    assert embed.title == "Changelog - 2026-08-29"
-    assert embed.thumbnail is not None and embed.thumbnail.url == constants.CHANGELOG_THUMBNAIL
+    assert embed.title == "🦇 Changelog - 2026-08-29"
     assert [(f.name, f.value) for f in embed.fields] == [("Added", "- Chat search\n- Sidebar")]
 
 
 def test_an_entry_without_a_date_has_a_plain_title() -> None:
     (embed,) = embeds.changelog_embeds(change_entry([("Added", ["WIP"])], date=None))
 
-    assert embed.title == "Changelog"
+    assert embed.title == "🦇 Changelog"
 
 
 def test_a_change_log_carries_a_footer_that_counts_the_items() -> None:
@@ -230,12 +228,12 @@ def test_many_categories_split_across_several_embeds() -> None:
 
     assert len(embeds_) == 2
     assert all(len(e.fields) <= embeds.MAX_FIELDS for e in embeds_)
-    assert all(e.title == "Changelog - 2026-08-29" for e in embeds_)
+    assert all(e.title == "🦇 Changelog - 2026-08-29" for e in embeds_)
     assert len(embeds_[0].fields) + len(embeds_[1].fields) == 40
 
 
 def test_an_empty_entry_still_gets_one_embed() -> None:
     (embed,) = embeds.changelog_embeds(change_entry([], date=None))
 
-    assert embed.title == "Changelog"
+    assert embed.title == "🦇 Changelog"
     assert embed.fields == []
