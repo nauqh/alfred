@@ -11,7 +11,7 @@ import hikari
 import lavalink
 
 from alfred import constants
-from alfred.dev_log import DevLog
+from alfred.changelog import ChangeLog
 from alfred.music import sources
 from alfred.music.player import AlfredPlayer
 from alfred.music.player import get_playlist
@@ -76,25 +76,25 @@ def _clamp(text: str, limit: int) -> str:
 
 
 def _log_timestamp(title: str) -> datetime | None:
-    """The dev log's date as a timestamp, when the title is an ISO date."""
+    """The change log's date as a timestamp, when the title is an ISO date."""
     try:
         return datetime.strptime(title, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     except ValueError:
         return None
 
 
-def dev_log_embeds(log: DevLog) -> tuple[hikari.Embed, ...]:
+def changelog_embeds(log: ChangeLog) -> tuple[hikari.Embed, ...]:
     """
-    The embed(s) behind the restart dev-log post.
+    The embed(s) behind the restart change-log post.
 
-    The title stays brief - just "Alfred dev log" - with the date carried by the timestamp and
-    a footer counting the updates. Each section becomes a field: the heading (emoji included)
-    as the name, the prose as the value. A log with more content than one embed can carry is
-    split across several: Discord caps an embed at 25 fields and 6000 characters total, and no
-    individual field may exceed 1024 characters, so a section longer than that is itself split
-    across numbered "part" fields.
+    The title stays brief - just "Alfred change log" - with the date carried by the timestamp
+    and a footer counting the updates. Each section becomes a field: the heading (emoji
+    included) as the name, the lined items as the value. A log with more content than one
+    embed can carry is split across several: Discord caps an embed at 25 fields and 6000
+    characters total, and no individual field may exceed 1024 characters, so a section longer
+    than that is itself split across numbered "part" fields.
     """
-    title: Final = "Alfred dev log"
+    title: Final = "Alfred change log"
     timestamp = _log_timestamp(log.title)
     total = len(log.sections)
     embeds_: list[hikari.Embed] = []
@@ -109,7 +109,7 @@ def dev_log_embeds(log: DevLog) -> tuple[hikari.Embed, ...]:
         # A brief footer: who posted, and how much is in the log. Overflow embeds say
         # "continued" so the recap count is not silently repeated.
         text = "Alfred · continued" if embeds_ else "Alfred" + (f" · {total} updates" if total else "")
-        embed.set_footer(text, icon=constants.DEV_LOG_FOOTER_ICON)
+        embed.set_footer(text, icon=constants.CHANGELOG_FOOTER_ICON)
         embeds_.append(embed)
         current = embed
         budget = MAX_EMBED_TOTAL - len(title) - len(embed.description or "") - len(text)

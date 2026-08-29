@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from alfred.dev_log import DevLog
-from alfred.dev_log import LogSection
+from alfred.changelog import ChangeLog
+from alfred.changelog import LogSection
 from alfred.music.player import AlfredPlayer
 from alfred.music.player import PlaylistRef
 from alfred.music.service import Queued
@@ -160,66 +160,66 @@ def test_the_queue_of_a_player_that_has_gone_says_nothing_is_playing() -> None:
     assert embeds.queue(None, title="Queue").description == "Nothing is playing."
 
 
-def dev_log(*sections: tuple[str, str]) -> DevLog:
-    """A `DevLog` with the given heading/body sections, for the embed builder tests."""
-    return DevLog(title="2026-08-29", sections=tuple(LogSection(heading=h, body=b) for h, b in sections))
+def change_log(*sections: tuple[str, str]) -> ChangeLog:
+    """A `ChangeLog` with the given heading/body sections, for the embed builder tests."""
+    return ChangeLog(title="2026-08-29", sections=tuple(LogSection(heading=h, body=b) for h, b in sections))
 
 
-def test_a_dev_log_renders_one_embed_with_a_field_per_section() -> None:
-    (embed,) = embeds.dev_log_embeds(
-        dev_log(("Ask Alfred to search", "The top 5 matches, numbered."), ("Sidebar", "The song and artist."))
+def test_a_change_log_renders_one_embed_with_a_field_per_section() -> None:
+    (embed,) = embeds.changelog_embeds(
+        change_log(("Ask Alfred to search", "The top 5 matches, numbered."), ("Sidebar", "The song and artist."))
     )
 
-    assert embed.title == "Alfred dev log"
+    assert embed.title == "Alfred change log"
     assert [(f.name, f.value) for f in embed.fields] == [
         ("Ask Alfred to search", "The top 5 matches, numbered."),
         ("Sidebar", "The song and artist."),
     ]
 
 
-def test_a_dev_log_keeps_writer_emojis_in_the_heading() -> None:
-    (embed,) = embeds.dev_log_embeds(dev_log(("🔎 Ask Alfred to search", "The top 5 matches, numbered.")))
+def test_a_change_log_keeps_writer_emojis_in_the_heading() -> None:
+    (embed,) = embeds.changelog_embeds(change_log(("🔎 Ask Alfred to search", "The top 5 matches, numbered.")))
 
     assert embed.fields[0].name == "🔎 Ask Alfred to search"
 
 
-def test_a_dev_log_carries_a_footer_that_counts_the_updates() -> None:
-    (embed,) = embeds.dev_log_embeds(
-        dev_log(("One", "first"), ("Two", "second"), ("Three", "third"))
+def test_a_change_log_carries_a_footer_that_counts_the_updates() -> None:
+    (embed,) = embeds.changelog_embeds(
+        change_log(("One", "first"), ("Two", "second"), ("Three", "third"))
     )
 
     assert embed.footer is not None and embed.footer.text == "Alfred · 3 updates"
 
 
-def test_a_dev_log_with_no_sections_gets_no_update_count() -> None:
-    (embed,) = embeds.dev_log_embeds(DevLog(title="2026-08-29"))
+def test_a_change_log_with_no_sections_gets_no_update_count() -> None:
+    (embed,) = embeds.changelog_embeds(ChangeLog(title="2026-08-29"))
 
     assert embed.footer is not None and embed.footer.text == "Alfred"
 
 
 def test_the_log_date_becomes_the_embed_timestamp() -> None:
-    (embed,) = embeds.dev_log_embeds(dev_log(("A", "b")))
+    (embed,) = embeds.changelog_embeds(change_log(("A", "b")))
 
     assert embed.timestamp is not None and embed.timestamp.year == 2026 and embed.timestamp.month == 8
 
 
 def test_a_non_date_title_leaves_the_timestamp_unset() -> None:
-    (embed,) = embeds.dev_log_embeds(DevLog(title="changes"))
+    (embed,) = embeds.changelog_embeds(ChangeLog(title="changes"))
 
     assert embed.timestamp is None
 
 
-def test_a_dev_log_carries_an_intro_as_the_description() -> None:
-    (embed,) = embeds.dev_log_embeds(DevLog(title="2026-08-29", description="A short intro."))
+def test_a_change_log_carries_an_intro_as_the_description() -> None:
+    (embed,) = embeds.changelog_embeds(ChangeLog(title="2026-08-29", description="A short intro."))
 
-    assert embed.title == "Alfred dev log"
+    assert embed.title == "Alfred change log"
     assert embed.description == "A short intro."
     assert embed.fields == []
 
 
 def test_a_long_section_is_split_across_part_fields() -> None:
     body = "x" * (embeds.MAX_FIELD_VALUE + 200)
-    (embed,) = embeds.dev_log_embeds(dev_log(("Long section", body)))
+    (embed,) = embeds.changelog_embeds(change_log(("Long section", body)))
 
     assert len(embed.fields) == 2
     assert embed.fields[0].name == "Long section"
@@ -231,16 +231,16 @@ def test_a_long_section_is_split_across_part_fields() -> None:
 def test_many_sections_split_across_several_embeds() -> None:
     sections = [(f"Section {i}", f"body {i}") for i in range(40)]
 
-    embeds_ = embeds.dev_log_embeds(dev_log(*sections))
+    embeds_ = embeds.changelog_embeds(change_log(*sections))
 
     assert len(embeds_) == 2
     assert all(len(e.fields) <= embeds.MAX_FIELDS for e in embeds_)
-    assert all(e.title == "Alfred dev log" for e in embeds_)
+    assert all(e.title == "Alfred change log" for e in embeds_)
     assert len(embeds_[0].fields) + len(embeds_[1].fields) == 40
 
 
-def test_an_empty_dev_log_still_gets_one_embed() -> None:
-    (embed,) = embeds.dev_log_embeds(DevLog(title="2026-08-29"))
+def test_an_empty_change_log_still_gets_one_embed() -> None:
+    (embed,) = embeds.changelog_embeds(ChangeLog(title="2026-08-29"))
 
-    assert embed.title == "Alfred dev log"
+    assert embed.title == "Alfred change log"
     assert embed.fields == []

@@ -1,8 +1,8 @@
-"""Finding and parsing the newest dev log, for the restart post.
+"""Finding and parsing the newest change log, for the restart post.
 
-Dev logs live in `docs/dev-logs/`, one dated file per day named `YYYY-MM-DD.md`. The newest
-is the latest date: ISO dates sort in calendar order, so picking the greatest filename is
-choosing the newest log. Parsing turns a log's markdown into plain data - the date, an
+Change logs live in `docs/changelogs/`, one dated file per day named `YYYY-MM-DD.md`. The
+newest is the latest date: ISO dates sort in calendar order, so picking the greatest filename
+is choosing the newest log. Parsing turns a log's markdown into plain data - the date, an
 optional intro, and the dated sections - so nothing here knows Discord. Turning that data
 into an embed is `alfred.ui.embeds`'s job, which is why this module imports nothing from it.
 """
@@ -13,33 +13,33 @@ import dataclasses
 import re
 from pathlib import Path
 
-# A dated dev log file. Its shape doubles as the sort key: `YYYY-MM-DD` filenames order
+# A dated change log file. Its shape doubles as the sort key: `YYYY-MM-DD` filenames order
 # chronologically under plain string comparison, which is what makes "newest" a max() over the
 # matching names rather than a date parse.
 DATE_FILE = re.compile(r"^\d{4}-\d{2}-\d{2}\.md$")
 
-LOGS_DIRNAME = "dev-logs"
+LOGS_DIRNAME = "changelogs"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class LogSection:
-    """One dated section of a dev log: a heading and the prose under it."""
+    """One dated section of a change log: a heading and the lines under it."""
 
     heading: str
     body: str
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class DevLog:
-    """A parsed dev log: its date, an optional intro, and its sections."""
+class ChangeLog:
+    """A parsed change log: its date, an optional intro, and its sections."""
 
     title: str
     description: str = ""
     sections: tuple[LogSection, ...] = ()
 
 
-def newest_dev_log(docs_dir: Path) -> Path | None:
-    """The newest dated dev log under `docs_dir/dev-logs`, or `None` if there is none."""
+def newest_change_log(docs_dir: Path) -> Path | None:
+    """The newest dated change log under `docs_dir/changelogs`, or `None` if there is none."""
     logs_dir = docs_dir / LOGS_DIRNAME
     if not logs_dir.is_dir():
         return None
@@ -51,13 +51,13 @@ def newest_dev_log(docs_dir: Path) -> Path | None:
     return best
 
 
-def parse(content: str) -> DevLog:
+def parse(content: str) -> ChangeLog:
     """
-    Turn a dev log's markdown into a `DevLog`.
+    Turn a change log's markdown into a `ChangeLog`.
 
-    The top-level `# YYYY-MM-DD` title becomes `DevLog.title`; prose before the first section
-    becomes `description`; every other heading starts a `LogSection`, and the lines under it
-    become its body. Heading marks and blank padding are dropped.
+    The top-level `# YYYY-MM-DD` title becomes `ChangeLog.title`; prose before the first
+    section becomes `description`; every other heading starts a `LogSection`, and the lines
+    under it become its body. Heading marks and blank padding are dropped.
     """
     title = ""
     intro: list[str] = []
@@ -91,7 +91,7 @@ def parse(content: str) -> DevLog:
             intro.append(stripped)
 
     finish()
-    return DevLog(title=title, description=_paragraphs(intro), sections=tuple(sections))
+    return ChangeLog(title=title, description=_paragraphs(intro), sections=tuple(sections))
 
 
 def _paragraphs(lines: list[str]) -> str:

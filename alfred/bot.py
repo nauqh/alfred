@@ -9,7 +9,7 @@ import lavalink
 import lightbulb
 from loguru import logger
 
-from alfred import dev_log
+from alfred import changelog
 from alfred import errors
 from alfred import log_config
 from alfred.chat.client import ChatClient
@@ -89,7 +89,7 @@ def build(config: Config) -> hikari.GatewayBot:
         client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(lavalink.Client, lavalink_client)
         client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(Config, config)
 
-        await _post_dev_log(bot, config)
+        await _post_changelog(bot, config)
 
         extensions = EXTENSIONS
         if chat_client is not None:
@@ -113,12 +113,12 @@ def build(config: Config) -> hikari.GatewayBot:
     return bot
 
 
-async def _post_dev_log(bot: hikari.GatewayBot, config: Config) -> None:
+async def _post_changelog(bot: hikari.GatewayBot, config: Config) -> None:
     """
-    Post the newest dev log to the configured channel, if one is configured.
+    Post the newest change log to the configured channel, if one is configured.
 
     The post replaces the old restart embed: instead of a card of versions, the channel gets
-    the day's dev log as an embed - each section is a row on the card, so a deploy tells
+    the day's change log as an embed - each section is a row on the card, so a deploy tells
     people what actually changed in prose they can read. A missing folder, an unreadable log,
     or a channel that vanished between config and post are all best-effort failures: they are
     logged, and never take the bot down.
@@ -127,32 +127,32 @@ async def _post_dev_log(bot: hikari.GatewayBot, config: Config) -> None:
         return
 
     docs_dir = Path(__file__).resolve().parent.parent / "docs"
-    log_path = dev_log.newest_dev_log(docs_dir)
+    log_path = changelog.newest_change_log(docs_dir)
     if log_path is None:
         logger.info(
-            "No dev log to post on startup - {} is empty",
-            docs_dir / dev_log.LOGS_DIRNAME,
+            "No change log to post on startup - {} is empty",
+            docs_dir / changelog.LOGS_DIRNAME,
         )
         return
 
     try:
         content = log_path.read_text(encoding="utf-8")
     except OSError as e:
-        logger.warning("Could not read the newest dev log {}: {}", log_path, e)
+        logger.warning("Could not read the newest change log {}: {}", log_path, e)
         return
 
     title = log_path.stem
-    parsed = dev_log.parse(content)
-    log = dev_log.DevLog(title=parsed.title or title, description=parsed.description, sections=parsed.sections)
+    parsed = changelog.parse(content)
+    log = changelog.ChangeLog(title=parsed.title or title, description=parsed.description, sections=parsed.sections)
 
-    for embed in embeds.dev_log_embeds(log):
+    for embed in embeds.changelog_embeds(log):
         try:
             await bot.rest.create_message(config.startup_channel_id, embed=embed)
         except hikari.HikariError as e:
-            logger.warning("Failed to post the dev log to channel {}: {}", config.startup_channel_id, e)
+            logger.warning("Failed to post the change log to channel {}: {}", config.startup_channel_id, e)
             return
 
-    logger.info("Posted the newest dev log {} to channel {}", log_path.name, config.startup_channel_id)
+    logger.info("Posted the newest change log {} to channel {}", log_path.name, config.startup_channel_id)
 
 
 def build_lavalink_client(config: Config, user_id: hikari.Snowflake) -> lavalink.Client:
