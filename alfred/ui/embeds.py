@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import dataclasses
+from datetime import datetime
+from datetime import timezone
+from typing import Final
 
 import hikari
 import lavalink
@@ -72,28 +75,44 @@ def _clamp(text: str, limit: int) -> str:
     return text[: limit - 1].rstrip() + "…"
 
 
+def _log_timestamp(title: str) -> datetime | None:
+    """The dev log's date as a timestamp, when the title is an ISO date."""
+    try:
+        return datetime.strptime(title, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
 def dev_log_embeds(log: DevLog) -> tuple[hikari.Embed, ...]:
     """
-    The embeds behind the restart dev-log post.
+    The embed(s) behind the restart dev-log post.
 
-    Each section of the log becomes a field - the heading as the name, the prose as the value.
-    A log with more content than one embed can carry is split across several: Discord caps an
-    embed at 25 fields and 6000 characters total, and no individual field may exceed 1024
-    characters, so a section longer than that is itself split across numbered "part" fields.
+    The title stays brief - just "Alfred dev log" - with the date carried by the timestamp and
+    a footer counting the updates. Each section becomes a field: the heading (emoji included)
+    as the name, the prose as the value. A log with more content than one embed can carry is
+    split across several: Discord caps an embed at 25 fields and 6000 characters total, and no
+    individual field may exceed 1024 characters, so a section longer than that is itself split
+    across numbered "part" fields.
     """
-    title = f"Alfred dev log - {log.title}"
-    embeds: list[hikari.Embed] = []
+    title: Final = "Alfred dev log"
+    timestamp = _log_timestamp(log.title)
+    total = len(log.sections)
+    embeds_: list[hikari.Embed] = []
     budget = 0
     current: hikari.Embed | None = None
 
     def start() -> None:
         nonlocal current, budget
-        embed = hikari.Embed(title=title, color=constants.COLOR_ALFRED)
-        if log.description and not embeds:
+        embed = hikari.Embed(title=title, color=constants.COLOR_ALFRED, timestamp=timestamp)
+        if log.description and not embeds_:
             embed.description = _clamp(log.description, MAX_DESCRIPTION)
-        embeds.append(embed)
+        # A brief footer: who posted, and how much is in the log. Overflow embeds say
+        # "continued" so the recap count is not silently repeated.
+        text = "Alfred · continued" if embeds_ else "Alfred" + (f" · {total} updates" if total else "")
+        embed.set_footer(text, icon=constants.DEV_LOG_FOOTER_ICON)
+        embeds_.append(embed)
         current = embed
-        budget = MAX_EMBED_TOTAL - len(title) - len(embed.description or "")
+        budget = MAX_EMBED_TOTAL - len(title) - len(embed.description or "") - len(text)
 
     for section in log.sections:
         name = _clamp(section.heading or "...", MAX_FIELD_NAME)
@@ -110,7 +129,7 @@ def dev_log_embeds(log: DevLog) -> tuple[hikari.Embed, ...]:
 
     if current is None:
         start()
-    return tuple(embeds)
+    return tuple(embeds_)
 
 
 def track_line(track: lavalink.AudioTrack, *, credit_author: bool = True) -> str:

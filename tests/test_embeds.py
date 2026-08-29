@@ -170,17 +170,49 @@ def test_a_dev_log_renders_one_embed_with_a_field_per_section() -> None:
         dev_log(("Ask Alfred to search", "The top 5 matches, numbered."), ("Sidebar", "The song and artist."))
     )
 
-    assert embed.title == "Alfred dev log - 2026-08-29"
+    assert embed.title == "Alfred dev log"
     assert [(f.name, f.value) for f in embed.fields] == [
         ("Ask Alfred to search", "The top 5 matches, numbered."),
         ("Sidebar", "The song and artist."),
     ]
 
 
+def test_a_dev_log_keeps_writer_emojis_in_the_heading() -> None:
+    (embed,) = embeds.dev_log_embeds(dev_log(("🔎 Ask Alfred to search", "The top 5 matches, numbered.")))
+
+    assert embed.fields[0].name == "🔎 Ask Alfred to search"
+
+
+def test_a_dev_log_carries_a_footer_that_counts_the_updates() -> None:
+    (embed,) = embeds.dev_log_embeds(
+        dev_log(("One", "first"), ("Two", "second"), ("Three", "third"))
+    )
+
+    assert embed.footer is not None and embed.footer.text == "Alfred · 3 updates"
+
+
+def test_a_dev_log_with_no_sections_gets_no_update_count() -> None:
+    (embed,) = embeds.dev_log_embeds(DevLog(title="2026-08-29"))
+
+    assert embed.footer is not None and embed.footer.text == "Alfred"
+
+
+def test_the_log_date_becomes_the_embed_timestamp() -> None:
+    (embed,) = embeds.dev_log_embeds(dev_log(("A", "b")))
+
+    assert embed.timestamp is not None and embed.timestamp.year == 2026 and embed.timestamp.month == 8
+
+
+def test_a_non_date_title_leaves_the_timestamp_unset() -> None:
+    (embed,) = embeds.dev_log_embeds(DevLog(title="changes"))
+
+    assert embed.timestamp is None
+
+
 def test_a_dev_log_carries_an_intro_as_the_description() -> None:
     (embed,) = embeds.dev_log_embeds(DevLog(title="2026-08-29", description="A short intro."))
 
-    assert embed.title == "Alfred dev log - 2026-08-29"
+    assert embed.title == "Alfred dev log"
     assert embed.description == "A short intro."
     assert embed.fields == []
 
@@ -203,12 +235,12 @@ def test_many_sections_split_across_several_embeds() -> None:
 
     assert len(embeds_) == 2
     assert all(len(e.fields) <= embeds.MAX_FIELDS for e in embeds_)
-    assert all(e.title == "Alfred dev log - 2026-08-29" for e in embeds_)
+    assert all(e.title == "Alfred dev log" for e in embeds_)
     assert len(embeds_[0].fields) + len(embeds_[1].fields) == 40
 
 
 def test_an_empty_dev_log_still_gets_one_embed() -> None:
     (embed,) = embeds.dev_log_embeds(DevLog(title="2026-08-29"))
 
-    assert embed.title == "Alfred dev log - 2026-08-29"
+    assert embed.title == "Alfred dev log"
     assert embed.fields == []

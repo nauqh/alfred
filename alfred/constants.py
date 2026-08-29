@@ -24,6 +24,9 @@ EMOJI_NEXT_PAGE: Final = "➡️"
 PROGRESS_BAR_FILLED: Final = "▰"
 PROGRESS_BAR_EMPTY: Final = "▱"
 
+# The bot's avatar on the landing page, used as the footer icon on embeds.
+DEV_LOG_FOOTER_ICON: Final = "https://nauqh.github.io/alfred/alfred_avatar.jpg"
+
 EMOJI_RESUME_PLAYER: Final = "▶️"
 EMOJI_PAUSE_PLAYER: Final = "⏸️"
 
