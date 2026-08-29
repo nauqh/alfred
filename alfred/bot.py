@@ -19,6 +19,7 @@ from alfred.extensions import CHAT_EXTENSION
 from alfred.extensions import EXTENSIONS
 from alfred.music.player import AlfredPlayer
 from alfred.presence import Presence
+from alfred.ui import embeds
 from alfred.ui import responses
 from alfred.ui.nowplaying import NowPlayingManager
 
@@ -117,8 +118,9 @@ async def _post_dev_log(bot: hikari.GatewayBot, config: Config) -> None:
     Post the newest dev log to the configured channel, if one is configured.
 
     The post replaces the old restart embed: instead of a card of versions, the channel gets
-    the day's dev log - prose someone can read. A missing folder, an unreadable log, or a
-    channel that vanished between config and post are all best-effort failures: they are
+    the day's dev log as an embed - each section is a row on the card, so a deploy tells
+    people what actually changed in prose they can read. A missing folder, an unreadable log,
+    or a channel that vanished between config and post are all best-effort failures: they are
     logged, and never take the bot down.
     """
     if config.startup_channel_id is None:
@@ -139,10 +141,13 @@ async def _post_dev_log(bot: hikari.GatewayBot, config: Config) -> None:
         logger.warning("Could not read the newest dev log {}: {}", log_path, e)
         return
 
-    title = f"Alfred dev log - {log_path.stem}"
-    for message in dev_log.format_messages(content, title=title):
+    title = log_path.stem
+    parsed = dev_log.parse(content)
+    log = dev_log.DevLog(title=parsed.title or title, description=parsed.description, sections=parsed.sections)
+
+    for embed in embeds.dev_log_embeds(log):
         try:
-            await bot.rest.create_message(config.startup_channel_id, content=message)
+            await bot.rest.create_message(config.startup_channel_id, embed=embed)
         except hikari.HikariError as e:
             logger.warning("Failed to post the dev log to channel {}: {}", config.startup_channel_id, e)
             return

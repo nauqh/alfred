@@ -1,9 +1,8 @@
-"""The dev log picker (newest file) and its Discord text shaping."""
+"""The dev log picker (newest file) and the markdown parser."""
 
 from __future__ import annotations
 
 from alfred import dev_log
-from alfred.ui.embeds import MAX_MESSAGE
 
 LOG = (
     "# 2026-08-28\n"
@@ -52,39 +51,51 @@ def test_newest_dev_log_is_none_when_no_dated_files_exist(tmp_path) -> None:
     assert dev_log.newest_dev_log(tmp_path) is None
 
 
-# --- format_messages -----------------------------------------------------------------------
+# --- parse ---------------------------------------------------------------------------------
 
 
-def test_headers_become_bold_and_the_title_is_prepended() -> None:
-    messages = dev_log.format_messages(LOG, title="Alfred dev log - 2026-08-28")
+def test_parse_reads_the_title_and_the_sections() -> None:
+    parsed = dev_log.parse(LOG)
 
-    assert len(messages) == 1
-    body = messages[0]
-    assert body.startswith("**Alfred dev log - 2026-08-28**\n\n")
-    # The file's own `#` date title and the `##` section headers all become bold lines.
-    assert "**2026-08-28**" in body
-    assert "**Queue is now paginated**" in body
-    assert "Long queues are one page at a time." in body
+    assert parsed.title == "2026-08-28"
+    assert parsed.description == ""
+    assert [s.heading for s in parsed.sections] == ["Queue is now paginated", "The bar keeps moving"]
+    assert parsed.sections[0].body == "Long queues are one page at a time."
+    assert parsed.sections[1].body == "It catches up every 15 seconds."
 
 
-def test_a_log_longer_than_a_message_is_split() -> None:
-    section = "# 2026-08-29\n\n"
-    section += "## Long log\n"
-    section += "\n".join(f"line {i} - " + "x" * 80 for i in range(80)) + "\n"
+def test_parse_puts_prose_before_the_first_section_in_the_description() -> None:
+    parsed = dev_log.parse("# 2026-08-29\n\nA short intro line.\n\n## A section\nBody here.\n")
 
-    messages = dev_log.format_messages(section, title="Alfred dev log - 2026-08-29")
-
-    assert len(messages) > 1
-    assert all(len(m) <= MAX_MESSAGE for m in messages)
-    # Nothing is lost across the split.
-    assert sum(m.count("line ") for m in messages) == 80
-    assert messages[0].startswith("**Alfred dev log - 2026-08-29**")
+    assert parsed.title == "2026-08-29"
+    assert parsed.description == "A short intro line."
+    assert parsed.sections[0].body == "Body here."
 
 
-def test_a_single_overlong_line_is_hard_sliced() -> None:
-    total = MAX_MESSAGE + 50
-    messages = dev_log.format_messages(f"# 2026-08-29\n\n{'y' * total}", title="t")
+def test_parse_handles_deeper_headings() -> None:
+    parsed = dev_log.parse("# 2026-08-29\n\n### Deep heading\nDeep body.\n")
 
-    # The over-long line is sliced into MAX_MESSAGE pieces, and nothing is dropped.
-    assert any(len(m) == MAX_MESSAGE for m in messages)
-    assert sum(m.count("y") for m in messages) == total
+    assert parsed.sections[0].heading == "Deep heading"
+    assert parsed.sections[0].body == "Deep body."
+
+
+def test_parse_drops_blank_padding_and_heading_marks() -> None:
+    parsed = dev_log.parse("# 2026-08-29\n\n\n##  A heading  \n\n  trimmed prose  \n\n\n")
+
+    assert parsed.title == "2026-08-29"
+    assert parsed.sections[0].heading == "A heading"
+    assert parsed.sections[0].body == "trimmed prose"
+
+
+def test_parse_keeps_multiline_prose() -> None:
+    parsed = dev_log.parse("# 2026-08-29\n\n## A section\nfirst line\nsecond line\n")
+
+    assert parsed.sections[0].body == "first line\nsecond line"
+
+
+def test_parse_of_empty_content_has_no_parts() -> None:
+    parsed = dev_log.parse("")
+
+    assert parsed.title == ""
+    assert parsed.description == ""
+    assert parsed.sections == ()

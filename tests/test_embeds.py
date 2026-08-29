@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import pytest
 
+from alfred.dev_log import DevLog
+from alfred.dev_log import LogSection
 from alfred.music.player import AlfredPlayer
 from alfred.music.player import PlaylistRef
 from alfred.music.service import Queued
@@ -156,3 +158,57 @@ def test_a_page_past_the_end_shows_the_last_one(player: AlfredPlayer) -> None:
 
 def test_the_queue_of_a_player_that_has_gone_says_nothing_is_playing() -> None:
     assert embeds.queue(None, title="Queue").description == "Nothing is playing."
+
+
+def dev_log(*sections: tuple[str, str]) -> DevLog:
+    """A `DevLog` with the given heading/body sections, for the embed builder tests."""
+    return DevLog(title="2026-08-29", sections=tuple(LogSection(heading=h, body=b) for h, b in sections))
+
+
+def test_a_dev_log_renders_one_embed_with_a_field_per_section() -> None:
+    (embed,) = embeds.dev_log_embeds(
+        dev_log(("Ask Alfred to search", "The top 5 matches, numbered."), ("Sidebar", "The song and artist."))
+    )
+
+    assert embed.title == "Alfred dev log - 2026-08-29"
+    assert [(f.name, f.value) for f in embed.fields] == [
+        ("Ask Alfred to search", "The top 5 matches, numbered."),
+        ("Sidebar", "The song and artist."),
+    ]
+
+
+def test_a_dev_log_carries_an_intro_as_the_description() -> None:
+    (embed,) = embeds.dev_log_embeds(DevLog(title="2026-08-29", description="A short intro."))
+
+    assert embed.title == "Alfred dev log - 2026-08-29"
+    assert embed.description == "A short intro."
+    assert embed.fields == []
+
+
+def test_a_long_section_is_split_across_part_fields() -> None:
+    body = "x" * (embeds.MAX_FIELD_VALUE + 200)
+    (embed,) = embeds.dev_log_embeds(dev_log(("Long section", body)))
+
+    assert len(embed.fields) == 2
+    assert embed.fields[0].name == "Long section"
+    assert embed.fields[1].name == "Long section (2)"
+    # Nothing is lost across the split.
+    assert "".join(f.value for f in embed.fields).count("x") == len(body)
+
+
+def test_many_sections_split_across_several_embeds() -> None:
+    sections = [(f"Section {i}", f"body {i}") for i in range(40)]
+
+    embeds_ = embeds.dev_log_embeds(dev_log(*sections))
+
+    assert len(embeds_) == 2
+    assert all(len(e.fields) <= embeds.MAX_FIELDS for e in embeds_)
+    assert all(e.title == "Alfred dev log - 2026-08-29" for e in embeds_)
+    assert len(embeds_[0].fields) + len(embeds_[1].fields) == 40
+
+
+def test_an_empty_dev_log_still_gets_one_embed() -> None:
+    (embed,) = embeds.dev_log_embeds(DevLog(title="2026-08-29"))
+
+    assert embed.title == "Alfred dev log - 2026-08-29"
+    assert embed.fields == []

@@ -8,6 +8,7 @@ import hikari
 import lavalink
 
 from alfred import constants
+from alfred.dev_log import DevLog
 from alfred.music import sources
 from alfred.music.player import AlfredPlayer
 from alfred.music.player import get_playlist
@@ -62,6 +63,54 @@ class Reply:
         wrong - and an answer with a title and rows is exactly the answer an embed suits.
         """
         return self.title is not None or bool(self.fields)
+
+
+def _clamp(text: str, limit: int) -> str:
+    """Cut `text` to `limit` characters, marking the cut so nothing reads as a bug."""
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + "…"
+
+
+def dev_log_embeds(log: DevLog) -> tuple[hikari.Embed, ...]:
+    """
+    The embeds behind the restart dev-log post.
+
+    Each section of the log becomes a field - the heading as the name, the prose as the value.
+    A log with more content than one embed can carry is split across several: Discord caps an
+    embed at 25 fields and 6000 characters total, and no individual field may exceed 1024
+    characters, so a section longer than that is itself split across numbered "part" fields.
+    """
+    title = f"Alfred dev log - {log.title}"
+    embeds: list[hikari.Embed] = []
+    budget = 0
+    current: hikari.Embed | None = None
+
+    def start() -> None:
+        nonlocal current, budget
+        embed = hikari.Embed(title=title, color=constants.COLOR_ALFRED)
+        if log.description and not embeds:
+            embed.description = _clamp(log.description, MAX_DESCRIPTION)
+        embeds.append(embed)
+        current = embed
+        budget = MAX_EMBED_TOTAL - len(title) - len(embed.description or "")
+
+    for section in log.sections:
+        name = _clamp(section.heading or "...", MAX_FIELD_NAME)
+        value = section.body.strip() or "..."
+        chunks = [value[i : i + MAX_FIELD_VALUE] for i in range(0, len(value), MAX_FIELD_VALUE)]
+
+        for index, chunk in enumerate(chunks):
+            part_name = name if index == 0 else f"{name} ({index + 1})"
+            cost = len(part_name) + len(chunk)
+            if current is None or len(current.fields) >= MAX_FIELDS or budget < cost:
+                start()
+            current.add_field(name=part_name, value=chunk, inline=False)
+            budget -= cost
+
+    if current is None:
+        start()
+    return tuple(embeds)
 
 
 def track_line(track: lavalink.AudioTrack, *, credit_author: bool = True) -> str:
