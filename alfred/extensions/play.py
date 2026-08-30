@@ -11,6 +11,7 @@ from alfred.extensions import hooks
 from alfred.music import search
 from alfred.music import service
 from alfred.music import sources
+from alfred.storage import PlayStore
 from alfred.ui import embeds
 from alfred.ui import responses
 from alfred.ui.formatting import trim
@@ -105,6 +106,7 @@ async def _play(
     ctx: lightbulb.Context,
     bot: hikari.GatewayBot,
     lavalink_client: lavalink.Client,
+    store: PlayStore | None,
     *,
     query: str,
     source: sources.Source,
@@ -130,6 +132,16 @@ async def _play(
     )
     await responses.respond(ctx, embed=embeds.queued(queued))
 
+    # Record who queued this, so the play history can answer "who" with a name. The play row
+    # itself lands on TrackStart; here the user is made known first, with a name to show.
+    if store is not None:
+        member = ctx.member
+        store.upsert_user(
+            ctx.user.id,
+            username=ctx.user.username,
+            display_name=member.display_name if member is not None else ctx.user.username,
+        )
+
 
 @loader.command
 class Play(
@@ -149,11 +161,13 @@ class Play(
         ctx: lightbulb.Context,
         bot: hikari.GatewayBot = lightbulb.di.INJECTED,
         lavalink_client: lavalink.Client = lightbulb.di.INJECTED,
+        store: PlayStore | None = lightbulb.di.INJECTED,
     ) -> None:
         await _play(
             ctx,
             bot,
             lavalink_client,
+            store,
             query=self.query,
             source=sources.YOUTUBE,
             play_next=self.next,
@@ -182,11 +196,13 @@ class Search(
         ctx: lightbulb.Context,
         bot: hikari.GatewayBot = lightbulb.di.INJECTED,
         lavalink_client: lavalink.Client = lightbulb.di.INJECTED,
+        store: PlayStore | None = lightbulb.di.INJECTED,
     ) -> None:
         await _play(
             ctx,
             bot,
             lavalink_client,
+            store,
             query=self.query,
             source=sources.BY_DISPLAY_NAME.get(self.source, sources.YOUTUBE),
             play_next=self.next,

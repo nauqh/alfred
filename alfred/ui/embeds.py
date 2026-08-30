@@ -337,7 +337,7 @@ def recap_embed(plays: list[tuple], *, since: datetime, now: datetime) -> hikari
     if not plays:
         embed.description = "Quiet week - no music played."
     else:
-        # Row: title, author, uri, duration_ms, requester_id, played_at.
+        # Row: title, author, uri, duration_ms, user_id, played_at.
         by_track: dict[str, int] = {}
         durations: list[int] = []
         by_listener: dict[int, int] = {}

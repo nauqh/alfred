@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Weekly recap, posted every Sunday morning - top tracks of the week, listening time, top listener
 
+### Changed
+
+- Play history now records the user who queued each track, not just an id: a `users` table holds
+  name snapshots and plays reference it, so "who played this" is answerable with a name. Existing
+  databases migrate in place on first start - history is kept
+
 ## [2.0.0] - 2026-08-29
 
 ### Added

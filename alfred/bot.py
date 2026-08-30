@@ -75,6 +75,8 @@ def build(config: Config) -> hikari.GatewayBot:
     store = (
         PlayStore(Path(__file__).resolve().parent.parent / "data" / "plays.db") if config.recap is not None else None
     )
+    if store is not None:
+        logger.info("Play history recording enabled at data/plays.db")
 
     @client.error_handler
     async def on_error(exc: lightbulb.exceptions.ExecutionPipelineFailedException) -> bool:
@@ -101,6 +103,10 @@ def build(config: Config) -> hikari.GatewayBot:
         # is still open for writes.
         client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(lavalink.Client, lavalink_client)
         client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(Config, config)
+        # Registered even when None: commands inject `PlayStore | None` and each decides whether
+        # recording is on. An unregistered type is not injectable at all, which is worse.
+        client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(PlayStore, store)
+
 
         await _post_changelog(bot, config)
 

@@ -67,7 +67,7 @@ def test_plays_are_recorded_and_read_back(tmp_path) -> None:
         author="Artist",
         uri="https://song.a",
         duration_ms=200_000,
-        requester_id=7,
+        user_id=7,
         played_at=_now(2026, 8, 28, 10),
     )
 
@@ -82,11 +82,11 @@ def test_weekly_respects_the_guild_and_the_since_window(tmp_path) -> None:
     for guild, title in ((1, "A"), (2, "B")):
         store.record_play(
             guild_id=guild, title=title, author=None, uri=None, duration_ms=1000,
-            requester_id=7, played_at=_now(2026, 8, 28, 10),
+            user_id=7, played_at=_now(2026, 8, 28, 10),
         )
     store.record_play(
         guild_id=1, title="Old", author=None, uri=None, duration_ms=1000,
-        requester_id=7, played_at=_now(2026, 8, 1, 0),
+        user_id=7, played_at=_now(2026, 8, 1, 0),
     )
 
     assert [row[0] for row in store.weekly(1, since=_now(2026, 8, 28, 0))] == ["A"]
@@ -97,11 +97,11 @@ def test_prune_removes_only_old_rows(tmp_path) -> None:
     store = PlayStore(tmp_path / "plays.db")
     store.record_play(
         guild_id=1, title="Old", author=None, uri=None, duration_ms=1000,
-        requester_id=7, played_at=_now(2026, 1, 1, 0),
+        user_id=7, played_at=_now(2026, 1, 1, 0),
     )
     store.record_play(
         guild_id=1, title="New", author=None, uri=None, duration_ms=1000,
-        requester_id=7, played_at=_now(2026, 8, 28, 0),
+        user_id=7, played_at=_now(2026, 8, 28, 0),
     )
 
     assert store.prune(retention_cutoff(_now(2026, 9, 1))) == 1
