@@ -97,7 +97,9 @@ def build(config: Config) -> hikari.GatewayBot:
         event_hooks = [LavalinkEventHandler(NowPlayingManager(bot, client, lavalink_client), presence)]
         if store is not None:
             event_hooks.append(PlayRecorder(store))
-        lavalink_client.add_event_hooks(*event_hooks)
+        # `add_event_hooks` takes exactly one hook; the variadic one is singular `add_event_hook`.
+        for hook in event_hooks:
+            lavalink_client.add_event_hooks(hook)
 
         # Registered before the first command runs, which is the last moment the DI registry
         # is still open for writes.
