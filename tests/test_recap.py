@@ -122,17 +122,17 @@ def test_a_busy_week_shows_top_tracks_and_totals() -> None:
         now=_now(2026, 8, 28, 9),
     )
 
-    assert embed.title == "🦇 Weekly recap"
+    assert embed.title == "🦇 The week's report"
     fields = {f.name: f.value for f in embed.fields}
-    assert "1. **A** - 2 plays" in fields["🎵 Top tracks"]
-    assert fields["📊 This week"] == "3 songs, 10:00 listening"
-    assert fields["👥 Top listener"] == "<@1> (2 plays)"
+    assert "1. **A** - called upon 2 times" in fields["🎼 The week's repertoire"]
+    assert fields["📈 The tally"].startswith("3 songs, 10:00 of music")
+    assert fields["🎩 Master of the queue"] == "<@1>, with 2 requests. My compliments."
 
 
 def test_an_empty_week_posts_a_quiet_line() -> None:
     embed = embeds.recap_embed([], since=_now(2026, 8, 21), now=_now(2026, 8, 28, 9))
 
-    assert embed.description == "Quiet week - no music played."
+    assert embed.description is not None and "quiet week" in embed.description
     assert embed.fields == []
 
 

@@ -320,22 +320,30 @@ def _current_description(player: AlfredPlayer) -> str:
 
 def recap_embed(plays: list[tuple], *, since: datetime, now: datetime) -> hikari.Embed:
     """
-    The embed behind the Sunday weekly recap.
+    The embed behind the Sunday weekly recap, delivered in the butler's voice.
 
     Top five tracks of the seven days up to `since`, then totals - song count, listening time,
-    top listener (by plays). An empty week posts the same card with a "quiet week" line in
-    place of the top tracks, because a week without music is still worth a word.
+    top listener (by plays). An empty week posts the same card with a quiet-week line in place
+    of the top tracks, because a week without music is still worth a word from Alfred.
 
     Args:
         plays: Rows from `PlayStore.weekly`, newest first.
         since: The start of the window, for the footer's date range.
         now: When the recap is posted, for the timestamp and the window's end.
     """
-    title: Final = "🦇 Weekly recap"
-    embed = hikari.Embed(title=title, color=constants.COLOR_ALFRED, timestamp=now)
+    title: Final = "🦇 The week's report"
+    embed = hikari.Embed(
+        title=title,
+        description="Your weekly account of the household's musical affairs, sir.",
+        color=constants.COLOR_ALFRED,
+        timestamp=now,
+    )
 
     if not plays:
-        embed.description = "Quiet week - no music played."
+        embed.description = (
+            "A quiet week, I'm afraid, sir - not a single record spun. "
+            "The speakers were left wanting. Shall I remedy that?"
+        )
     else:
         # Row: title, author, uri, duration_ms, user_id, played_at.
         by_track: dict[str, int] = {}
@@ -349,24 +357,27 @@ def recap_embed(plays: list[tuple], *, since: datetime, now: datetime) -> hikari
 
         top = sorted(by_track.items(), key=lambda item: item[1], reverse=True)[:5]
         lines = [
-            f"{i}. **{title_}** - {count} play{'s' if count != 1 else ''}"
+            f"{i}. **{title_}** - called upon {count} time{'s' if count != 1 else ''}"
             for i, (title_, count) in enumerate(top, start=1)
         ]
-        embed.add_field(name="🎵 Top tracks", value="\n".join(lines) or "...", inline=False)
+        embed.add_field(name="🎼 The week's repertoire", value="\n".join(lines) or "...", inline=False)
 
         total = len(plays)
         listening = format_time(sum(durations))
         embed.add_field(
-            name="📊 This week",
-            value=f"{total} song{'s' if total != 1 else ''}, {listening} listening",
+            name="📈 The tally",
+            value=(
+                f"{total} song{'s' if total != 1 else ''}, {listening} of music. "
+                "I trust the selections proved satisfactory, sir."
+            ),
             inline=False,
         )
 
         if by_listener:
             top_listener, listener_plays = max(by_listener.items(), key=lambda item: item[1])
             embed.add_field(
-                name="👥 Top listener",
-                value=f"<@{top_listener}> ({listener_plays} plays)",
+                name="🎩 Master of the queue",
+                value=f"<@{top_listener}>, with {listener_plays} request{'s' if listener_plays != 1 else ''}. My compliments.",
                 inline=False,
             )
 

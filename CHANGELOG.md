@@ -1,34 +1,29 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes to the household are recorded here, sir - one keeps the master informed.
 
 ## [Unreleased]
 
 ### Added
 
-- Weekly recap, posted every Sunday morning - top tracks of the week, listening time, top listener
+- The week's report, posted each Sunday morning - the repertoire, the tally, the master of the queue
 
 ### Changed
 
-- Play history now records the user who queued each track, not just an id: a `users` table holds
-  name snapshots and plays reference it, so "who played this" is answerable with a name. Existing
-  databases migrate in place on first start - history is kept
+- Play history now records who queued each track, not merely an id. Older records carry over intact
 
 ## [2.0.0] - 2026-08-29
 
 ### Added
 
-- Paginated queue - ten tracks per page, with Prev and Next buttons
-- Live progress bar that keeps moving
-- Now playing view with Pause, Skip and Loop buttons
-- Requester can press the now playing buttons
-- @mention answers from chat, with command tool calling
-- Track name shown in the sidebar while playing
-- Self-hosted YouTube cipher server
-- Posts this changelog to a channel on restart
+- Queue pagination - ten tracks a page, Prev and Next included
+- A progress bar that keeps its own time
+- The now playing card, with Pause, Skip and Loop at your service
+- Whoever queued the track may press its buttons
+- @mentions answered, with command tool calling
+- The track's name shown in the sidebar while playing
+- A self-hosted YouTube cipher server
+- This log posted to the channel upon restart
 
 ### Fixed
 
