@@ -28,6 +28,14 @@ from alfred.ui import embeds
 QUEUE_PREV_LABEL = "Prev"
 QUEUE_NEXT_LABEL = "Next"
 
+
+def turn_away_message(mention: str, label: str) -> str:
+    """The butler's refusal, for a press the presser had no right to make."""
+    return (
+        f"{mention} I'm afraid the {label} answers only to the one who requested this "
+        "track, sir. Might I suggest a polite word with them instead?"
+    )
+
 LOOP_LABELS = {
     lavalink.DefaultPlayer.LOOP_NONE: "Loop: off",
     lavalink.DefaultPlayer.LOOP_SINGLE: "Loop: track",
@@ -138,7 +146,7 @@ class NowPlayingMenu(lightbulb.components.Menu):
         Three gates, in this order. There has to be something playing - the panel outlives
         its track by the moment it takes the track event to arrive. Then the press has to be
         allowed: the owner may press anything, and whoever queued the track that is playing
-        may control that track. Anyone else is turned away with a snarky reply and never
+        may control that track. Anyone else is turned away with a butler's refusal and never
         reaches the voice rule. Last, whoever passed must still be in the bot's voice channel,
         so a button and its command cannot disagree.
 
@@ -154,7 +162,7 @@ class NowPlayingMenu(lightbulb.components.Menu):
             return None
 
         if not await self._may_control(ctx, player):
-            await ctx.respond(f"{ctx.user.mention} {ctx.component.label} con cặc à?")
+            await ctx.respond(turn_away_message(ctx.user.mention, ctx.component.label))
             return None
 
         me = self._bot.get_me()

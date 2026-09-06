@@ -11,6 +11,7 @@ from alfred.music.player import AlfredPlayer
 from alfred.ui.menus import NEXT_LOOP
 from alfred.ui.menus import NowPlayingMenu
 from alfred.ui.menus import QueuePanelMenu
+from alfred.ui.menus import turn_away_message
 from tests.conftest import confirm_playback
 from tests.conftest import make_track
 
@@ -186,13 +187,13 @@ async def test_a_listener_in_the_channel_may_press(playing_player: AlfredPlayer)
 
 
 @pytest.mark.asyncio
-async def test_an_outsider_is_turned_away_with_the_snark(playing_player: AlfredPlayer) -> None:
+async def test_an_outsider_is_turned_away_with_the_refusal(playing_player: AlfredPlayer) -> None:
     # In the bot's channel and at a live player - but the owner queued this track, not them.
     menu = build_menu(playing_player, ALL_IN_VOICE)
     ctx = FakeContext(OUTSIDER_ID, label="Skip")
 
     assert await menu.check(ctx) is None  # type: ignore[arg-type]
-    assert ctx.responses[0]["content"] == f"@{OUTSIDER_ID} Skip con cặc à?"
+    assert ctx.responses[0]["content"] == turn_away_message(f"@{OUTSIDER_ID}", "Skip")
 
 
 @pytest.mark.asyncio
@@ -201,7 +202,7 @@ async def test_someone_in_no_channel_is_turned_away(playing_player: AlfredPlayer
     ctx = FakeContext(OUTSIDER_ID, label="Loop: off")
 
     assert await menu.check(ctx) is None  # type: ignore[arg-type]
-    assert ctx.responses[0]["content"] == f"@{OUTSIDER_ID} Loop: off con cặc à?"
+    assert ctx.responses[0]["content"] == turn_away_message(f"@{OUTSIDER_ID}", "Loop: off")
 
 
 @pytest.mark.asyncio
@@ -232,7 +233,7 @@ async def test_the_claim_covers_the_current_track_only(player: AlfredPlayer) -> 
     ctx = FakeContext(OUTSIDER_ID, label="Skip")
 
     assert await build_menu(player, ALL_IN_VOICE).check(ctx) is None  # type: ignore[arg-type]
-    assert ctx.responses[0]["content"] == f"@{OUTSIDER_ID} Skip con cặc à?"
+    assert ctx.responses[0]["content"] == turn_away_message(f"@{OUTSIDER_ID}", "Skip")
 
 
 @pytest.mark.asyncio
