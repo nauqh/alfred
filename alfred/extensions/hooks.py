@@ -11,6 +11,7 @@ import lavalink
 import lightbulb
 
 from alfred import errors
+from alfred import owner
 from alfred.music import service
 
 
@@ -54,6 +55,33 @@ def player_connected(
     player = service.get_player(lavalink_client, ctx.guild_id)
     if player is None or not player.is_connected:
         raise errors.PlayerNotConnected
+
+
+@lightbulb.hook(lightbulb.ExecutionSteps.CHECKS)
+async def may_control(
+    _: lightbulb.ExecutionPipeline,
+    ctx: lightbulb.Context,
+    lavalink_client: lavalink.Client = lightbulb.di.INJECTED,
+) -> None:
+    """
+    Require the caller to be whoever queued the track now playing, or the bot's owner.
+
+    The same rule the now playing buttons apply, so a command and its button cannot disagree.
+    The voice rule stays separate - `valid_user_voice` still runs first - so the two checks
+    compose the way the buttons compose them.
+    """
+    if ctx.guild_id is None:
+        raise errors.GuildOnly
+
+    player = service.get_player(lavalink_client, ctx.guild_id)
+    current = player.current if player is not None else None
+    if current is not None and ctx.user.id == current.requester:
+        return
+
+    if await owner.is_owner(ctx.client, ctx.user.id):
+        return
+
+    raise errors.TrackNotYours
 
 
 @lightbulb.hook(lightbulb.ExecutionSteps.CHECKS)

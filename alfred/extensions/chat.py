@@ -42,6 +42,7 @@ async def on_message(
     bot: hikari.GatewayBot = lightbulb.di.INJECTED,
     chat_client: ChatClient = lightbulb.di.INJECTED,
     lavalink_client: lavalink.Client = lightbulb.di.INJECTED,
+    client: lightbulb.Client = lightbulb.di.INJECTED,
 ) -> None:
     """Answer a message that mentions the bot, ignoring everything else in the channel."""
     if not event.is_human:
@@ -85,7 +86,7 @@ async def on_message(
         _in_flight.discard(event.channel_id)
 
     if isinstance(reply, ToolCall):
-        await _run_action(event, reply, turns, bot, lavalink_client, chat_client)
+        await _run_action(event, reply, turns, bot, lavalink_client, chat_client, client)
         return
 
     # Whether this is an embed is the model's call, made by giving the answer a title or fields
@@ -103,6 +104,7 @@ async def _run_action(
     bot: hikari.GatewayBot,
     lavalink_client: lavalink.Client,
     chat_client: ChatClient,
+    client: lightbulb.Client,
 ) -> None:
     """
     Run an action the model proposed, and say what happened.
@@ -122,6 +124,7 @@ async def _run_action(
         guild_id=event.guild_id,
         channel_id=event.channel_id,
         user_id=event.author.id,
+        client=client,
     )
 
     try:

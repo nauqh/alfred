@@ -74,7 +74,7 @@ no `/join`.
 |---|---|
 | Loop and shuffle are **options**, not commands | Set once as tracks are queued. Loop is also a button |
 | `/search` narrows by source and type | Track, artist, album or playlist |
-| `/queue` and `/now` need no voice check | Reading what is playing is open to anyone, including paging through the queue; acting on the player is restricted to the bot's voice channel |
+| `/queue` and `/now` need no voice check | Reading what is playing is open to anyone, including paging through the queue; acting on the player takes the bot's voice channel *and* a claim on the track - whoever queued it, or the bot's owner. `/skip` and the buttons apply the same rule |
 | There is no `/pause` | Deafening yourself pauses playback when you are the only listener, and undeafening resumes it. The panel's Pause button is the only manual path |
 | The bot leaves when no one is left in the channel | Queue state is irrelevant - it stays even with nothing queued |
 
@@ -173,7 +173,7 @@ follow-up "play 2" can find the match again, no stored state involved.
 | | |
 |---|---|
 | **The model proposes, it does not decide** | A tool call is treated as a request from whoever sent the message, never as an instruction from the model. `alfred/actions.py` re-applies the same checks the equivalent slash command applies, so asking Alfred to skip is exactly as restricted as running `/skip`. The requester, guild and channel come from the message - nothing the model returns can change who a track is queued as |
-| **Checks are duplicated, not shared** | A `lightbulb` hook needs a `Context` and a message listener has none, so `actions.py` mirrors `hooks.py` rather than importing it. `tests/test_actions.py` asserts the pairs stay in step |
+| **Checks are duplicated, not shared** | A `lightbulb` hook needs a `Context` and a message listener has none, so `actions.py` mirrors `hooks.py` rather than importing it. The one exception is the owner rule, which `alfred/owner.py` settles once for both. `tests/test_actions.py` asserts the pairs stay in step |
 | **No privileged intent needed** | Answering mentions needs `GUILD_MESSAGES`, not `MESSAGE_CONTENT` - Discord exempts messages that mention your bot from the content restriction. Nothing to toggle in the developer portal |
 | **Free model ids rot** | OpenRouter rotates which models carry a free tier, and a retired id 404s at request time rather than at startup. Current list: [openrouter.ai/models?q=free](https://openrouter.ai/models?q=free). Swap with `OPENROUTER_MODEL` |
 | **Prefer a non-reasoning model** | A reasoning model sits thinking for seconds before its first word. Measured across eight questions on 2026-08-23: the default answered in 1.7-5.8s, `nemotron-3.5-lightning` in 5-29s while burning ~1000 thinking tokens a reply. Latency is the thing to check when swapping |

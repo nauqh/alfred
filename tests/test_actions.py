@@ -12,6 +12,7 @@ from alfred.chat.completions import ToolCall
 from alfred.music import service
 from alfred.music.player import AlfredPlayer
 from alfred.music.player import PlaylistRef
+from tests.conftest import confirm_playback
 from tests.conftest import make_track
 
 GUILD = 1
@@ -20,6 +21,7 @@ VOICE = 99
 OTHER_VOICE = 100
 USER = 7
 BOT_USER = 8
+STRANGER = 9
 
 
 class FakeVoiceState:
@@ -71,11 +73,19 @@ class FakeLoadResult:
         self.playlist_info = None
 
 
+class FakeLightbulbClient:
+    """Stands in for the lightbulb client, with the owner ids already resolved."""
+
+    def __init__(self, owner_ids: set[int]) -> None:
+        self._owner_ids = owner_ids
+
+
 def invocation(
     *,
     user_voice: int | None = VOICE,
     bot_voice: int | None = VOICE,
     player: AlfredPlayer | None = None,
+    owner: bool = False,
 ) -> actions.Invocation:
     """An `Invocation` with the voice topology and player under test."""
     states: dict[int, int | None] = {USER: user_voice, BOT_USER: bot_voice}
@@ -85,6 +95,7 @@ def invocation(
         guild_id=GUILD,
         channel_id=CHANNEL,
         user_id=USER,  # type: ignore[arg-type]
+        client=FakeLightbulbClient({USER} if owner else set()),
     )
 
 
@@ -116,6 +127,25 @@ async def test_play_from_a_different_voice_channel_is_refused() -> None:
     """Mirrors `hooks.valid_user_voice`: chat is not a way around the bot's channel."""
     with pytest.raises(errors.NotSameVoice):
         await actions.run(call(actions.PLAY, query="a song"), invocation(user_voice=OTHER_VOICE))
+
+
+def start_track(player: AlfredPlayer, requester_id: int, title: str = "Some Song") -> AlfredPlayer:
+    """Put a track on the player and make it the current one, as the node confirming it would."""
+    player.add(track=make_track(title), requester=requester_id)
+    player._next = player.queue.pop(0)
+    confirm_playback(player)
+    return player
+
+
+def skip_spy(player: AlfredPlayer, monkeypatch: pytest.MonkeyPatch) -> list[bool]:
+    skipped: list[bool] = []
+
+    async def fake_skip() -> None:
+        skipped.append(True)
+        return None
+
+    monkeypatch.setattr(player, "skip", fake_skip)
+    return skipped
 
 
 async def test_skip_from_outside_a_voice_channel_is_refused() -> None:
@@ -152,13 +182,8 @@ async def test_reading_the_player_needs_no_voice_check(
 
 async def test_skip_from_the_bots_channel_skips(player: AlfredPlayer, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(type(player), "is_playing", property(lambda _: True))
-    skipped: list[bool] = []
-
-    async def fake_skip() -> None:
-        skipped.append(True)
-        return None
-
-    monkeypatch.setattr(player, "skip", fake_skip)
+    start_track(player, USER)
+    skipped = skip_spy(player, monkeypatch)
 
     result = await actions.run(call(actions.SKIP), invocation(player=player))
 
@@ -166,6 +191,28 @@ async def test_skip_from_the_bots_channel_skips(player: AlfredPlayer, monkeypatc
     # A summary for the model to confirm, not the slash command's card.
     assert result.embed is None
     assert result.summary is not None and "Skipped" in result.summary
+
+
+async def test_skip_by_someone_who_did_not_queue_it_is_refused(
+    player: AlfredPlayer,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Mirrors `hooks.may_control`: the track belongs to whoever queued it."""
+    monkeypatch.setattr(type(player), "is_playing", property(lambda _: True))
+    start_track(player, STRANGER)
+
+    with pytest.raises(errors.TrackNotYours):
+        await actions.run(call(actions.SKIP), invocation(player=player))
+
+
+async def test_the_owner_may_skip_anyones_track(player: AlfredPlayer, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(type(player), "is_playing", property(lambda _: True))
+    start_track(player, STRANGER)
+    skipped = skip_spy(player, monkeypatch)
+
+    await actions.run(call(actions.SKIP), invocation(player=player, owner=True))
+
+    assert skipped == [True]
 
 
 async def test_queueing_confirms_in_words_rather_than_a_card(monkeypatch: pytest.MonkeyPatch) -> None:

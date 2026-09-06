@@ -37,6 +37,10 @@ class PlayerNotPlaying(AlfredError):
     default_message = "Nothing is playing right now."
 
 
+class TrackNotYours(AlfredError):
+    default_message = "Only whoever queued the track now playing - or the bot's owner - may do that, sir."
+
+
 class NoResults(AlfredError):
     default_message = "No results for that query."
 

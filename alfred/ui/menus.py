@@ -21,6 +21,7 @@ from loguru import logger
 
 from alfred import constants
 from alfred import errors
+from alfred import owner
 from alfred.music import service
 from alfred.music.player import AlfredPlayer
 from alfred.ui import embeds
@@ -35,6 +36,7 @@ def turn_away_message(mention: str, label: str) -> str:
         f"{mention} I'm afraid the {label} answers only to the one who requested this "
         "track, sir. Might I suggest a polite word with them instead?"
     )
+
 
 LOOP_LABELS = {
     lavalink.DefaultPlayer.LOOP_NONE: "Loop: off",
@@ -195,17 +197,10 @@ class NowPlayingMenu(lightbulb.components.Menu):
         """
         Whether the presser owns the bot's application.
 
-        Mirrors `lightbulb.prefab.owner_only` - the owner alone, plus any members of the team
-        that owns the application. The result is cached on the client so it is fetched once.
+        Delegates to `alfred.owner.is_owner` - the same answer `hooks.may_control` gives the
+        slash commands, so a button and its command cannot disagree.
         """
-        client = ctx.client
-        if client._owner_ids is None:
-            app = await client._ensure_application()
-            owner_ids: set[hikari.Snowflakeish] = {app.owner.id}
-            if app.team is not None:
-                owner_ids.update(app.team.members.keys())
-            client._owner_ids = owner_ids
-        return ctx.user.id in client._owner_ids
+        return await owner.is_owner(ctx.client, ctx.user.id)
 
     async def on_pause(self, ctx: lightbulb.components.MenuContext) -> None:
         player = await self.check(ctx)

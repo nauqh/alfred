@@ -377,7 +377,10 @@ def recap_embed(plays: list[tuple], *, since: datetime, now: datetime) -> hikari
             top_listener, listener_plays = max(by_listener.items(), key=lambda item: item[1])
             embed.add_field(
                 name="🎩 Master of the queue",
-                value=f"<@{top_listener}>, with {listener_plays} request{'s' if listener_plays != 1 else ''}. My compliments.",
+                value=(
+                    f"<@{top_listener}>, with {listener_plays} "
+                    f"request{'s' if listener_plays != 1 else ''}. My compliments."
+                ),
                 inline=False,
             )
 

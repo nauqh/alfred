@@ -47,7 +47,7 @@ class Skip(
     lightbulb.SlashCommand,
     name="skip",
     description="Skip the current track",
-    hooks=[hooks.guild_only, hooks.valid_user_voice, hooks.player_playing],
+    hooks=[hooks.guild_only, hooks.valid_user_voice, hooks.player_playing, hooks.may_control],
 ):
     @lightbulb.invoke
     async def invoke(self, ctx: lightbulb.Context, lavalink_client: lavalink.Client = lightbulb.di.INJECTED) -> None:

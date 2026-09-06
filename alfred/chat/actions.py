@@ -17,10 +17,12 @@ from typing import Final
 
 import hikari
 import lavalink
+import lightbulb
 from loguru import logger
 
 from alfred import constants
 from alfred import errors
+from alfred import owner
 from alfred.chat.completions import ToolCall
 from alfred.music import service
 from alfred.music import sources
@@ -156,6 +158,8 @@ class Invocation:
     guild_id: int
     channel_id: int
     user_id: hikari.Snowflake
+    client: lightbulb.Client | None = None
+    """The lightbulb client, for the owner check. `None` only in tests that never skip."""
 
 
 async def run(call: ToolCall, context: Invocation) -> Result:
@@ -285,9 +289,13 @@ def _show_queue(context: Invocation) -> Result:
 
 
 async def _skip(context: Invocation) -> Result:
-    """`/skip`, from chat. Checks match `Skip`: guild_only, valid_user_voice, player_playing."""
+    """
+    `/skip`, from chat. Checks match `Skip`: guild_only, valid_user_voice, player_playing,
+    may_control.
+    """
     _require_user_voice(context)
     player = _require_playing(context)
+    await _require_may_control(context, player)
 
     skipped = await player.skip()
     if skipped is None:
@@ -323,3 +331,18 @@ def _require_playing(context: Invocation) -> AlfredPlayer:
     if player is None or not player.is_playing:
         raise errors.PlayerNotPlaying
     return player
+
+
+async def _require_may_control(context: Invocation, player: AlfredPlayer) -> None:
+    """
+    Mirror of `hooks.may_control`: whoever queued the track now playing, or the bot's owner.
+
+    The owner rule itself is shared with the hook, via `alfred.owner.is_owner` - the app fetch
+    and its caching are not context-bound, so there is nothing to duplicate.
+    """
+    current = player.current
+    if current is not None and context.user_id == current.requester:
+        return
+    if context.client is not None and await owner.is_owner(context.client, context.user_id):
+        return
+    raise errors.TrackNotYours

@@ -14,6 +14,7 @@ import pytest
 from alfred import errors
 from alfred.extensions import hooks
 from alfred.music.player import AlfredPlayer
+from tests.conftest import confirm_playback
 from tests.conftest import make_track
 
 BOT_ID = 100
@@ -72,6 +73,13 @@ class FakeClient:
     _features: tuple[Any, ...] = ()
 
 
+class FakeOwnerClient(FakeClient):
+    """A client whose owner ids are already resolved, for the `may_control` hook."""
+
+    def __init__(self, owner_ids: set[int]) -> None:
+        self._owner_ids = owner_ids
+
+
 @dataclasses.dataclass
 class FakeContext:
     guild_id: int | None
@@ -99,8 +107,10 @@ async def run_hook(
         await hook(None, ctx)
 
 
-def context(*, guild_id: int | None = GUILD_ID, user_id: int = USER_ID) -> FakeContext:
-    return FakeContext(guild_id=guild_id, user=FakeUser(id=user_id))
+def context(
+    *, guild_id: int | None = GUILD_ID, user_id: int = USER_ID, client: FakeClient | None = None
+) -> FakeContext:
+    return FakeContext(guild_id=guild_id, user=FakeUser(id=user_id), client=client or FakeClient())
 
 
 @pytest.mark.asyncio
@@ -166,3 +176,58 @@ async def test_player_playing_accepts_a_playing_player(player: AlfredPlayer) -> 
     player.current = make_track()
 
     await run_hook(hooks.player_playing, context(), lavalink_client=FakeLavalinkClient(player))
+
+
+# --- may_control ---------------------------------------------------------------------------
+
+
+def start_track(player: AlfredPlayer, requester_id: int, title: str = "Some Song") -> AlfredPlayer:
+    """Put a track on the player and make it the current one, as the node confirming it would."""
+    player.add(track=make_track(title), requester=requester_id)
+    player._next = player.queue.pop(0)
+    confirm_playback(player)
+    return player
+
+
+@pytest.mark.asyncio
+async def test_may_control_lets_the_requester_pass(player: AlfredPlayer) -> None:
+    start_track(player, USER_ID)
+
+    await run_hook(
+        hooks.may_control,
+        context(user_id=USER_ID, client=FakeOwnerClient(set())),
+        lavalink_client=FakeLavalinkClient(player),
+    )
+
+
+@pytest.mark.asyncio
+async def test_may_control_rejects_someone_who_did_not_queue_the_track(player: AlfredPlayer) -> None:
+    start_track(player, BOT_ID)
+
+    with pytest.raises(errors.TrackNotYours):
+        await run_hook(
+            hooks.may_control,
+            context(user_id=USER_ID, client=FakeOwnerClient(set())),
+            lavalink_client=FakeLavalinkClient(player),
+        )
+
+
+@pytest.mark.asyncio
+async def test_may_control_lets_the_owner_pass(player: AlfredPlayer) -> None:
+    start_track(player, BOT_ID)
+
+    await run_hook(
+        hooks.may_control,
+        context(user_id=USER_ID, client=FakeOwnerClient({USER_ID})),
+        lavalink_client=FakeLavalinkClient(player),
+    )
+
+
+@pytest.mark.asyncio
+async def test_may_control_rejects_when_nothing_is_current(player: AlfredPlayer) -> None:
+    with pytest.raises(errors.TrackNotYours):
+        await run_hook(
+            hooks.may_control,
+            context(user_id=USER_ID, client=FakeOwnerClient(set())),
+            lavalink_client=FakeLavalinkClient(player),
+        )
