@@ -10,7 +10,14 @@ All notable changes to the household are recorded here, sir - one keeps the mast
 
 ### Changed
 
+- The player card now shows timestamped progress, source metadata, requesters and clearer empty states
+- Queue panels show total duration and identify expired views as snapshots
+- Search suggestions now label tracks, artists, albums and playlists directly
 - Play history now records who queued each track, not merely an id. Older records carry over intact
+
+### Fixed
+
+- `/remove` now uses the same one-based track numbering shown in autocomplete
 
 ## [2.0.0] - 2026-08-29
 
