@@ -22,7 +22,7 @@ class GuildOnly(AlfredError):
 
 
 class NotInVoice(AlfredError):
-    default_message = "Join a voice channel to use this command."
+    default_message = "Join a voice channel first, then try again."
 
 
 class NotSameVoice(AlfredError):
@@ -30,11 +30,11 @@ class NotSameVoice(AlfredError):
 
 
 class PlayerNotConnected(AlfredError):
-    default_message = "The bot is not in a voice channel."
+    default_message = "The bot is not in a voice channel. Use /play to connect it."
 
 
 class PlayerNotPlaying(AlfredError):
-    default_message = "Nothing is playing right now."
+    default_message = "Nothing is playing right now. Try /play to start a track."
 
 
 class TrackNotYours(AlfredError):
@@ -42,7 +42,7 @@ class TrackNotYours(AlfredError):
 
 
 class NoResults(AlfredError):
-    default_message = "No results for that query."
+    default_message = "No results for that query. Try /search for more options."
 
 
 class NoNodesAvailable(AlfredError):

@@ -70,7 +70,7 @@ async def _choices(
     if source not in sources.LAVASEARCH_SOURCES:
         result = await service.resolve(lavalink_client, query, source)
         return [
-            _choice(f"🎬 {trim(track.title, 60)} [{trim(track.author, 20)}]", track.uri)
+            _choice(f"🎵 Track · {trim(track.title, 60)} - {trim(track.author, 20)}", track.uri)
             for track in result.tracks[:MAX_CHOICES]
         ]
 
@@ -83,16 +83,16 @@ async def _choices(
     result = await search.load_search(node, source.query(query), types)
 
     choices = [
-        _choice(f"🎵 {trim(track.title, 60)} - {trim(track.author, 20)}", track.uri)
+        _choice(f"🎵 Track · {trim(track.title, 60)} - {trim(track.author, 20)}", track.uri)
         for track in result.tracks[:per_type]
     ]
-    choices += [_choice(f"🎤 {trim(item.title, 80)}", item.uri) for item in result.artists[:per_type]]
+    choices += [_choice(f"🎤 Artist · {trim(item.title, 80)}", item.uri) for item in result.artists[:per_type]]
     choices += [
-        _choice(f"🎧 {trim(item.title, 60)} - {trim(item.author, 20)} ⭐", item.uri)
+        _choice(f"🎧 Playlist · {trim(item.title, 60)} - {trim(item.author, 20)} ⭐", item.uri)
         for item in result.playlists[:per_type]
     ]
     choices += [
-        _choice(f"💿 {trim(item.title, 60)} - {trim(item.author, 20)} 🎤", item.uri)
+        _choice(f"💿 Album · {trim(item.title, 60)} - {trim(item.author, 20)} 🎤", item.uri)
         for item in result.albums[:per_type]
     ]
     return [choice for choice in choices if choice.value]

@@ -19,8 +19,13 @@ from alfred.music.service import Queued
 from alfred.ui.formatting import format_time
 from alfred.ui.formatting import player_bar
 from alfred.ui.formatting import track_length
+from alfred.ui.formatting import trim
 
 NOW_PLAYING_TITLE = "Now Playing"
+TRACK_TITLE_LIMIT = 180
+QUEUE_TRACK_TITLE_LIMIT = 80
+TRACK_AUTHOR_LIMIT = 80
+QUEUE_TITLE_LIMIT = 72
 
 # Discord's limits on what a message may carry. They live here because they are facts about
 # Discord rather than about any model, and `alfred.chat.completions` clamps model output
@@ -133,17 +138,34 @@ def changelog_embeds(entry: Entry) -> tuple[hikari.Embed, ...]:
     return tuple(embeds_)
 
 
+def _source_label(track: lavalink.AudioTrack) -> str:
+    """Give the source a short, human-readable label for metadata rows."""
+    return {
+        "youtube": "YouTube",
+        "spotify": "Spotify",
+        "deezer": "Deezer",
+        "soundcloud": "SoundCloud",
+        "http": "Direct link",
+    }.get(track.source_name, track.source_name.capitalize() or "Audio")
+
+
 def track_line(track: lavalink.AudioTrack, *, credit_author: bool = True) -> str:
-    """One line describing a track: its linked title, and its length."""
-    line = f"[{track.title}]({track.uri}) `{track_length(track)}`"
-    if credit_author and track.source_name in sources.CREDITED_SOURCE_NAMES:
-        line += f" • {track.author}"
+    """One compact queue line: linked title, length, artist and requester."""
+    title = trim(track.title, QUEUE_TRACK_TITLE_LIMIT)
+    line = f"[{title}]({track.uri}) `{track_length(track)}`"
+    if credit_author and track.source_name in sources.CREDITED_SOURCE_NAMES and track.author:
+        line += f" • {trim(track.author, TRACK_AUTHOR_LIMIT)}"
+    if track.requester is not None:
+        line += f" · <@{track.requester}>"
     return line
 
 
 def track_summary(track: lavalink.AudioTrack) -> str:
     """The multi-line summary used when a track is queued."""
-    return f"[{track.title}]({track.uri})\n{track.author} `{track_length(track)}`\n\n<@!{track.requester}>"
+    title = trim(track.title, TRACK_TITLE_LIMIT)
+    author = trim(track.author, TRACK_AUTHOR_LIMIT) if track.author else "Unknown artist"
+    requester = f"<@!{track.requester}>" if track.requester is not None else "Requested by nobody"
+    return f"[{title}]({track.uri})\n{author} · {_source_label(track)} `{track_length(track)}`\n\n{requester}"
 
 
 def now_playing(player: AlfredPlayer | None) -> hikari.Embed:
@@ -152,7 +174,7 @@ def now_playing(player: AlfredPlayer | None) -> hikari.Embed:
     if current is None:
         return hikari.Embed(
             title=NOW_PLAYING_TITLE,
-            description="Nothing is playing.",
+            description="Nothing is playing.\n\nTry `/play` or `/search` to start some music.",
             color=constants.COLOR_ALFRED,
         )
 
@@ -181,7 +203,14 @@ def queue_pages(track_count: int, page_size: int) -> int:
     return max(1, -(-track_count // page_size))
 
 
-def queue(player: AlfredPlayer | None, *, title: str, page_size: int = 0, page: int = 0) -> hikari.Embed:
+def queue(
+    player: AlfredPlayer | None,
+    *,
+    title: str,
+    page_size: int = 0,
+    page: int = 0,
+    snapshot: bool = False,
+) -> hikari.Embed:
     """
     The embed behind ``/queue``: the current track, then a numbered list of what follows.
 
@@ -193,19 +222,21 @@ def queue(player: AlfredPlayer | None, *, title: str, page_size: int = 0, page: 
         page: Which page of the queue to list, counted from zero. Out of range values are
             clamped rather than rejected - the queue moves on while a panel is open, and a
             page that was real when the button was drawn may not be by the time it is pressed.
+        snapshot: Mark the result as a static panel after its paging controls expire.
     """
     current = player.current if player is not None else None
     if current is None or player is None:
         return hikari.Embed(
             title=title,
-            description="Nothing is playing.",
+            description="Nothing is playing.\n\nTry `/play` or `/search` to start some music.",
             color=constants.COLOR_ALFRED,
         )
 
     lines: list[str] = [
         "**Now Playing:**",
-        f"[{current.title}]({current.uri}) `{track_length(current)}`"
-        + (f" • {current.author}" if current.author else ""),
+        f"[{trim(current.title, TRACK_TITLE_LIMIT)}]({current.uri}) `{track_length(current)}`"
+        + (f" • {trim(current.author, TRACK_AUTHOR_LIMIT)}" if current.author else "")
+        + f" · {_source_label(current)}",
     ]
 
     size = max(page_size, 0)
@@ -221,8 +252,14 @@ def queue(player: AlfredPlayer | None, *, title: str, page_size: int = 0, page: 
 
     total_count = len(player.queue) + 1
     footer = f"\n-# Total: {total_count} track{'s' if total_count != 1 else ''}"
+    all_tracks = [current, *player.queue]
+    if all(not track.is_stream and track.duration > 0 for track in all_tracks):
+        footer += f" · {format_time(sum(track.duration for track in all_tracks))}"
     if pages > 1:
         footer += f" • Page {page + 1}/{pages}"
+    if snapshot:
+        updated = int(datetime.now(timezone.utc).timestamp())
+        footer += f" · Snapshot · updated <t:{updated}:R>"
     lines.append(footer)
 
     return hikari.Embed(
@@ -248,13 +285,14 @@ def queued(added: Queued) -> hikari.Embed:
         ).set_thumbnail(added.artwork_url)
 
     assert added.playlist is not None
-    name, url = added.playlist.name, added.playlist.url or "#"
+    name, url = trim(added.playlist.name, QUEUE_TITLE_LIMIT), added.playlist.url or "#"
+    author = trim(added.author, TRACK_AUTHOR_LIMIT) if added.author else None
     mention = f"<@{added.requester_id}>"
 
     if added.result_type == "artist":
-        description = f"[{(added.author or name).upper()}]({url}) - `{added.count} tracks`\n\n{mention}"
-    elif added.author:
-        description = f"[{name}]({url}) `{added.count} track(s)`\n{added.author}\n\n{mention}"
+        description = f"[{(author or name).upper()}]({url}) - `{added.count} tracks`\n\n{mention}"
+    elif author:
+        description = f"[{name}]({url}) `{added.count} track(s)`\n{author}\n\n{mention}"
     else:
         description = f"Playlist [{name}]({url}) - {added.count} tracks\n\n{mention}"
 
@@ -299,18 +337,19 @@ def _current_description(player: AlfredPlayer) -> str:
     current = player.current
     assert current is not None
 
-    author_line = f"by **{current.author}**" if current.author else ""
+    author_line = f"by **{trim(current.author, TRACK_AUTHOR_LIMIT)}**" if current.author else ""
     bar = player_bar(player)
 
-    subtext_parts: list[str] = [f"Requested: <@{current.requester}>"]
+    subtext_parts: list[str] = [f"Requested: <@{current.requester}>", _source_label(current)]
     playlist = get_playlist(current)
     if playlist is not None:
-        subtext_parts.append(f"|| Playing [{playlist.name}]({playlist.url or '#'})")
+        playlist_name = trim(playlist.name, QUEUE_TITLE_LIMIT)
+        subtext_parts.append(f"|| Playing [{playlist_name}]({playlist.url or '#'})")
 
     subtext = "-# " + " • ".join(subtext_parts)
 
     lines = [
-        f"### [{current.title}]({current.uri})",
+        f"### [{trim(current.title, TRACK_TITLE_LIMIT)}]({current.uri})",
         author_line,
         bar,
         subtext,

@@ -300,7 +300,7 @@ def test_the_panel_shows_the_current_track(playing_player: AlfredPlayer) -> None
 def test_the_panel_says_so_when_there_is_no_player() -> None:
     embed = build_menu(None, IN_CHANNEL).embed()
 
-    assert embed.description == "Nothing is playing."
+    assert embed.description == "Nothing is playing.\n\nTry `/play` or `/search` to start some music."
 
 
 @pytest.mark.asyncio
@@ -410,4 +410,6 @@ def test_a_page_past_the_end_is_clamped_rather_than_rendered_empty(player: Alfre
 
 
 def test_a_panel_outliving_its_player_says_nothing_is_playing() -> None:
-    assert build_panel(None).embed().description == "Nothing is playing."
+    assert build_panel(None).embed().description == (
+        "Nothing is playing.\n\nTry `/play` or `/search` to start some music."
+    )

@@ -283,13 +283,14 @@ class QueuePanelMenu(lightbulb.components.Menu):
         player = self.player()
         return embeds.queue_pages(len(player.queue) if player is not None else 0, self._page_size)
 
-    def embed(self) -> hikari.Embed:
+    def embed(self, *, snapshot: bool = False) -> hikari.Embed:
         """The panel this menu sits under: one page of the queue."""
         return embeds.queue(
             self.player(),
             title=constants.QUEUE_TITLE,
             page_size=self._page_size,
             page=self.page,
+            snapshot=snapshot,
         )
 
     def refresh_buttons(self) -> None:

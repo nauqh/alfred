@@ -6,8 +6,13 @@ from alfred.ui.formatting import PROGRESS_BAR_WIDTH
 from alfred.ui.formatting import format_time
 from alfred.ui.formatting import format_uptime
 from alfred.ui.formatting import parse_time
+from alfred.ui.formatting import player_bar
 from alfred.ui.formatting import progress_bar
+from alfred.ui.formatting import progress_line
 from alfred.ui.formatting import trim
+from tests.conftest import confirm_playback
+from tests.conftest import make_track
+from tests.conftest import set_position
 
 
 @pytest.mark.parametrize(
@@ -67,6 +72,27 @@ def test_progress_bar_stays_in_bounds(fraction: float) -> None:
     bar = progress_bar(fraction)
 
     assert bar.count(PROGRESS_BAR_FILLED) + bar.count(PROGRESS_BAR_EMPTY) == PROGRESS_BAR_WIDTH
+
+
+def test_progress_line_has_a_fixed_width_and_clamped_playhead() -> None:
+    assert len(progress_line(-1.0)) == 18
+    assert progress_line(0.0).startswith("●")
+    assert progress_line(0.5).count("●") == 1
+    assert progress_line(2.0).endswith("●")
+
+
+def test_player_bar_uses_timestamps_and_a_clamped_playhead(player) -> None:
+    player.add(track=make_track("Song"), requester=1)
+    player._next = player.queue.pop(0)
+    confirm_playback(player)
+    set_position(player, 60_000)
+
+    bar = player_bar(player)
+
+    assert bar.startswith("⏸️ 1:00 ")
+    assert "●" in bar
+    assert bar.endswith(" 3:20")
+    assert "[" not in bar
 
 
 def test_trim_only_shortens_what_is_too_long() -> None:

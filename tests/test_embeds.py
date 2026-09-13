@@ -118,6 +118,8 @@ def test_the_first_page_lists_the_first_tracks(player: AlfredPlayer) -> None:
     assert embed.description is not None
     assert "`1.` [Queued 0]" in embed.description
     assert "`10.` [Queued 9]" in embed.description
+    assert "<@42>" in embed.description
+    assert "YouTube" in embed.description
     assert "Queued 10" not in embed.description
 
 
@@ -156,8 +158,19 @@ def test_a_page_past_the_end_shows_the_last_one(player: AlfredPlayer) -> None:
     assert embed.description is not None and "Page 3/3" in embed.description
 
 
+def test_a_queue_snapshot_identifies_itself_and_shows_elapsed_total(player: AlfredPlayer) -> None:
+    embed = embeds.queue(playing(player, 1), title="Queue", page_size=10, snapshot=True)
+
+    assert embed.description is not None
+    assert "Snapshot" in embed.description
+    assert "updated <t:" in embed.description
+    assert "6:40" in embed.description
+
+
 def test_the_queue_of_a_player_that_has_gone_says_nothing_is_playing() -> None:
-    assert embeds.queue(None, title="Queue").description == "Nothing is playing."
+    assert embeds.queue(None, title="Queue").description == (
+        "Nothing is playing.\n\nTry `/play` or `/search` to start some music."
+    )
 
 
 def change_entry(categories: list[tuple[str, list[str]]], *, date: str | None = "2026-08-29") -> Entry:

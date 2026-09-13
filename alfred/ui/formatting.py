@@ -14,6 +14,10 @@ if TYPE_CHECKING:
     import lavalink
 
 PROGRESS_BAR_WIDTH = 10
+PROGRESS_LINE_WIDTH = 18
+PROGRESS_CURSOR = "●"
+PROGRESS_LINE_FILLED = "━"
+PROGRESS_LINE_EMPTY = "─"
 
 
 def parse_time(milliseconds: int) -> tuple[int, int, int, int]:
@@ -66,8 +70,19 @@ def progress_bar(fraction: float) -> str:
     return PROGRESS_BAR_FILLED * filled + PROGRESS_BAR_EMPTY * (PROGRESS_BAR_WIDTH - filled)
 
 
+def progress_line(fraction: float) -> str:
+    """Render a compact timestamp-friendly progress line with a visible playhead."""
+    fraction = min(max(fraction, 0.0), 1.0)
+    cursor = round(fraction * (PROGRESS_LINE_WIDTH - 1))
+    return (
+        PROGRESS_LINE_FILLED * cursor
+        + PROGRESS_CURSOR
+        + PROGRESS_LINE_EMPTY * (PROGRESS_LINE_WIDTH - cursor - 1)
+    )
+
+
 def player_bar(player: lavalink.DefaultPlayer) -> str:
-    """Render the cyber deck progress line: start/end times flanking a block pill, with a percentage."""
+    """Render timestamps and a playhead that is easy to scan on desktop and mobile."""
     current = player.current
     if current is None:
         return ""
@@ -75,15 +90,13 @@ def player_bar(player: lavalink.DefaultPlayer) -> str:
     play_pause = EMOJI_RESUME_PLAYER if player.paused else EMOJI_PAUSE_PLAYER
 
     if current.is_stream or not current.duration:
-        return f"{play_pause} LIVE {progress_bar(0.99)}"
+        return f"{play_pause} LIVE"
 
-    current_time = format_time(player.position)
+    position = min(max(player.position, 0), current.duration)
+    current_time = format_time(position)
     total_time = format_time(current.duration)
-    fraction = player.position / current.duration if current.duration > 0 else 0.0
-    percent = round(fraction * 100)
-    # Non-breaking spaces so Discord's markdown parser cannot trim the padding inside the
-    # brackets (it strips plain spaces; NBSP survives).
-    return f"{play_pause} {current_time} {progress_bar(fraction)} {total_time} [\u00a0{percent}%\u00a0]"
+    fraction = position / current.duration
+    return f"{play_pause} {current_time} {progress_line(fraction)} {total_time}"
 
 
 def track_length(track: lavalink.AudioTrack) -> str:

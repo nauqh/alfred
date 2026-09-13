@@ -108,7 +108,7 @@ async def _run_panel(ctx: lightbulb.Context, menu: QueuePanelMenu, response_id: 
         await menu.attach(ctx.client, timeout=constants.QUEUE_PANEL_TIMEOUT)
 
     try:
-        await ctx.edit_response(response_id, components=None)
+        await ctx.edit_response(response_id, embed=menu.embed(snapshot=True), components=None)
     except (hikari.NotFoundError, hikari.ForbiddenError):
         pass  # Someone deleted the message, or the bot lost the channel. Either way the buttons are gone.
     except hikari.HikariError as e:
@@ -132,7 +132,7 @@ async def track_autocomplete(
         [
             hikari.impl.AutocompleteChoiceBuilder(
                 name=trim(f"{i + 1}. {trim(track.title, 60)} - {trim(track.author, 20)}", 100),
-                value=i,
+                value=i + 1,
             )
             for i, track in enumerate(player.queue[:MAX_CHOICES])
         ]
@@ -146,7 +146,7 @@ class Remove(
     description="Remove a track from the queue",
     hooks=[hooks.guild_only, hooks.valid_user_voice, hooks.player_playing],
 ):
-    track = lightbulb.integer("track", "The track to remove", autocomplete=track_autocomplete, min_value=0)
+    track = lightbulb.integer("track", "The track number to remove", autocomplete=track_autocomplete, min_value=1)
 
     @lightbulb.invoke
     async def invoke(self, ctx: lightbulb.Context, lavalink_client: lavalink.Client = lightbulb.di.INJECTED) -> None:
@@ -157,7 +157,7 @@ class Remove(
             raise errors.PlayerNotPlaying
 
         try:
-            removed = player.remove(self.track)
+            removed = player.remove(self.track - 1)
         except IndexError:
             raise errors.AlfredError("There is no track at that position in the queue.") from None
 
