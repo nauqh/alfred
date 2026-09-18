@@ -1,10 +1,10 @@
-# Alfred 2.0 — Product Requirements
+# Alfred 2.0 - Product Requirements
 
 | | |
 |---|---|
-| **Status** | Implemented, unverified against live Discord |
-| **Author** | — |
-| **Last updated** | 2026-08-28 |
+| **Status** | Released and running in production |
+| **Author** | - |
+| **Last updated** | 2026-09-18 |
 | **Engineering design** | [design.md](design.md) |
 | **Supersedes** | [`bachtran02/MusicCat@legacy-python`](https://github.com/bachtran02/MusicCat/tree/legacy-python) |
 
@@ -12,6 +12,11 @@ Requirements have been edited since the 2.0 release where the shipped behaviour
 moved on - the player's buttons left `/queue` for the now playing card, and who
 may press them changed. The goals, non-goals and §4.1 record the release as it
 was decided and are left alone.
+
+Three things shipped after 2.0 and are recorded here as requirements rather than
+as goals, since they were not part of what 2.0 committed to: chat replies
+(FR-45 to FR-50), the restart change log and the weekly recap (FR-51 to FR-56).
+The recap is what made NFR-3's "no database" false, and it is restated there.
 
 ## 1. Summary
 
@@ -22,7 +27,7 @@ This release rebuilds the bot on the current generation of its libraries, becaus
 the versions it was pinned to can no longer be upgraded, and fixes the defects
 that rebuild exposed.
 
-It also **narrows the surface from 18 commands to 9** (§4.1). That second half was not in the original scope — the
+It also **narrows the surface from 18 commands to 9** (§4.1). That second half was not in the original scope - the
 release began as a straight port and the narrowing was decided during it. Four
 capabilities were dropped rather than relocated, and §4.1 names each one.
 
@@ -39,7 +44,7 @@ The bot works. Its dependencies are stuck.
 
 These interlock. Lightbulb 2 cannot run on hikari 2.5, so hikari cannot be
 upgraded alone; miru's Python ceiling caps the whole project's runtime regardless
-of what the others support. There is no incremental path — the upgrade is all
+of what the others support. There is no incremental path - the upgrade is all
 four at once, and lightbulb 2 → 3 is a rewrite of every command definition rather
 than a version bump.
 
@@ -59,16 +64,16 @@ pre-existing user-facing bugs, not new work:
 
 ## 3. Goals
 
-- **G1 — Run on current libraries.** hikari 2.5, lightbulb 3.2, lavalink.py 5.11,
-  on Python 3.10–3.14.
-- **G2 — Keep what survives faithful.** A command that still exists behaves as it
+- **G1 - Run on current libraries.** hikari 2.5, lightbulb 3.2, lavalink.py 5.11,
+  on Python 3.10 to 3.14.
+- **G2 - Keep what survives faithful.** A command that still exists behaves as it
   did, under the same name and arguments. This started as *preserve the product
   exactly*, and G6 replaced half of it.
-- **G3 — Fix what the port exposed.** Ship none of the five defects above.
-- **G4 — Make it deployable by someone who is not the author.** Configuration
+- **G3 - Fix what the port exposed.** Ship none of the five defects above.
+- **G4 - Make it deployable by someone who is not the author.** Configuration
   from the environment; one `docker compose up`.
-- **G5 — Leave a safety net.** An automated test suite, where there was none.
-- **G6 — Narrow the surface.** Added mid-release. Keep only what earns its place:
+- **G5 - Leave a safety net.** An automated test suite, where there was none.
+- **G6 - Narrow the surface.** Added mid-release. Keep only what earns its place:
   queue music, see the queue, skip, leave. Every removal deliberate and recorded,
   including the ones that cost a capability.
 
@@ -78,7 +83,7 @@ pre-existing user-facing bugs, not new work:
   autoplay. A port that grows features cannot be reviewed as a port.
 - **Multi-tenancy or per-guild configuration.** One deployment, one set of
   settings, as before.
-- **Persistence across restarts.** Queues are in memory and are lost on restart —
+- **Persistence across restarts.** Queues are in memory and are lost on restart -
   unchanged, and never a complaint.
 - **Pixel-identical embeds.** The embeds are re-created faithfully but are not
   diffed against the old ones.
@@ -119,12 +124,12 @@ scope.
 
 ## 5. Users
 
-**The listener** — a member of a Discord server where Alfred is installed.
+**The listener** - a member of a Discord server where Alfred is installed.
 Wants to hear a song without reading documentation. Interacts mostly through
 `/play`; will never see a config file. Cares that autocomplete finds the right
 track, that replies are quick, and that nothing needs re-typing.
 
-**The operator** — whoever self-hosts the bot. Runs the container, holds the
+**The operator** - whoever self-hosts the bot. Runs the container, holds the
 Discord token and the Lavalink credentials, and is the only one who sees
 `/stats` and `/info`. Cares that a misconfiguration fails loudly at boot rather
 than at the first command, and that pointing at a different node is not a code
@@ -142,7 +147,7 @@ change.
 | US-6 | listener | remove a track from the queue | one bad choice doesn't have to play |
 | US-7 | listener | loop a track or the queue, and shuffle | the music continues without babysitting |
 | US-8 | listener | queue a playlist and have it shuffled | I get variety without queueing tracks one by one |
-| US-9 | listener | have playback pause when I deafen myself | I don't miss anything when I step away — this is the only pause |
+| US-9 | listener | have playback pause when I deafen myself | I don't miss anything when I step away - this is the only pause |
 | US-10 | operator | configure the bot without editing code | I can deploy it against my own node |
 | US-11 | operator | see node health | I can tell "the bot is broken" from "the node is down" |
 | US-12 | operator | have bad config fail at startup | I find out at deploy, not from a user |
@@ -150,7 +155,7 @@ change.
 ## 7. Functional requirements
 
 Priority: **P0** ships or the release doesn't; **P1** expected; **P2** nice to
-have. "Verified" names the automated test that covers it — `manual` means it
+have. "Verified" names the automated test that covers it - `manual` means it
 needs a live Discord and Lavalink node.
 
 ### Playback
@@ -173,15 +178,15 @@ needs a live Discord and Lavalink node.
 | FR-9 | `/search` autocompletes the query as the user types | P0 | manual |
 | FR-10 | `/search` takes a `source` (YouTube, Spotify, Deezer) and a `type` (track, artist, album, playlist) | P0 | offline command render |
 | FR-11 | On Spotify and Deezer, autocomplete returns artists, albums and playlists as well as tracks, each visually distinguished | P1 | `test_search` |
-| FR-12 | With no `type`, results are balanced across the four types; with one, that type fills the list | P2 | — |
-| FR-13 | Autocomplete never surfaces an error to the user — a failed lookup returns no suggestions | P0 | `test_search` |
+| FR-12 | With no `type`, results are balanced across the four types; with one, that type fills the list | P2 | - |
+| FR-13 | Autocomplete never surfaces an error to the user - a failed lookup returns no suggestions | P0 | `test_search` |
 
 ### Player controls
 
 | ID | Requirement | Pri | Verified |
 |---|---|---|---|
 | FR-14 | `/skip` plays the next track and names the one it replaced | P0 | `test_player` |
-| FR-17 | `/play loop:true` loops the track, or the queue for a playlist — and **track means track** | P0 | `test_service` |
+| FR-17 | `/play loop:true` loops the track, or the queue for a playlist - and **track means track** | P0 | `test_service` |
 | FR-18 | `/play shuffle:true` shuffles a playlist as it is queued | P1 | `test_service` |
 | FR-20 | `/leave` clears the queue, loop and shuffle | P0 | `test_player` |
 
@@ -189,7 +194,7 @@ needs a live Discord and Lavalink node.
 
 | ID | Requirement | Pri | Verified |
 |---|---|---|---|
-| FR-21 | The bot posts nothing unprompted — every message it sends is the reply to a command | P0 | code review |
+| FR-21 | The bot posts unprompted only where it is configured to: the now playing card, the restart change log, and the Sunday recap. Nothing else it sends is anything but a reply | P0 | code review |
 | FR-22 | The now playing card carries Pause, Skip and Loop, and each press redraws the card in place | P0 | `test_menus` |
 | FR-23 | The bot's owner, or whoever queued the track that is playing, may press - and only from the bot's voice channel. Anyone else is turned away | P0 | `test_menus` |
 | FR-24 | The card's buttons have no timeout: they live exactly as long as the track | P1 | `test_nowplaying` |
@@ -214,6 +219,32 @@ needs a live Discord and Lavalink node.
 | FR-36 | The bot leaves once it is alone in the channel | P1 | manual |
 | FR-37 | Being disconnected externally clears the player, even if the node is unreachable | P1 | `test_player` |
 
+### Chat replies
+
+Shipped after 2.0. Off entirely unless `OPENROUTER_API_KEY` is set.
+
+| ID | Requirement | Pri | Verified |
+|---|---|---|---|
+| FR-45 | An @mention is answered by a model; ordinary channel traffic is ignored, and with no key the listener is never registered | P0 | `test_config` for the switch; the listener itself is manual |
+| FR-46 | The model may run `/play`, `/search`, `/now`, `/queue` and `/skip` through tool calling | P1 | `test_actions` |
+| FR-47 | A tool call is treated as a request from whoever sent the message, never as an instruction from the model, and re-applies the checks the slash command applies | P0 | `test_actions` |
+| FR-48 | A reply carries the context of its reply chain and nothing else; nothing is stored between messages | P1 | manual |
+| FR-49 | A completion that is a reasoning monologue is refused rather than posted | P0 | `test_chat` |
+| FR-50 | One reply per channel at a time; mentions arriving while one is in flight are dropped, not queued | P2 | code review |
+
+### The restart log and the weekly recap
+
+Shipped after 2.0. Each is off until given a channel.
+
+| ID | Requirement | Pri | Verified |
+|---|---|---|---|
+| FR-51 | On restart the bot posts the newest `CHANGELOG.md` entry to `STARTUP_CHANNEL_ID`, and stays silent when that is unset | P1 | `test_changelog` |
+| FR-52 | Each Sunday at `RECAP_HOUR` in `RECAP_TIMEZONE` the bot posts the week: top tracks, total count, listening time, top listener | P1 | `test_recap` for the schedule; the post is manual |
+| FR-53 | A recap is for the moment - a week the bot was down on Sunday is skipped, never caught up | P2 | `test_recap` |
+| FR-54 | Each track start records the user who queued it, not merely an id, and history older than 60 days is pruned | P1 | `test_storage` |
+| FR-55 | History is recorded only while the recap is configured; the database is not created otherwise | P2 | `test_storage` |
+| FR-56 | An unknown `RECAP_TIMEZONE` falls back to UTC rather than taking the bot down | P2 | `test_recap` |
+
 ### Operation
 
 | ID | Requirement | Pri | Verified |
@@ -232,10 +263,11 @@ needs a live Discord and Lavalink node.
 |---|---|
 | NFR-1 | Python 3.10 through 3.14 |
 | NFR-2 | Deployable as `docker compose up` with the node alongside, gated on the node's health check |
-| NFR-3 | No database, no queue, no worker, no scheduled process |
+| NFR-3 | No queue and no worker process. One SQLite file and one in-process scheduled task, both created only when the weekly recap is configured; playback itself persists nothing |
 | NFR-4 | Secrets only via environment; none committed. `.env` and the node's `application.yml` are ignored |
 | NFR-5 | Structured logging to console; optional rotating files, including a dedicated track log |
 | NFR-6 | The test suite runs offline in under 5 seconds |
+| NFR-9 | Play history is pruned to 60 days, and survives a container rebuild on a mounted volume |
 | NFR-7 | Lint and format enforced by a single tool (`ruff`) with the configuration committed |
 | NFR-8 | A user-facing error never exposes a traceback |
 
@@ -246,7 +278,7 @@ needs a live Discord and Lavalink node.
 | Scope held | 9 commands; every removal deliberate and recorded | §4.1 |
 | Known defects shipped | 0 of the 5 in §2 | Each has a test or a documented manual check |
 | Dependencies on a pre-release or unmaintained version | 0 | `pyproject.toml` |
-| Automated test coverage of pure logic | Every non-I/O module has tests | 198 tests at time of writing |
+| Automated test coverage of pure logic | Every non-I/O module has tests | 257 tests as of 2026-09-18 |
 | Time for a new operator to first playback | < 15 minutes from clone | README walkthrough, unmeasured |
 | Post-cutover regressions reported in the first week | 0 | User reports |
 
@@ -254,21 +286,22 @@ needs a live Discord and Lavalink node.
 
 | Milestone | Contents | State |
 |---|---|---|
-| **M1 — Port** | All four libraries current, commands registering, miru removed | Done |
-| **M2 — Defects** | The five §2 defects fixed, each with a test where testable | Done |
-| **M3 — Operability** | Environment configuration, Docker compose, README, node config example | Done |
-| **M4 — Safety net** | Test suite, lint and format clean | Done — 100 tests |
-| **M5 — Live verification** | First run against a test guild with `DEFAULT_GUILDS` set: every P0 walked through by hand | **Not started** |
-| **M6 — Cutover** | Global command registration, legacy deployment retired | Not started |
+| **M1 - Port** | All four libraries current, commands registering, miru removed | Done |
+| **M2 - Defects** | The five §2 defects fixed, each with a test where testable | Done |
+| **M3 - Operability** | Environment configuration, Docker compose, README, node config example | Done |
+| **M4 - Safety net** | Test suite, lint and format clean | Done - 100 tests |
+| **M5 - Live verification** | First run against a test guild with `DEFAULT_GUILDS` set: every P0 walked through by hand | Done |
+| **M6 - Cutover** | Global command registration, legacy deployment retired | Done |
 
-M5 is the gate. Everything before it is verified offline only.
+The plan is complete. The bot runs on a VPS under `docker compose`, and what
+`docs/deploy.md` describes is the live deployment rather than a proposal.
 
 ## 11. Risks
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| **Nothing has run against live Discord or Lavalink.** Offline checks verify shape, not behaviour | High | M5 walks every P0 by hand in a test guild before cutover |
-| **YouTube playback breaks on YouTube's schedule, not ours.** youtube-source's latest commit is a client-version revert — the arms race is live | High | Not a stack decision: every backend fails the same week. Mitigated by consuming upstream fixes rather than maintaining them; `pot` and `oauth` are both documented in the node config |
+| ~~**Nothing has run against live Discord or Lavalink.**~~ | ~~High~~ | **Closed** by M5 and the cutover. Offline checks still verify shape and not behaviour, which is why the live-only requirements above are marked `manual` |
+| **YouTube playback breaks on YouTube's schedule, not ours.** youtube-source's latest commit is a client-version revert - the arms race is live | High | Not a stack decision: every backend fails the same week. Mitigated by consuming upstream fixes rather than maintaining them; `pot` and `oauth` are both documented in the node config |
 | Plugin versions rot, and a stale client name silently degrades playback | Medium | Versions verified 2026-08-14 and dated in the config; the config warns against copying a client list from an older file |
 | `MenuHandle` cannot detach a persistent menu (`components/menus.py:579-587`), so `attach_persistent` leaks an entry per panel | Low | `/queue` blocks on `attach()` instead, which discards in a `finally`; noted in `design.md` so it is not undone by accident |
 | Two `/play` commands within the same moment could skip a track, because `is_playing` is false until the node confirms the track started | Low | Pre-existing in the legacy bot; window is milliseconds; not worth a lock |
@@ -276,19 +309,20 @@ M5 is the gate. Everything before it is verified offline only.
 
 ## 12. Open questions
 
-1. **Does the operator want CI?** A workflow running `ruff` and `pytest` on the
-   test suite is roughly 20 lines and nothing depends on it.
+1. ~~**Does the operator want CI?**~~ **Closed, no.** It was built and removed at
+   the operator's request; deployment is a deliberate manual step. The only
+   workflow in `.github/` publishes `landing/` to GitHub Pages.
 2. **Should `/previous` exist?** Stepping backwards was lost with the legacy
    buttons and is the only capability the trim cost. The player's history and
-   `play_previous` went with it, so restoring it is ~40 lines, not a one-liner —
+   `play_previous` went with it, so restoring it is ~40 lines, not a one-liner -
    as a command, or as a fifth button on the panel.
 3. **Where should this live long-term?** It currently sits in a subdirectory of a
-   GitHub Pages repository, which is where it could be pushed — not where it
+   GitHub Pages repository, which is where it could be pushed - not where it
    belongs.
 4. **Is `DEFAULT_GUILDS` wanted in production**, or only for development? Global
    registration is the default and takes up to an hour to propagate.
 
-## Appendix — command reference
+## Appendix - command reference
 
 ### Commands
 
@@ -296,11 +330,12 @@ M5 is the gate. Everything before it is verified offline only.
 |---|---|---|
 | `/play` | `query` · `next` · `loop` · `shuffle` | guild, voice |
 | `/search` | `query`* · `type` · `source` · `next` · `loop` · `shuffle` | guild, voice |
-| `/skip` | — | guild, voice, playing |
-| `/queue` | — | guild, playing |
+| `/skip` | - | guild, voice, playing |
+| `/now` | - | guild, playing |
+| `/queue` | - | guild, playing |
 | `/remove` | `track`* | guild, voice, playing |
-| `/leave` | — | guild, voice, connected |
-| `/stats` `/info` | — | owner |
+| `/leave` | - | guild, voice, connected |
+| `/stats` `/info` | - | owner |
 
 \* autocompleted
 

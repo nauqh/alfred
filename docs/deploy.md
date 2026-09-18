@@ -68,6 +68,17 @@ started successfully in approx 2 seconds
 `restart: unless-stopped` combined with `systemctl enable docker` restores the
 stack automatically after a reboot.
 
+Two optional variables are worth setting on a real deploy, since both default to
+off and neither announces its absence:
+
+- `LOG_DIR=logs` writes `bot.log` and `track.log` into the mounted `./logs`
+  directory. Left unset, the mount in `docker-compose.yml` is inert and
+  `docker compose logs` is the only record.
+- `STARTUP_CHANNEL_ID` is where the bot posts the change log when it restarts,
+  which is how a deploy announces itself. `RECAP_CHANNEL_ID` falls back to it, so
+  setting this one variable also switches on the Sunday recap - provided
+  `DEFAULT_GUILDS` names the server.
+
 ## 4. Updating
 
 Deploys are manual. The appropriate command depends on what changed:

@@ -2,6 +2,19 @@
 
 A research-backed design proposal for modernizing Alfred's Discord UI components, embeds, and interactive player views.
 
+| | |
+|---|---|
+| **Status** | **Shipped.** Option A and all four blueprint steps are implemented |
+| **Written** | 2026-08 |
+| **Kept for** | the research and the rejected options, which are the part worth not re-deriving |
+
+Read this as a record of a decision, not as a plan. What it proposed is what the
+bot now draws: the shipped card is described in [the README](../README.md#the-now-playing-view),
+and how it is built is [design.md](design.md). The module paths below were
+written before the package was split into `music/` and `ui/` and have been
+corrected, but nothing else here has been rewritten to match what shipped -
+where the two differ, the code is right.
+
 ---
 
 ## 1. Competitor & Ecosystem Research
@@ -146,16 +159,16 @@ Different unicode glyph sets render differently across iOS, Android, and Desktop
 
 ## 6. Implementation Blueprint
 
-### Step 1: Source Theme Colors (`alfred/sources.py` or `alfred/constants.py`)
+### Step 1: Source Theme Colors (`alfred/music/sources.py` or `alfred/constants.py`)
 Add color constants mapping `track.source_name` or `source.display_name` to hex codes (`hikari.Color`).
 
-### Step 2: Modern Progress Bar Formatter (`alfred/formatting.py`)
+### Step 2: Modern Progress Bar Formatter (`alfred/ui/formatting.py`)
 Upgrade `player_bar()` to flanked layout `01:23 ━━━━●━━━━━━━━ 03:45` with customizable width.
 
-### Step 3: Embed Redesign (`alfred/embeds.py`)
+### Step 3: Embed Redesign (`alfred/ui/embeds.py`)
 Implement Option A with dynamic color, `-# ` subtext, source header, and album art thumbnail.
 
-### Step 4: Enhanced Menu Buttons (`alfred/menus.py`)
+### Step 4: Enhanced Menu Buttons (`alfred/ui/menus.py`)
 - Native Discord Twemoji vector icons (`⏸️ Pause` / `▶️ Resume`, `⏭️ Skip`, `🔁 Loop: ...`).
 - Dynamic button styles (`ButtonStyle.SUCCESS` on Resume, `ButtonStyle.PRIMARY` on Active Loop).
 - Direct link button (`🔗 Link`) to `current.uri` (native Discord URL button).

@@ -20,7 +20,9 @@ it what to do.
 - Now playing card with Pause, Skip and Loop buttons, and a progress bar that keeps moving
 - `/queue` pages through the whole queue, ten tracks at a time
 - **@mention it to ask a question, or to queue something** - "@Alfred play bohemian rhapsody" really queues it. Answered by a free [OpenRouter](https://openrouter.ai) model; off unless a key is set
-- The bot posts nothing unprompted - every message is a reply to a command or to a mention
+- **A weekly recap** posted each Sunday morning: the week's top tracks, the tally, the top listener. Off unless a channel is set
+- The change log posted to the channel when the bot restarts, so a deploy announces itself
+- Nothing else is unprompted - every other message is a reply to a command or to a mention
 
 ## Quick start
 
@@ -149,6 +151,23 @@ Two worth knowing:
 - `DEFAULT_GUILDS` - register commands to named guilds while developing. Guild
   commands appear instantly; global ones take up to an hour to propagate.
 
+### The restart log and the weekly recap
+
+Both are off until they are given somewhere to post, and both go quiet again if
+that variable is removed.
+
+| Variable | Effect |
+|---|---|
+| `STARTUP_CHANNEL_ID` | Where the bot posts the newest `CHANGELOG.md` entry when it restarts. Unset, it restarts silently |
+| `RECAP_CHANNEL_ID` | Where the Sunday recap goes. Falls back to `STARTUP_CHANNEL_ID`, so one variable usually covers both |
+| `RECAP_HOUR` | Hour of Sunday morning, 0-23. Default `9` |
+| `RECAP_TIMEZONE` | An IANA name such as `Asia/Ho_Chi_Minh`. Default `UTC` |
+
+The recap also needs `DEFAULT_GUILDS` - it reads the first guild in the list,
+since the bot is single-server. Play history is recorded to `data/plays.db` only
+while the recap is configured, is kept for 60 days, and survives a rebuild
+because `./data` is a mounted volume.
+
 ### Chat replies
 
 Set `OPENROUTER_API_KEY` ([get one](https://openrouter.ai/keys)) and the bot answers
@@ -165,15 +184,15 @@ It can also *run* five of its commands when asked, through OpenRouter tool calli
 | "skip this" | `/skip` |
 | "search for spider man: across the spider verse" | `/search` - lists the top matches, numbered |
 
-Asked for music without naming anything — "play something" — it asks what you want
+Asked for music without naming anything - "play something" - it asks what you want
 rather than picking for you. Asked to *search*, it lists the top five matches with their
 links, numbered, and plays the one you reply with - the list is posted as-is so the
 follow-up "play 2" can find the match again, no stored state involved.
 
 | | |
 |---|---|
-| **The model proposes, it does not decide** | A tool call is treated as a request from whoever sent the message, never as an instruction from the model. `alfred/actions.py` re-applies the same checks the equivalent slash command applies, so asking Alfred to skip is exactly as restricted as running `/skip`. The requester, guild and channel come from the message - nothing the model returns can change who a track is queued as |
-| **Checks are duplicated, not shared** | A `lightbulb` hook needs a `Context` and a message listener has none, so `actions.py` mirrors `hooks.py` rather than importing it. The one exception is the owner rule, which `alfred/owner.py` settles once for both. `tests/test_actions.py` asserts the pairs stay in step |
+| **The model proposes, it does not decide** | A tool call is treated as a request from whoever sent the message, never as an instruction from the model. `alfred/chat/actions.py` re-applies the same checks the equivalent slash command applies, so asking Alfred to skip is exactly as restricted as running `/skip`. The requester, guild and channel come from the message - nothing the model returns can change who a track is queued as |
+| **Checks are duplicated, not shared** | A `lightbulb` hook needs a `Context` and a message listener has none, so `chat/actions.py` mirrors `extensions/hooks.py` rather than importing it. The one exception is the owner rule, which `alfred/owner.py` settles once for both. `tests/test_actions.py` asserts the pairs stay in step |
 | **No privileged intent needed** | Answering mentions needs `GUILD_MESSAGES`, not `MESSAGE_CONTENT` - Discord exempts messages that mention your bot from the content restriction. Nothing to toggle in the developer portal |
 | **Free model ids rot** | OpenRouter rotates which models carry a free tier, and a retired id 404s at request time rather than at startup. Current list: [openrouter.ai/models?q=free](https://openrouter.ai/models?q=free). Swap with `OPENROUTER_MODEL` |
 | **Prefer a non-reasoning model** | A reasoning model sits thinking for seconds before its first word. Measured across eight questions on 2026-08-23: the default answered in 1.7-5.8s, `nemotron-3.5-lightning` in 5-29s while burning ~1000 thinking tokens a reply. Latency is the thing to check when swapping |
@@ -217,6 +236,8 @@ only. `--frozen` fails the build when the lock has drifted, so a forgotten
 | [docs/deploy.md](docs/deploy.md) | Run it on a VPS: box prep, secrets, updates, YouTube OAuth |
 | [docs/design.md](docs/design.md) | How it is put together |
 | [docs/prd.md](docs/prd.md) | Product requirements and acceptance criteria |
+| [HANDOFF.md](HANDOFF.md) | Working notes: what is settled, what not to re-open |
+| [docs/ui_design.md](docs/ui_design.md) | The 2026-08 view-design exploration, kept as a record |
 
 ## Credits
 

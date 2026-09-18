@@ -1,25 +1,29 @@
 # Handoff
 
-Working notes for picking this up cold. Not documentation — `docs/` and the code comments
+Working notes for picking this up cold. Not documentation - `docs/` and the code comments
 are that. This is the context that would otherwise have to be re-derived.
 
-Last updated: 2026-08-28.
+Last updated: 2026-09-18.
 
 ## Where things stand
 
-Alfred plays music, and answers when you @mention it. Nine commands in five extensions.
+Alfred plays music, and answers when you @mention it. Nine commands across four command
+extensions, plus a fifth extension that carries the mention listener and no commands.
 
 | | State |
 |---|---|
 | Play / search / now / queue / skip / remove / leave | Working |
 | `/stats` / `/info` | Working |
-| Hearing you | Not possible — see below |
-| Answering @mentions, and running four commands from chat | Working, off unless `OPENROUTER_API_KEY` is set |
+| Hearing you | Not possible - see below |
+| Answering @mentions, and running five commands from chat | Working, off unless `OPENROUTER_API_KEY` is set |
+| The change log posted on restart | Working, off unless `STARTUP_CHANNEL_ID` is set |
+| The Sunday recap, and the play history behind it | Working, off unless a recap channel is set |
 | Speaking (`/say`, TTS) | Removed 2026-08-20 and not back. The node no longer enables `flowerytts` |
 
 Text speech came back on 2026-08-24 (`9fdcd98`), four days after the whole talking feature set
 was cut. What returned is the answerer only: `alfred/chat/` hears an @mention, asks a free
-OpenRouter model, and can run `/play`, `/now`, `/queue` and `/skip` through tool calling. What
+OpenRouter model, and can run `/play`, `/search`, `/now`, `/queue` and `/skip` through tool
+calling. What
 did **not** come back is voice - no `/say`, no TTS, no hearing. The removal note in `git log`
 reads as though speech is gone entirely; it is not.
 
@@ -29,12 +33,12 @@ reads as though speech is gone entirely; it is not.
 ## Voice: what is settled, and why
 
 Alfred **cannot hear**, and no amount of work on this codebase changes that. Established
-over several rounds — do not re-litigate without new information:
+over several rounds - do not re-litigate without new information:
 
 - Discord gives a bot **one voice connection per guild**.
 - Lavalink playback works by handing that connection to the node. Lavalink *is* the voice
   client.
-- Voice receive requires the library to own the connection itself —
+- Voice receive requires the library to own the connection itself -
   `channel.connect(cls=VoiceRecvClient)`. One voice client per guild.
 - Both want the same slot. A bot can play through Lavalink **or** hear. Not both.
 
@@ -43,7 +47,7 @@ Consequences that were checked and are not worth rechecking:
 - **Rewriting on py-cord does not fix it.** py-cord + Lavalink is fine; py-cord + Lavalink +
   hearing is not. Same one-slot problem.
 - **Dropping Lavalink for native audio would work** but loses the YouTube OAuth fix,
-  Spotify/Deezer via LavaSrc and LavaSearch autocomplete — and puts YouTube resolution back
+  Spotify/Deezer via LavaSrc and LavaSearch autocomplete - and puts YouTube resolution back
   on the VPS IP, which is exactly the `Sign in to confirm you're not a bot` failure that
   OAuth was adopted to solve.
 - **Time-sharing the slot** (listen while idle, hand over to Lavalink to play) works, but the
@@ -72,16 +76,21 @@ Consequences that were checked and are not worth rechecking:
 - **YouTube playback runs through OAuth**, not a poToken. `docs/deploy.md` covers the
   device flow; the refresh token lives in `lavalink/application.yml` (gitignored). A
   `Sign in to confirm you're not a bot` failure usually means the token expired or was
-  revoked — rerun the flow.
+  revoked - rerun the flow.
 - **`.env` and `lavalink/application.yml` are gitignored** and never arrive via `git pull`.
   A deploy that "did nothing" is usually this.
 - **Local runs do not need Docker**: `scripts/lavalink.ps1` for the node, `uv run alfred` for
   the bot, with `LAVALINK_HOST=127.0.0.1`.
+- **The recap is the only thing that touches disk.** `data/plays.db`, written by
+  `recorder.py` as each track starts, read only by `recap.py`. It is gitignored, mounted as
+  a volume so a rebuild does not lose it, and pruned to 60 days. No recap channel
+  configured means the file is never created at all.
+- **`docker compose down` does not delete the history**; only `rm -rf data/` does.
 
 ## Constraints to keep
 
 - **Never** add a `Co-Authored-By: Claude` trailer to a commit. Global rule, all projects.
-- **CI and the cron deploy were built and then deliberately removed** at the user's request —
+- **CI and the cron deploy were built and then deliberately removed** at the user's request -
   deploying is a documented manual step in `docs/deploy.md`. Do not reintroduce either
   without being asked again.
 - `.env` holds the real Discord token. Never commit it, never print its contents; check
@@ -98,7 +107,7 @@ Consequences that were checked and are not worth rechecking:
 ## Working notes
 
 - Keep replies short and concrete. Long explanations get asked to be simpler.
-- Explain before building anything sizeable — a plan was rejected mid-edit for going straight
+- Explain before building anything sizeable - a plan was rejected mid-edit for going straight
   to code, and rightly.
 - Verify rather than assert, and say which is which. Reverting a fix to watch the new test
   fail has caught real problems here and is expected, not ceremony.
