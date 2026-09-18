@@ -148,3 +148,10 @@ def test_migrated_database_still_records_new_plays(tmp_path) -> None:
     _record(store, user=9, title="New")
 
     assert [r[0] for r in store.user_plays(9)] == ["New"]
+
+def test_opening_in_a_missing_directory_creates_it(tmp_path) -> None:
+    """A fresh clone has no `data/` - gitignored - so the store makes its own parent."""
+    store = PlayStore(tmp_path / "data" / "plays.db")
+    _record(store, user=7)
+
+    assert [(u[0], u[1]) for u in store.users()] == [(7, "")]

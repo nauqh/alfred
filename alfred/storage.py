@@ -57,6 +57,10 @@ class PlayStore:
     """A SQLite-backed store of plays and the users who queued them."""
 
     def __init__(self, path: Path) -> None:
+        # sqlite3 creates the file but not the directory holding it. Under compose `./data` is a
+        # bind mount and already exists; a host run on a fresh clone has no `data/` at all, and
+        # the connect below would fail with "unable to open database file".
+        path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(path)
         # Foreign keys are off by default in SQLite; the plays->users reference is only real
         # if this connection enforces it.
