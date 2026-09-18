@@ -7,13 +7,48 @@ footprint:
 | Service | Idle RAM |
 |---|---|
 | `alfred` (bot) | ~58 MB |
-| `alfred-lavalink` (Lavalink node) | ~420 MB (JVM) |
+| `alfred-lavalink` (Lavalink node) | ~300-350 MB (JVM, capped at `-Xmx400M`) |
 | `alfred-cipher` | ~104 MB |
+
+The node was measured at ~420 MB before the heap was capped. A JVM only
+collects garbage as it nears its ceiling, so a ceiling above the machine's real
+RAM means it never collects and is eventually killed by the kernel instead. The
+cap lives in `docker-compose.yml` and is the first thing to change when moving
+to a different size of machine.
 
 ## 1. Prepare the machine
 
 Requires SSH access to a Debian/Ubuntu box with root and Docker installed.
 Verify `docker ps` responds before continuing.
+
+**Size.** ~510 MB of stack plus ~150 MB for the OS and the Docker daemon, so
+**1 GB is the working minimum** and 2 GB is comfortable. 512 MB does not fit,
+and fails during `docker compose build` before it ever gets to run. Disk and
+bandwidth are not the constraint: the images and build cache come to ~3 GB, and
+a playing bot moves ~100 MB an hour counting the fetch in and the stream out.
+
+**IPv4 only.** Discord's gateway, API and voice servers are all IPv4, and the
+containers reach each other over Docker's IPv4 bridge. There is nothing to
+configure, and enabling IPv6 is worth avoiding: the node will generally prefer
+it outbound, and Google treats a datacentre IPv6 block more harshly than the
+equivalent IPv4 address, which is the same bot check section 5 exists to solve.
+
+**Swap.** Droplets ship without any. One GB costs nothing on a 25 GB disk and
+covers the build, which is the tightest moment the machine will have:
+
+```sh
+fallocate -l 1G /swapfile && chmod 600 /swapfile
+mkswap /swapfile && swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+```
+
+Nothing should touch it in normal running. If `free -h` shows swap in steady
+use, the machine is too small rather than correctly configured.
+
+**Region.** Match the droplet to the voice channel's region, not to where
+anyone lives: audio goes from the node to a Discord voice server, and that is
+the hop worth keeping short. Pin the region in Discord under Channel Settings,
+Overrides, rather than letting it be chosen per session.
 
 ## 2. Retrieve the code and configure secrets
 

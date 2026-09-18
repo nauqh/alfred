@@ -34,7 +34,17 @@ services:
     image: ghcr.io/lavalink-devs/lavalink:4.2.2
     container_name: alfred-lavalink
     environment:
-      - _JAVA_OPTIONS=-Xmx2G
+      # The JVM only collects garbage as it approaches this ceiling, so the ceiling has to
+      # sit under the machine's real RAM - not at what the machine might one day have. At
+      # -Xmx2G on a 1 GB droplet the node never feels pressure to collect, grows past the
+      # available memory and is killed by the kernel; `restart: unless-stopped` then brings
+      # it back to do it again.
+      #
+      # 400M suits a 1 GB box. Non-heap memory - metaspace, thread stacks, the buffers the
+      # node pushes audio through - is outside this number and adds roughly 100-150 MB, so
+      # budget ~500 MB for the container. Raise it on a bigger machine; the node will use
+      # whatever it is given.
+      - _JAVA_OPTIONS=-Xmx400M
       - SERVER_PORT=2333
       # `application.yml` reads this back as `${CIPHER_PASSWORD}`. Spring resolves it from
       # the node's own environment, not from the compose file, so it has to be handed to
