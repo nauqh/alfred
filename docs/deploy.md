@@ -110,9 +110,7 @@ off and neither announces its absence:
   directory. Left unset, the mount in `docker-compose.yml` is inert and
   `docker compose logs` is the only record.
 - `STARTUP_CHANNEL_ID` is where the bot posts the change log when it restarts,
-  which is how a deploy announces itself. `RECAP_CHANNEL_ID` falls back to it, so
-  setting this one variable also switches on the Sunday recap - provided
-  `DEFAULT_GUILDS` names the server.
+  which is how a deploy announces itself. Unset, restarts are silent.
 
 ## 4. Updating
 
@@ -124,9 +122,6 @@ Deploys are manual. The appropriate command depends on what changed:
 | Change log (`CHANGELOG.md`) | `git pull && docker compose restart bot` - the file is mounted in, so a new entry reaches the bot without a rebuild |
 | `.env` | `docker compose up -d` |
 | `lavalink/application.yml` | `docker compose restart lavalink` (bind mount) |
-
-> The play-history database for the weekly recap lives in `./data`, mounted into the bot and
-> gitignored. A `docker compose down` does **not** delete it; only `rm -rf data/` resets it.
 
 Only the bot is built from source; the source is baked into the image at build
 time, so `git pull` alone does not affect a running stack. The node and

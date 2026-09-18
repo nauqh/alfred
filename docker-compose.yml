@@ -100,6 +100,4 @@ services:
       # It is mounted rather than baked so an edit reaches the bot on `restart` - the same
       # way the log used to arrive when it lived under docs/.
       - ./CHANGELOG.md:/app/CHANGELOG.md:ro
-      # The play-history database for the weekly recap. Mounted so it survives rebuilds.
-      - ./data:/app/data
     restart: unless-stopped

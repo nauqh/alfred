@@ -13,10 +13,12 @@ moved on - the player's buttons left `/queue` for the now playing card, and who
 may press them changed. The goals, non-goals and §4.1 record the release as it
 was decided and are left alone.
 
-Three things shipped after 2.0 and are recorded here as requirements rather than
-as goals, since they were not part of what 2.0 committed to: chat replies
-(FR-45 to FR-50), the restart change log and the weekly recap (FR-51 to FR-56).
-The recap is what made NFR-3's "no database" false, and it is restated there.
+Two features shipped after 2.0 and were then removed on a deliberate narrowing
+of scope, on 2026-09-18: chat replies to @mentions, and the weekly recap with the
+play history behind it. Alfred is a music bot, and neither was music. Their
+requirements are deleted rather than struck through, since nothing is left to
+hold the product to. What remains of that period is the restart change log,
+FR-51 below.
 
 ## 1. Summary
 
@@ -194,7 +196,7 @@ needs a live Discord and Lavalink node.
 
 | ID | Requirement | Pri | Verified |
 |---|---|---|---|
-| FR-21 | The bot posts unprompted only where it is configured to: the now playing card, the restart change log, and the Sunday recap. Nothing else it sends is anything but a reply | P0 | code review |
+| FR-21 | The bot posts unprompted only where it is configured to: the now playing card, and the restart change log. Nothing else it sends is anything but a reply | P0 | code review |
 | FR-22 | The now playing card carries Pause, Skip and Loop, and each press redraws the card in place | P0 | `test_menus` |
 | FR-23 | The bot's owner, or whoever queued the track that is playing, may press - and only from the bot's voice channel. Anyone else is turned away | P0 | `test_menus` |
 | FR-24 | The card's buttons have no timeout: they live exactly as long as the track | P1 | `test_nowplaying` |
@@ -219,31 +221,12 @@ needs a live Discord and Lavalink node.
 | FR-36 | The bot leaves once it is alone in the channel | P1 | manual |
 | FR-37 | Being disconnected externally clears the player, even if the node is unreachable | P1 | `test_player` |
 
-### Chat replies
-
-Shipped after 2.0. Off entirely unless `OPENROUTER_API_KEY` is set.
-
-| ID | Requirement | Pri | Verified |
-|---|---|---|---|
-| FR-45 | An @mention is answered by a model; ordinary channel traffic is ignored, and with no key the listener is never registered | P0 | `test_config` for the switch; the listener itself is manual |
-| FR-46 | The model may run `/play`, `/search`, `/now`, `/queue` and `/skip` through tool calling | P1 | `test_actions` |
-| FR-47 | A tool call is treated as a request from whoever sent the message, never as an instruction from the model, and re-applies the checks the slash command applies | P0 | `test_actions` |
-| FR-48 | A reply carries the context of its reply chain and nothing else; nothing is stored between messages | P1 | manual |
-| FR-49 | A completion that is a reasoning monologue is refused rather than posted | P0 | `test_chat` |
-| FR-50 | One reply per channel at a time; mentions arriving while one is in flight are dropped, not queued | P2 | code review |
-
-### The restart log and the weekly recap
-
-Shipped after 2.0. Each is off until given a channel.
+### The restart change log
 
 | ID | Requirement | Pri | Verified |
 |---|---|---|---|
 | FR-51 | On restart the bot posts the newest `CHANGELOG.md` entry to `STARTUP_CHANNEL_ID`, and stays silent when that is unset | P1 | `test_changelog` |
-| FR-52 | Each Sunday at `RECAP_HOUR` in `RECAP_TIMEZONE` the bot posts the week: top tracks, total count, listening time, top listener | P1 | `test_recap` for the schedule; the post is manual |
-| FR-53 | A recap is for the moment - a week the bot was down on Sunday is skipped, never caught up | P2 | `test_recap` |
-| FR-54 | Each track start records the user who queued it, not merely an id, and history older than 60 days is pruned | P1 | `test_storage` |
-| FR-55 | History is recorded only while the recap is configured; the database is not created otherwise | P2 | `test_storage` |
-| FR-56 | An unknown `RECAP_TIMEZONE` falls back to UTC rather than taking the bot down | P2 | `test_recap` |
+| FR-51a | The change log is mounted rather than baked into the image, so a new entry reaches the bot on `restart` without a rebuild | P2 | `docker-compose.yml` |
 
 ### Operation
 
@@ -263,11 +246,10 @@ Shipped after 2.0. Each is off until given a channel.
 |---|---|
 | NFR-1 | Python 3.10 through 3.14 |
 | NFR-2 | Deployable as `docker compose up` with the node alongside, gated on the node's health check |
-| NFR-3 | No queue and no worker process. One SQLite file and one in-process scheduled task, both created only when the weekly recap is configured; playback itself persists nothing |
+| NFR-3 | No database, no queue, no worker, no scheduled process. Nothing is written to disk but the log |
 | NFR-4 | Secrets only via environment; none committed. `.env` and the node's `application.yml` are ignored |
 | NFR-5 | Structured logging to console; optional rotating files, including a dedicated track log |
 | NFR-6 | The test suite runs offline in under 5 seconds |
-| NFR-9 | Play history is pruned to 60 days, and survives a container rebuild on a mounted volume |
 | NFR-7 | Lint and format enforced by a single tool (`ruff`) with the configuration committed |
 | NFR-8 | A user-facing error never exposes a traceback |
 
@@ -278,7 +260,7 @@ Shipped after 2.0. Each is off until given a channel.
 | Scope held | 9 commands; every removal deliberate and recorded | §4.1 |
 | Known defects shipped | 0 of the 5 in §2 | Each has a test or a documented manual check |
 | Dependencies on a pre-release or unmaintained version | 0 | `pyproject.toml` |
-| Automated test coverage of pure logic | Every non-I/O module has tests | 257 tests as of 2026-09-18 |
+| Automated test coverage of pure logic | Every non-I/O module has tests | 172 tests as of 2026-09-18 |
 | Time for a new operator to first playback | < 15 minutes from clone | README walkthrough, unmeasured |
 | Post-cutover regressions reported in the first week | 0 | User reports |
 

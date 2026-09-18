@@ -28,8 +28,8 @@ class Queued:
     What a call to `enqueue` put in the queue.
 
     Returned instead of a rendered embed so that `alfred.music` owes nothing to `alfred.ui`.
-    Two callers render the same value differently: the slash commands turn it into the "Track
-    added" card, and the chat path describes it in a sentence. Neither reading belongs in here.
+    What it describes and how it is drawn are separate concerns: `/play` turns this into the
+    "Track added" card, and that rendering does not belong in here.
     """
 
     requester_id: int

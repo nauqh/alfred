@@ -32,8 +32,8 @@ EMOJI_PAUSE_PLAYER: Final = "⏸️"
 
 ACTIVITY_NAME: Final = "https://nauqh.github.io/alfred/"
 
-# The queue panel. Both `/queue` and the same view reached by asking Alfred in chat render
-# through these, so the two cannot drift into showing different amounts of the same queue.
+# The queue panel. `/queue` and the now playing view both render through these, so the two
+# cannot drift into showing different amounts of the same queue.
 QUEUE_TITLE: Final = "Queue"
 QUEUE_PAGE_SIZE: Final = 10
 

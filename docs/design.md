@@ -32,15 +32,9 @@ thing the bot renders that can be pressed, and it lives exactly as long as its
 track: moving to the next track deletes it and posts the next track's view, and
 the queue ending deletes it outright. _Avoid_: panel, controller.
 
-The view is the only unprompted message tied to playback. Two others exist and
-are both scheduled rather than reactive: the change log posted on restart, and
-the Sunday recap. Everything else the bot sends is the reply to a command
-someone ran.
-
-**Play history** - the rows in `data/plays.db`: one per track start, with the
-user who queued it. Written by `recorder`, read only by the recap. It is not
-state the player consults - nothing in playback reads it back. _Avoid_: stats,
-analytics.
+The view is the only unprompted message tied to playback. One other exists: the
+change log posted on restart. Everything else the bot sends is the reply to a
+command someone ran.
 
 **Source** - a search backend behind a Lavalink prefix (`ytsearch`, `dzsearch`,
 `spsearch`). Not every Source is **playable**: Spotify is mirrored onto another
@@ -76,14 +70,9 @@ which changes only how it is described, never how it is queued.
         YouTube · Spotify · Deezer · SoundCloud
 ```
 
-Two processes: the bot and the node. No queue, no worker, no cron - and, until
-the weekly recap, no database either. What the recap added is one SQLite file
-written through `storage.py` and an `asyncio` task that sleeps until Sunday;
-neither is a third process, and both are off unless configured.
-
-Playback state stays in memory and is meant to be. A restart drops the queues,
+Two processes: the bot and the node. No database, no queue, no worker, no cron -
+the only state is in memory, and it is meant to be. A restart drops the queues,
 which is the same behaviour the legacy bot had and has never been a complaint.
-What survives a restart is history, not position.
 
 ## Layout
 
@@ -99,9 +88,6 @@ alfred/
 │   ├── owner.py          who owns the bot, resolved once and cached
 │   ├── presence.py       what Discord shows under the bot's name
 │   ├── changelog.py      the newest CHANGELOG.md entry, for the restart post
-│   ├── storage.py        SQLite play history - the only module that touches disk
-│   ├── recorder.py       writing a row as each track starts
-│   ├── recap.py          the Sunday task: sleep, read the week, post it
 │   │
 │   ├── music/            the player, and what fills it
 │   │   ├── service.py      join · resolve · enqueue - the one seam
@@ -116,17 +102,10 @@ alfred/
 │   │   ├── responses.py    replying, and the self-deleting reply
 │   │   └── formatting.py   durations, progress bar, trimming
 │   │
-│   ├── chat/             answering @mentions, and acting on them
-│   │   ├── client.py       talking to a model on OpenRouter
-│   │   ├── completions.py  turning a raw completion into something postable
-│   │   ├── actions.py      running commands from chat, behind the same checks
-│   │   └── prompt.py       the persona
-│   │
 │   └── extensions/       the slash commands, and their checks
 │       ├── hooks.py        the command checks
-│       └── general · play · queue · admin · chat
+│       └── general · play · queue · admin
 ├── lavalink/             the node's application.yml
-├── data/                 plays.db, written at runtime and gitignored
 ├── landing/              the GitHub Pages landing page
 ├── tests/
 └── docs/
@@ -135,19 +114,15 @@ alfred/
 The packages are strictly layered, and nothing points back up:
 
 ```
-wiring  →  extensions  →  chat  →  ui  →  music  →  errors · config · constants
-                                     ↘  recap  →  storage  ←  recorder
+wiring  →  extensions  →  ui  →  music  →  errors · config · constants
 ```
 
 `music` owes nothing to `ui`, which is why `service.enqueue` returns a **`Queued`**
 describing what it added rather than a rendered embed. Two callers read the same
-value differently: `/play` renders it as the "Track added" card, and the chat path
-describes it in a sentence. `events.py` sits at the top rather than inside `music/`
+value differently: `/play` renders it as the "Track added" card, and `/search`
+describes what it queued. `events.py` sits at the top rather than inside `music/`
 because it is glue - Lavalink events driving the now playing view - and would
-otherwise be the one edge pointing back up. `recorder.py` sits beside it for the
-same reason and is deliberately a second handler rather than a branch inside the
-first: writing a row and keeping the view in step fail independently, and a
-failed write must not cost anyone their now playing card.
+otherwise be the one edge pointing back up.
 
 ## The modules
 
@@ -167,16 +142,10 @@ implementation.
 | `hooks` | four execution hooks | voice-state cache lookups and dependency injection |
 | `responses` | `respond(ctx, **kwargs)` | the self-deleting reply lightbulb no longer provides |
 | `embeds` | one builder per card, plus `queue_pages` | every embed shape in the bot, and Discord's limits on them |
-| `PlayStore` | `record_play()` · `upsert_user()` · `weekly()` · `users()` | SQLite, the schema, the legacy single-table migration, and pruning past 60 days |
-| `recap` | `schedule(...)` - an asyncio task | the sleep-until-Sunday arithmetic, the timezone, and a missed week |
 
-There is no DTO layer and no repository. The player *is* the model, and
-`lavalink.AudioTrack` is the only track type that crosses a boundary.
-
-`PlayStore` is the single exception to "no persistence", and is deliberately
-narrow: it is the only module that opens a file, it returns plain tuples rather
-than a row type, and nothing in the playback path reads from it. Remove the
-recap and the module has no callers left.
+There is no persistence layer, no DTO layer and no repository. The player *is*
+the model, and `lavalink.AudioTrack` is the only track type that crosses a
+boundary. Nothing in the package opens a file for writing except the log.
 
 ### `service` - the one real seam
 
@@ -453,15 +422,12 @@ two-node list - so pointing it at a different node was a code change.
 | Node | `LAVALINK_HOST` `_PORT` `_PASSWORD` `_REGION` `_SSL` `_NODE_NAME` |
 | Node, plural | `LAVALINK_NODES` - JSON array of partial node objects, each falling back to the singular vars |
 | Behaviour | `DEFAULT_GUILDS` · `DELETE_AFTER` · `LOG_LEVEL` · `LOG_DIR` |
-| Chat | `OPENROUTER_API_KEY` · `OPENROUTER_MODEL` · `CHAT_MAX_TOKENS` · `CHAT_TEMPERATURE` · `CHAT_TIMEOUT` · `CHAT_SYSTEM_PROMPT` |
-| Posting | `STARTUP_CHANNEL_ID` · `RECAP_CHANNEL_ID` · `RECAP_HOUR` · `RECAP_TIMEZONE` |
+| Posting | `STARTUP_CHANNEL_ID` |
 
-The last two tiers are **capability switches, not settings**. `Config.chat` and
-`Config.recap` are `None` when their key variable is absent, and a `None` there
-means the feature is never wired up at all: no OpenRouter key and the message
-listener is not registered, so the bot cannot hear ordinary traffic; no recap
-channel and neither the Sunday task nor the play-history database is created.
-Absence is the off switch, which is why neither has an `ENABLED` flag.
+`STARTUP_CHANNEL_ID` is a **capability switch, not a setting**:
+`Config.startup_channel_id` is `None` when it is absent, and a `None` there means
+the restart post never happens. Absence is the off switch, which is why there is
+no separate `ENABLED` flag.
 
 A bad value fails the boot with the variable named, not the first command that
 touches it. `LAVALINK_NODES` takes partial objects on purpose: the common
@@ -478,7 +444,7 @@ plugins and sources. Every audio filter is off: the bot applies none since
 
 ## Testing
 
-257 tests, no network, ~2s. Each module is tested through the interface its
+172 tests, no network, ~2s. Each module is tested through the interface its
 callers use.
 
 - `Config` - the environment is a parameter, so every case is a dict.
@@ -495,11 +461,6 @@ callers use.
 - `nowplaying` - a fake REST client; asserts a track posts a view with buttons,
   the next track replaces it, and hiding it unregisters the menu rather than
   leaking it.
-- `storage` - a real SQLite database under `tmp_path`, since the thing worth
-  testing is the SQL. Covers the legacy-schema migration and the 60-day prune.
-- `recap` - the schedule arithmetic as a pure function, so every case is a
-  date: the Sunday that has already passed rolls a week, and an unknown
-  timezone falls back to UTC rather than raising.
 - `changelog` - parsing `CHANGELOG.md`, including a file with no released
   entry yet.
 
@@ -515,11 +476,6 @@ tests failing for the right reason:
   position tens of years in the past and sent `play_previous` down the wrong
   branch.
 
-The one module with no tests of its own is `extensions/chat.py`, the mention
-listener: everything it calls is covered, but the listener is a hikari event
-handler and testing it would mean modelling the gateway. The in-flight guard and
-the reply-chain walk are code review only, and are marked that way in the PRD.
-
 There is no test that talks to Discord or to a Lavalink node. The offline
 ceiling is the command surface: a script builds the client, loads all four
 extensions and renders all 9 command builders exactly as Discord would receive
@@ -529,9 +485,9 @@ which catches the whole class of registration errors without a token.
 ## What the rewrite costs
 
 Measured at the 2.0 cutover, and left at those figures because that is the
-comparison being made. The package has grown since: **4,796 lines and 3,160 of
-tests as of 2026-09-18**, the difference being the chat package, the weekly
-recap and the play history, none of which the legacy bot had in any form.
+comparison being made. The package stands at **3,005 lines and 2,233 of
+tests as of 2026-09-18**, after the chat package, the weekly recap and the play
+history were removed again - see the note under "Deliberately absent".
 
 At cutover the package was **2,064 lines against the legacy `bot/`'s 1,578**,
 plus 1,246 lines of tests where there were none. Stated plainly because the direction is the
@@ -605,11 +561,15 @@ override · private `_transport` access · `eval` on options · hardcoded node
 config · application-specific emoji IDs · a queue · a worker · persistence of
 playback state across restarts.
 
-"A database" was on that list until the weekly recap, which needed a week of
-history and could not get it from memory. What arrived is the smallest thing
-that answers the question: one SQLite file, stdlib, no server, no ORM, no
-migration tool, and no reader outside the recap. Playback still persists
-nothing.
+Two features briefly left that list and have since been removed outright: chat
+replies to @mentions, answered by a model over OpenRouter, and a weekly recap
+that needed a SQLite file of play history to report on. Both are gone on a
+deliberate narrowing of scope - this is a music bot, and neither was music.
+
+What went with them: the `chat/` package and its extension, `storage.py`,
+`recorder.py`, `recap.py`, the `aiohttp` and `tzdata` dependencies, the
+`data/` volume, and the `GUILD_MESSAGES` intent. The bot now reads no message
+content at all, and opens no file for writing except the log.
 
 The emoji are the subtlest of those. The legacy bot carried eleven custom emojis
 belonging to its own Discord application, and **no other application can render

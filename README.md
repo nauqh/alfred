@@ -19,10 +19,8 @@ it what to do.
 - `/search` with live autocomplete for tracks, artists, albums and playlists via [LavaSearch](https://github.com/topi314/LavaSearch)
 - Now playing card with Pause, Skip and Loop buttons, and a progress bar that keeps moving
 - `/queue` pages through the whole queue, ten tracks at a time
-- **@mention it to ask a question, or to queue something** - "@Alfred play bohemian rhapsody" really queues it. Answered by a free [OpenRouter](https://openrouter.ai) model; off unless a key is set
-- **A weekly recap** posted each Sunday morning: the week's top tracks, the tally, the top listener. Off unless a channel is set
 - The change log posted to the channel when the bot restarts, so a deploy announces itself
-- Nothing else is unprompted - every other message is a reply to a command or to a mention
+- Nothing else is unprompted - every other message is a reply to a command
 
 ## Quick start
 
@@ -151,64 +149,15 @@ Two worth knowing:
 - `DEFAULT_GUILDS` - register commands to named guilds while developing. Guild
   commands appear instantly; global ones take up to an hour to propagate.
 
-### The restart log and the weekly recap
-
-Both are off until they are given somewhere to post, and both go quiet again if
-that variable is removed.
+### The restart log
 
 | Variable | Effect |
 |---|---|
 | `STARTUP_CHANNEL_ID` | Where the bot posts the newest `CHANGELOG.md` entry when it restarts. Unset, it restarts silently |
-| `RECAP_CHANNEL_ID` | Where the Sunday recap goes. Falls back to `STARTUP_CHANNEL_ID`, so one variable usually covers both |
-| `RECAP_HOUR` | Hour of Sunday morning, 0-23. Default `9` |
-| `RECAP_TIMEZONE` | An IANA name such as `Asia/Ho_Chi_Minh`. Default `UTC` |
 
-The recap also needs `DEFAULT_GUILDS` - it reads the first guild in the list,
-since the bot is single-server. Play history is recorded to `data/plays.db` only
-while the recap is configured, is kept for 60 days, and survives a rebuild
-because `./data` is a mounted volume.
-
-### Chat replies
-
-Set `OPENROUTER_API_KEY` ([get one](https://openrouter.ai/keys)) and the bot answers
-when someone @mentions it. Leave it blank and the listener is never registered, so the
-bot stays deaf to ordinary channel traffic.
-
-It can also *run* five of its commands when asked, through OpenRouter tool calling:
-
-| Ask it | Runs |
-|---|---|
-| "play never gonna give you up", "play `<url>`" | `/play` |
-| "what's playing" | `/now` |
-| "show me the queue" | `/queue` |
-| "skip this" | `/skip` |
-| "search for spider man: across the spider verse" | `/search` - lists the top matches, numbered |
-
-Asked for music without naming anything - "play something" - it asks what you want
-rather than picking for you. Asked to *search*, it lists the top five matches with their
-links, numbered, and plays the one you reply with - the list is posted as-is so the
-follow-up "play 2" can find the match again, no stored state involved.
-
-| | |
-|---|---|
-| **The model proposes, it does not decide** | A tool call is treated as a request from whoever sent the message, never as an instruction from the model. `alfred/chat/actions.py` re-applies the same checks the equivalent slash command applies, so asking Alfred to skip is exactly as restricted as running `/skip`. The requester, guild and channel come from the message - nothing the model returns can change who a track is queued as |
-| **Checks are duplicated, not shared** | A `lightbulb` hook needs a `Context` and a message listener has none, so `chat/actions.py` mirrors `extensions/hooks.py` rather than importing it. The one exception is the owner rule, which `alfred/owner.py` settles once for both. `tests/test_actions.py` asserts the pairs stay in step |
-| **No privileged intent needed** | Answering mentions needs `GUILD_MESSAGES`, not `MESSAGE_CONTENT` - Discord exempts messages that mention your bot from the content restriction. Nothing to toggle in the developer portal |
-| **Free model ids rot** | OpenRouter rotates which models carry a free tier, and a retired id 404s at request time rather than at startup. Current list: [openrouter.ai/models?q=free](https://openrouter.ai/models?q=free). Swap with `OPENROUTER_MODEL` |
-| **Prefer a non-reasoning model** | A reasoning model sits thinking for seconds before its first word. Measured across eight questions on 2026-08-23: the default answered in 1.7-5.8s, `nemotron-3.5-lightning` in 5-29s while burning ~1000 thinking tokens a reply. Latency is the thing to check when swapping |
-| **Context is the reply chain** | A cold mention is a fresh question. Reply to one of Alfred's answers and that exchange comes with it. Nothing is stored between messages, so a restart loses nothing and one person's conversation never leaks into another's |
-| **Reasoning models are muzzled** | Several free models think out loud, and their thinking is `content` unless you say otherwise - one posted its entire *"Here's a thinking process:"* monologue into a channel as the answer. Requests send `reasoning: {"exclude": true}`, and a completion that still opens with a monologue is refused rather than posted |
-| **The model picks the format** | Plain text for ordinary answers; an embed when the answer has structure worth laying out. It opts in by returning JSON with a title or fields - structure *is* the signal, so there is no separate flag for a weak model to get wrong. Anything unparseable is posted as the plain answer it looks like, rather than failing the reply |
-| **One reply per channel at a time** | Mentions arriving while one is in flight are dropped, not queued - the free tier is rate limited hard enough that a queued answer arrives after everyone has moved on |
-
-Every reply logs one line at `INFO` - model, latency, plain or embed, and token
-usage - so a truncated answer is visible as a completion count sitting exactly on
-`CHAT_MAX_TOKENS`. `LOG_LEVEL=DEBUG` adds the prompt turns and the raw completion,
-which is what explains a reply that came out plain when an embed was wanted.
-
-`CHAT_MAX_TOKENS`, `CHAT_TEMPERATURE` and `CHAT_TIMEOUT` tune the request.
-`CHAT_SYSTEM_PROMPT` replaces Alfred's persona *and* its knowledge of its own
-commands - the built-in prompt lists them, so an override drops that.
+`CHANGELOG.md` is mounted into the container rather than baked into the image, so
+editing it and running `docker compose restart bot` posts the new entry without a
+rebuild.
 
 ## Development
 

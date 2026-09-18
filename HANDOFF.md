@@ -7,28 +7,28 @@ Last updated: 2026-09-18.
 
 ## Where things stand
 
-Alfred plays music, and answers when you @mention it. Nine commands across four command
-extensions, plus a fifth extension that carries the mention listener and no commands.
+Alfred plays music. Nothing else. Nine commands in four extensions.
 
 | | State |
 |---|---|
 | Play / search / now / queue / skip / remove / leave | Working |
 | `/stats` / `/info` | Working |
 | Hearing you | Not possible - see below |
-| Answering @mentions, and running five commands from chat | Working, off unless `OPENROUTER_API_KEY` is set |
 | The change log posted on restart | Working, off unless `STARTUP_CHANNEL_ID` is set |
-| The Sunday recap, and the play history behind it | Working, off unless a recap channel is set |
+| Answering @mentions (LLM chat) | **Removed 2026-09-18.** Scope decision, not a defect |
+| The Sunday recap and play history | **Removed 2026-09-18.** Same decision |
 | Speaking (`/say`, TTS) | Removed 2026-08-20 and not back. The node no longer enables `flowerytts` |
 
-Text speech came back on 2026-08-24 (`9fdcd98`), four days after the whole talking feature set
-was cut. What returned is the answerer only: `alfred/chat/` hears an @mention, asks a free
-OpenRouter model, and can run `/play`, `/search`, `/now`, `/queue` and `/skip` through tool
-calling. What
-did **not** come back is voice - no `/say`, no TTS, no hearing. The removal note in `git log`
-reads as though speech is gone entirely; it is not.
+**Do not rebuild either of the removed features without being asked.** Both worked; both
+were cut on 2026-09-18 because this is a music bot. The chat package answered @mentions over
+OpenRouter and could run five commands by tool call; the recap posted a Sunday summary off a
+SQLite play history. Their code, tests, dependencies (`aiohttp`, `tzdata`), the `data/`
+volume and the `GUILD_MESSAGES` intent all went with them.
 
-`git revert` will not cleanly undo any of this (later commits touch the same files);
-`git log --oneline 5d3dd6e..HEAD` names the original speech commits.
+The history is where to look if either is wanted back rather than rewritten. Note the
+precedent: the talking feature set was cut on 2026-08-20 and a narrower piece of it returned
+on 2026-08-24 (`9fdcd98`), so a removal note in `git log` does not by itself tell you what is
+live. What has never come back is voice - no `/say`, no TTS, no hearing.
 
 ## Voice: what is settled, and why
 
@@ -81,11 +81,8 @@ Consequences that were checked and are not worth rechecking:
   A deploy that "did nothing" is usually this.
 - **Local runs do not need Docker**: `scripts/lavalink.ps1` for the node, `uv run alfred` for
   the bot, with `LAVALINK_HOST=127.0.0.1`.
-- **The recap is the only thing that touches disk.** `data/plays.db`, written by
-  `recorder.py` as each track starts, read only by `recap.py`. It is gitignored, mounted as
-  a volume so a rebuild does not lose it, and pruned to 60 days. No recap channel
-  configured means the file is never created at all.
-- **`docker compose down` does not delete the history**; only `rm -rf data/` does.
+- **Nothing is written to disk but the log.** No database, no state file, no scheduled task.
+  A restart drops the queue, which is intended.
 
 ## Constraints to keep
 

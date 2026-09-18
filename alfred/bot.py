@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 
 import hikari
@@ -13,29 +12,18 @@ from loguru import logger
 from alfred import changelog
 from alfred import errors
 from alfred import log_config
-from alfred.chat.client import ChatClient
 from alfred.config import Config
 from alfred.events import LavalinkEventHandler
-from alfred.extensions import CHAT_EXTENSION
 from alfred.extensions import EXTENSIONS
 from alfred.music.player import AlfredPlayer
 from alfred.presence import Presence
-from alfred.recap import run_weekly_recap
-from alfred.recorder import PlayRecorder
-from alfred.storage import PlayStore
 from alfred.ui import embeds
 from alfred.ui import responses
 from alfred.ui.nowplaying import NowPlayingManager
 
-# GUILD_MESSAGES is what lets `alfred.extensions.chat` see an @mention. MESSAGE_CONTENT is
-# deliberately absent and not needed: it is privileged, and Discord exempts messages that
-# mention the bot from it - their content arrives populated regardless. The bot is therefore
-# blind to the text of every message that is not addressed to it, which is the intent.
-INTENTS = hikari.Intents.GUILDS | hikari.Intents.GUILD_VOICE_STATES | hikari.Intents.GUILD_MESSAGES
-
-# Fire-and-forget background tasks (the weekly recap), kept referenced so the event loop
-# does not collect them.
-_background_tasks: set[asyncio.Task[None]] = set()
+# Two intents, neither privileged. The bot needs to know what guilds it is in and who is in
+# which voice channel; it reads no message content at all, and has no listener that would.
+INTENTS = hikari.Intents.GUILDS | hikari.Intents.GUILD_VOICE_STATES
 
 
 @lightbulb.hook(lightbulb.ExecutionSteps.PRE_INVOKE)
@@ -71,12 +59,6 @@ def build(config: Config) -> hikari.GatewayBot:
 
     responses.configure(config.delete_after)
     lavalink_client: lavalink.Client | None = None
-    chat_client = ChatClient(config.chat) if config.chat is not None else None
-    store = (
-        PlayStore(Path(__file__).resolve().parent.parent / "data" / "plays.db") if config.recap is not None else None
-    )
-    if store is not None:
-        logger.info("Play history recording enabled at data/plays.db")
 
     @client.error_handler
     async def on_error(exc: lightbulb.exceptions.ExecutionPipelineFailedException) -> bool:
@@ -94,37 +76,16 @@ def build(config: Config) -> hikari.GatewayBot:
 
         lavalink_client = build_lavalink_client(config, me.id)
 
-        event_hooks = [LavalinkEventHandler(NowPlayingManager(bot, client, lavalink_client), presence)]
-        if store is not None:
-            event_hooks.append(PlayRecorder(store))
-        # `add_event_hooks` takes exactly one hook; the variadic one is singular `add_event_hook`.
-        for hook in event_hooks:
-            lavalink_client.add_event_hooks(hook)
+        lavalink_client.add_event_hooks(LavalinkEventHandler(NowPlayingManager(bot, client, lavalink_client), presence))
 
         # Registered before the first command runs, which is the last moment the DI registry
         # is still open for writes.
         client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(lavalink.Client, lavalink_client)
         client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(Config, config)
-        # Registered even when None: commands inject `PlayStore | None` and each decides whether
-        # recording is on. An unregistered type is not injectable at all, which is worse.
-        client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(PlayStore, store)
-
 
         await _post_changelog(bot, config)
 
-        if config.recap is not None and store is not None:
-            task = asyncio.create_task(run_weekly_recap(store, bot, config.recap))
-            _background_tasks.add(task)
-            task.add_done_callback(_background_tasks.discard)
-
-        extensions = EXTENSIONS
-        if chat_client is not None:
-            await chat_client.start()
-            client.di.registry_for(lightbulb.di.Contexts.DEFAULT).register_value(ChatClient, chat_client)
-            extensions += CHAT_EXTENSION
-            logger.info("Chat replies enabled, answering with {!r}", chat_client.model)
-
-        await client.load_extensions(*extensions)
+        await client.load_extensions(*EXTENSIONS)
         await client.start()
 
     @bot.listen(hikari.StoppingEvent)
@@ -132,13 +93,6 @@ def build(config: Config) -> hikari.GatewayBot:
         if lavalink_client is not None:
             await lavalink_client.close()
             logger.info("Closed the Lavalink client")
-
-        if chat_client is not None:
-            await chat_client.close()
-
-        if store is not None:
-            store.close()
-            logger.info("Closed the play store")
 
     return bot
 

@@ -15,10 +15,6 @@ license = { text = "MIT" }
 # Floors, not pins - `uv.lock` holds the exact versions, and it is committed.
 # `uv sync --frozen` installs the lock verbatim; `uv lock --upgrade` moves it.
 dependencies = [
-    # Already installed as one of hikari's own requirements, but `alfred.chat.client` imports
-    # it directly - and a dependency you import is one you declare, or it disappears the day
-    # hikari swaps its HTTP client.
-    "aiohttp>=3.9",
     "hikari>=2.5.0",
     "hikari-lightbulb>=3.2.5",
     "lavalink>=5.11.0",
@@ -26,9 +22,6 @@ dependencies = [
     # All of the bot's own logging. hikari and lavalink still log through the standard
     # library; `log_config` bridges them into loguru so there is one stream, one format.
     "loguru>=0.7.3",
-    # Timezone data for `zoneinfo` - the slim image and Windows have no system tz database,
-    # and the weekly recap needs RECAP_TIMEZONE (e.g. Asia/Ho_Chi_Minh) to resolve.
-    "tzdata>=2025.1",
 ]
 
 [project.optional-dependencies]

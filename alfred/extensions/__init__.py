@@ -10,6 +10,3 @@ EXTENSIONS: Final = (
     "alfred.extensions.queue",
     "alfred.extensions.admin",
 )
-
-CHAT_EXTENSION: Final = ("alfred.extensions.chat",)
-"""Loaded on top of `EXTENSIONS` only when `OPENROUTER_API_KEY` is set - see `alfred.bot.build`."""

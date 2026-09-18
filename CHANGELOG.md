@@ -4,16 +4,16 @@ All notable changes to the household are recorded here, sir - one keeps the mast
 
 ## [Unreleased]
 
-### Added
+### Removed
 
-- The week's report, posted each Sunday morning - the repertoire, the tally, the master of the queue
+- Conversation. One no longer answers when addressed; the household attends to music alone
+- The week's report, and the ledger of plays that informed it
 
 ### Changed
 
 - The player card now shows timestamped progress, source metadata, requesters and clearer empty states
 - Queue panels show total duration and identify expired views as snapshots
 - Search suggestions now label tracks, artists, albums and playlists directly
-- Play history now records who queued each track, not merely an id. Older records carry over intact
 
 ### Fixed
 

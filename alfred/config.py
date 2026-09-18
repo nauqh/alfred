@@ -38,29 +38,6 @@ class NodeConfig:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class ChatConfig:
-    """Settings for the mention-triggered chat replies, when they are switched on."""
-
-    api_key: str
-    model: str
-    max_tokens: int
-    temperature: float
-    timeout: float
-    system_prompt: str | None
-    """Replaces the built-in Alfred persona wholesale when set - see `alfred.chat`."""
-
-
-@dataclasses.dataclass(frozen=True, slots=True)
-class RecapConfig:
-    """The weekly recap: where to post, when, and who it is for."""
-
-    channel_id: int
-    guild_id: int
-    hour: int
-    timezone: str
-
-
-@dataclasses.dataclass(frozen=True, slots=True)
 class Config:
     """Everything the bot needs to know before it connects to anything."""
 
@@ -70,12 +47,8 @@ class Config:
     delete_after: float
     log_level: str
     log_dir: str | None
-    chat: ChatConfig | None
-    """`None` when `OPENROUTER_API_KEY` is unset, which leaves the bot deaf to ordinary messages."""
     startup_channel_id: int | None
     """Where the bot posts its restart view; `None` leaves it silent on restart."""
-    recap: RecapConfig | None = None
-    """The weekly recap, or `None` when it is not configured."""
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Config:
@@ -107,69 +80,8 @@ class Config:
             delete_after=_float(env, "DELETE_AFTER", 60.0),
             log_level=env.get("LOG_LEVEL", "INFO").upper(),
             log_dir=env.get("LOG_DIR") or None,
-            chat=_chat(env),
             startup_channel_id=_optional_guild_id(env, "STARTUP_CHANNEL_ID"),
-            recap=_recap(env),
         )
-
-
-# OpenRouter rotates which models carry a free tier; this one was on the list on 2026-08-23.
-# A retired id comes back as a 404 at request time, not at startup.
-#
-# Chosen by running the same eight questions through the free models on that day's list:
-#   dots-3-note-preview  1.7-5.8s, natural, no leaks              <- this one
-#   nemotron-3.5-lightning  5-29s, ~1000 thinking tokens a reply, and it ignored
-#                           `reasoning: {"exclude": true}` often enough to leak a monologue
-#   lfm-2.5-2.6b  fast, but emits raw `<|tool_call_start|>` tokens and invents YouTube IDs
-#
-# Latency is the thing to watch when swapping: a reasoning model spends seconds thinking
-# before its first word, which is a long time to sit in a chat channel.
-DEFAULT_CHAT_MODEL = "dots-studio/dots-3-note-preview:free"
-
-
-def _recap(env: Mapping[str, str]) -> RecapConfig | None:
-    """
-    Build the weekly recap settings.
-
-    The channel falls back to `STARTUP_CHANNEL_ID` when `RECAP_CHANNEL_ID` is unset, so a
-    server that already shows the changelog gets the recap in the same place with one less
-    variable to set. The guild is the first of `DEFAULT_GUILDS` - the bot is single-server,
-    and a recap with nowhere to post is off.
-    """
-    channel_id = _optional_guild_id(env, "RECAP_CHANNEL_ID") or _optional_guild_id(env, "STARTUP_CHANNEL_ID")
-    guilds = _guild_ids(env)
-    if channel_id is None or not guilds:
-        return None
-
-    hour = _int(env, "RECAP_HOUR", 9)
-    if not 0 <= hour <= 23:
-        raise ConfigError(f"'RECAP_HOUR' must be between 0 and 23, got {hour}")
-
-    return RecapConfig(
-        channel_id=channel_id,
-        guild_id=guilds[0],
-        hour=hour,
-        timezone=env.get("RECAP_TIMEZONE", "UTC").strip() or "UTC",
-    )
-
-
-def _chat(env: Mapping[str, str]) -> ChatConfig | None:
-    """Build the chat settings, or `None` when there is no API key to use them with."""
-    api_key = env.get("OPENROUTER_API_KEY", "").strip()
-    if not api_key:
-        return None
-
-    return ChatConfig(
-        api_key=api_key,
-        model=env.get("OPENROUTER_MODEL", "").strip() or DEFAULT_CHAT_MODEL,
-        # Generous for a reply that is meant to be a sentence or two, because a reasoning model
-        # spends most of this budget thinking before it writes anything. At 400 a cut-off answer
-        # was arriving as nothing but the start of the model's own monologue.
-        max_tokens=_int(env, "CHAT_MAX_TOKENS", 1200),
-        temperature=_float(env, "CHAT_TEMPERATURE", 0.7),
-        timeout=_float(env, "CHAT_TIMEOUT", 30.0),
-        system_prompt=env.get("CHAT_SYSTEM_PROMPT") or None,
-    )
 
 
 def _nodes(env: Mapping[str, str], *, fallback: NodeConfig) -> tuple[NodeConfig, ...]:

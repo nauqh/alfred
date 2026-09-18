@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import dataclasses
 from datetime import datetime
 from datetime import timezone
 from typing import Final
@@ -27,51 +26,13 @@ QUEUE_TRACK_TITLE_LIMIT = 80
 TRACK_AUTHOR_LIMIT = 80
 QUEUE_TITLE_LIMIT = 72
 
-# Discord's limits on what a message may carry. They live here because they are facts about
-# Discord rather than about any model, and `alfred.chat.completions` clamps model output
-# against them - a small model asked for structure will cheerfully write a 3000 character
-# field value. Discord rejects the whole message if any one limit is exceeded, and enforces
-# the total separately from the per-part limits.
-#
-# An ordinary message gets less room than an embed description, which is why a plain answer is
-# clamped harder than the same text would be inside an embed.
+# Discord's limits on what an embed may carry. Discord rejects the whole message if any one
+# is exceeded, and enforces the total separately from the per-part limits, which is why
+# `changelog_embeds` tracks a budget as well as clamping each field.
 MAX_EMBED_TOTAL = 6000
-MAX_MESSAGE = 2000
-MAX_TITLE = 256
-MAX_DESCRIPTION = 4096
 MAX_FIELDS = 25
 MAX_FIELD_NAME = 256
 MAX_FIELD_VALUE = 1024
-
-
-@dataclasses.dataclass(frozen=True, slots=True)
-class Field:
-    """One name/value row of an embed."""
-
-    name: str
-    value: str
-    inline: bool = False
-
-
-@dataclasses.dataclass(frozen=True, slots=True)
-class Reply:
-    """A model answer, and how it should be posted."""
-
-    description: str
-    title: str | None = None
-    fields: tuple[Field, ...] = ()
-
-    @property
-    def is_embed(self) -> bool:
-        """
-        Whether this answer earns an embed.
-
-        Structure is the signal: the model opts in by giving the answer a title or fields, and
-        a bare description is posted as an ordinary message. Nothing asks the model for a
-        separate "use an embed" flag, because that is one more thing for a weak model to get
-        wrong - and an answer with a title and rows is exactly the answer an embed suits.
-        """
-        return self.title is not None or bool(self.fields)
 
 
 def _clamp(text: str, limit: int) -> str:
@@ -113,7 +74,7 @@ def changelog_embeds(entry: Entry) -> tuple[hikari.Embed, ...]:
         nonlocal current, budget
         embed = hikari.Embed(title=title, color=constants.COLOR_ALFRED, timestamp=timestamp)
         # A brief footer: who posted, and how much is in the log. Overflow embeds say
-        # "continued" so the recap count is not silently repeated.
+        # "continued" so the update count is not silently repeated.
         text = "Alfred · continued" if embeds_ else "Alfred" + (f" · {total} updates" if total else "")
         embed.set_footer(text, icon=constants.CHANGELOG_FOOTER_ICON)
         embeds_.append(embed)
@@ -303,35 +264,6 @@ def queued(added: Queued) -> hikari.Embed:
     ).set_thumbnail(added.artwork_url)
 
 
-def chat_reply(reply: Reply, *, model: str) -> hikari.Embed:
-    """
-    The embed behind a reply to an @mention.
-
-    Args:
-        reply: The parsed model answer.
-        model: The OpenRouter model id, shown in the footer so it is obvious which one spoke -
-            the free ones vary a lot, and swapping `OPENROUTER_MODEL` is the first thing to try
-            when the answers are poor.
-    """
-    embed = hikari.Embed(
-        title=reply.title,
-        description=reply.description,
-        color=constants.COLOR_ALFRED,
-    )
-
-    budget = MAX_EMBED_TOTAL - len(reply.description) - len(reply.title or "") - len(model)
-    for field in reply.fields:
-        # Discord rejects the whole message when the parts together exceed the total, so fields
-        # past the budget are dropped rather than allowed to lose the answer with them.
-        cost = len(field.name) + len(field.value)
-        if cost > budget:
-            break
-        budget -= cost
-        embed.add_field(name=field.name, value=field.value, inline=field.inline)
-
-    return embed.set_footer(model)
-
-
 def _current_description(player: AlfredPlayer) -> str:
     """The block describing the current track: title, author, progress, playlist and requester."""
     current = player.current
@@ -355,75 +287,3 @@ def _current_description(player: AlfredPlayer) -> str:
         subtext,
     ]
     return "\n".join(line for line in lines if line is not None)
-
-
-def recap_embed(plays: list[tuple], *, since: datetime, now: datetime) -> hikari.Embed:
-    """
-    The embed behind the Sunday weekly recap, delivered in the butler's voice.
-
-    Top five tracks of the seven days up to `since`, then totals - song count, listening time,
-    top listener (by plays). An empty week posts the same card with a quiet-week line in place
-    of the top tracks, because a week without music is still worth a word from Alfred.
-
-    Args:
-        plays: Rows from `PlayStore.weekly`, newest first.
-        since: The start of the window, for the footer's date range.
-        now: When the recap is posted, for the timestamp and the window's end.
-    """
-    title: Final = "🦇 The week's report"
-    embed = hikari.Embed(
-        title=title,
-        description="Your weekly account of the household's musical affairs, sir.",
-        color=constants.COLOR_ALFRED,
-        timestamp=now,
-    )
-
-    if not plays:
-        embed.description = (
-            "A quiet week, I'm afraid, sir - not a single record spun. "
-            "The speakers were left wanting. Shall I remedy that?"
-        )
-    else:
-        # Row: title, author, uri, duration_ms, user_id, played_at.
-        by_track: dict[str, int] = {}
-        durations: list[int] = []
-        by_listener: dict[int, int] = {}
-        for title_, _author, _uri, duration_ms, requester_id, _played_at in plays:
-            by_track[title_] = by_track.get(title_, 0) + 1
-            if duration_ms:
-                durations.append(duration_ms)
-            by_listener[requester_id] = by_listener.get(requester_id, 0) + 1
-
-        top = sorted(by_track.items(), key=lambda item: item[1], reverse=True)[:5]
-        lines = [
-            f"{i}. **{title_}** - called upon {count} time{'s' if count != 1 else ''}"
-            for i, (title_, count) in enumerate(top, start=1)
-        ]
-        embed.add_field(name="🎼 The week's repertoire", value="\n".join(lines) or "...", inline=False)
-
-        total = len(plays)
-        listening = format_time(sum(durations))
-        embed.add_field(
-            name="📈 The tally",
-            value=(
-                f"{total} song{'s' if total != 1 else ''}, {listening} of music. "
-                "I trust the selections proved satisfactory, sir."
-            ),
-            inline=False,
-        )
-
-        if by_listener:
-            top_listener, listener_plays = max(by_listener.items(), key=lambda item: item[1])
-            embed.add_field(
-                name="🎩 Master of the queue",
-                value=(
-                    f"<@{top_listener}>, with {listener_plays} "
-                    f"request{'s' if listener_plays != 1 else ''}. My compliments."
-                ),
-                inline=False,
-            )
-
-    since_s = since.strftime("%d %b") if since else ""
-    now_s = now.strftime("%d %b")
-    embed.set_footer(f"{since_s} - {now_s}" if since_s else now_s, icon=constants.CHANGELOG_FOOTER_ICON)
-    return embed
