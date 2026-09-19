@@ -1,23 +1,27 @@
-"""Handling of the events Lavalink sends about players and nodes.
+"""Handling of the events Lavalink sends about players.
 
 Two jobs: keeping the now playing view in step with the player - a track starting posts the
-view, the queue ending removes it - and keeping a stuck player moving. Everything else is the
-record of what the node is doing.
+view, the queue ending removes it - and reporting the tracks that fail or stall. Node and
+websocket state is left to lavalink.py, which already logs it into the same stream.
 """
 
 from __future__ import annotations
 
-import lavalink
-from loguru import logger
+import logging
 
+import lavalink
+
+from alfred.log_config import track_logger
 from alfred.music.player import AlfredPlayer
 from alfred.presence import Presence
 from alfred.ui.nowplaying import NowPlayingManager
 
+logger = logging.getLogger(__name__)
+
 
 class LavalinkEventHandler:
     """
-    Keeps the now playing view in step with the player, and a stuck player moving.
+    Keeps the now playing view in step with the player.
 
     Register it with `lavalink.Client.add_event_hooks`.
     """
@@ -28,8 +32,8 @@ class LavalinkEventHandler:
 
     @lavalink.listener(lavalink.TrackStartEvent)
     async def on_track_start(self, event: lavalink.TrackStartEvent) -> None:
-        logger.bind(track=True).info("{} - {} - {}", event.track.title, event.track.author, event.track.uri)
-        logger.info("Track started on guild {}", event.player.guild_id)
+        track_logger.info("%s - %s - %s", event.track.title, event.track.author, event.track.uri)
+        logger.info("Track started on guild %s", event.player.guild_id)
 
         assert isinstance(event.player, AlfredPlayer)
         # `show` replaces whatever view is up, which covers every way a track can start:
@@ -39,16 +43,12 @@ class LavalinkEventHandler:
 
     @lavalink.listener(lavalink.QueueEndEvent)
     async def on_queue_end(self, event: lavalink.QueueEndEvent) -> None:
-        logger.info("Queue finished on guild {}", event.player.guild_id)
+        logger.info("Queue finished on guild %s", event.player.guild_id)
 
         # Nothing left to control. `AlfredPlayer.stop` dispatches this too, so the view also
         # goes when the bot leaves voice; handling must stay idempotent.
         await self._now_playing.hide(event.player.guild_id)
         await self._presence.quiet()
-
-    @lavalink.listener(lavalink.TrackEndEvent)
-    async def on_track_end(self, event: lavalink.TrackEndEvent) -> None:
-        logger.debug("Track finished on guild {} ({})", event.player.guild_id, event.reason)
 
     @lavalink.listener(lavalink.TrackExceptionEvent)
     async def on_track_exception(self, event: lavalink.TrackExceptionEvent) -> None:
@@ -60,7 +60,7 @@ class LavalinkEventHandler:
         next song off the queue. No replay here, so a dead or dying stream moves forward instead
         of looping back onto itself.
         """
-        logger.warning("Track {!r} failed on guild {}: {}", event.track.title, event.player.guild_id, event.message)
+        logger.warning("Track %r failed on guild %s: %s", event.track.title, event.player.guild_id, event.message)
 
     @lavalink.listener(lavalink.TrackStuckEvent)
     async def on_track_stuck(self, event: lavalink.TrackStuckEvent) -> None:
@@ -73,25 +73,8 @@ class LavalinkEventHandler:
         stuck one - so this hook only reports it.
         """
         logger.warning(
-            "Track {!r} stuck for {}ms on guild {} - skipping",
+            "Track %r stuck for %sms on guild %s - skipping",
             event.track.title,
             event.threshold,
             event.player.guild_id,
-        )
-
-    @lavalink.listener(lavalink.NodeConnectedEvent)
-    async def on_node_connected(self, event: lavalink.NodeConnectedEvent) -> None:
-        logger.info("Connected to Lavalink node {!r}", event.node.name)
-
-    @lavalink.listener(lavalink.NodeDisconnectedEvent)
-    async def on_node_disconnected(self, event: lavalink.NodeDisconnectedEvent) -> None:
-        logger.warning("Disconnected from Lavalink node {!r} (code {}): {}", event.node.name, event.code, event.reason)
-
-    @lavalink.listener(lavalink.WebSocketClosedEvent)
-    async def on_websocket_closed(self, event: lavalink.WebSocketClosedEvent) -> None:
-        logger.warning(
-            "Voice websocket closed on guild {} (code {}): {}",
-            event.player.guild_id,
-            event.code,
-            event.reason,
         )

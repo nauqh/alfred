@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import logging
 from collections.abc import Iterable
 from collections.abc import Mapping
 from typing import Any
 
 import lavalink
-from loguru import logger
+
+logger = logging.getLogger(__name__)
 
 ALL_TYPES = ("track", "artist", "playlist", "album")
 
@@ -26,7 +28,6 @@ class SearchItem:
     author: str
     uri: str
     artwork_url: str | None
-    item_type: str | None
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> SearchItem:
@@ -37,7 +38,6 @@ class SearchItem:
             author=plugin_info.get("author") or "",
             uri=plugin_info.get("url") or info.get("url") or "",
             artwork_url=plugin_info.get("artworkUrl") or info.get("artworkUrl"),
-            item_type=plugin_info.get("type"),
         )
 
 
@@ -49,11 +49,6 @@ class LavaSearchResult:
     albums: tuple[SearchItem, ...] = ()
     artists: tuple[SearchItem, ...] = ()
     playlists: tuple[SearchItem, ...] = ()
-    texts: tuple[str, ...] = ()
-
-    @property
-    def is_empty(self) -> bool:
-        return not (self.tracks or self.albums or self.artists or self.playlists)
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> LavaSearchResult:
@@ -62,7 +57,6 @@ class LavaSearchResult:
             albums=_items(payload.get("albums")),
             artists=_items(payload.get("artists")),
             playlists=_items(payload.get("playlists")),
-            texts=tuple(payload.get("texts") or ()),
         )
 
 
@@ -94,7 +88,7 @@ async def load_search(
             params={"query": query, "types": ",".join(types)},
         )
     except (lavalink.LavalinkError, OSError, asyncio.TimeoutError) as e:
-        logger.warning("LavaSearch request failed on node {!r}: {}", node.name, e)
+        logger.warning("LavaSearch request failed on node %r: %s", node.name, e)
         return LavaSearchResult()
 
     # The plugin answers 204 (which lavalink.py surfaces as `True`) when it has no results.

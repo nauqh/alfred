@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
+import math
 from datetime import datetime
 from datetime import timezone
-from typing import Final
 
 import hikari
 import lavalink
 
 from alfred import constants
-from alfred.changelog import Entry
 from alfred.music import sources
 from alfred.music.player import AlfredPlayer
 from alfred.music.player import get_playlist
@@ -26,78 +25,6 @@ QUEUE_TRACK_TITLE_LIMIT = 80
 TRACK_AUTHOR_LIMIT = 80
 QUEUE_TITLE_LIMIT = 72
 
-# Discord's limits on what an embed may carry. Discord rejects the whole message if any one
-# is exceeded, and enforces the total separately from the per-part limits, which is why
-# `changelog_embeds` tracks a budget as well as clamping each field.
-MAX_EMBED_TOTAL = 6000
-MAX_FIELDS = 25
-MAX_FIELD_NAME = 256
-MAX_FIELD_VALUE = 1024
-
-
-def _clamp(text: str, limit: int) -> str:
-    """Cut `text` to `limit` characters, marking the cut so nothing reads as a bug."""
-    if len(text) <= limit:
-        return text
-    return text[: limit - 1].rstrip() + "…"
-
-
-def _log_timestamp(date: str | None) -> datetime | None:
-    """The entry's date as a timestamp, when it is an ISO date."""
-    if not date:
-        return None
-    try:
-        return datetime.strptime(date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-    except ValueError:
-        return None
-
-
-def changelog_embeds(entry: Entry) -> tuple[hikari.Embed, ...]:
-    """
-    The embed(s) behind the restart change-log post.
-
-    The title is brief - "🦇 Changelog - <date>" - with a footer counting the listed changes.
-    Each category of the newest entry becomes a field: `### Added` becomes
-    the field name, its bullet items the value. A log with more content than one embed can
-    carry is split across several: Discord caps an embed at 25 fields and 6000 characters
-    total, and no individual field may exceed 1024 characters, so a category longer than
-    that is itself split across numbered "part" fields.
-    """
-    title: Final = f"🦇 Changelog - {entry.date}" if entry.date else "🦇 Changelog"
-    timestamp = _log_timestamp(entry.date)
-    total = sum(len(category.items) for category in entry.categories)
-    embeds_: list[hikari.Embed] = []
-    budget = 0
-    current: hikari.Embed | None = None
-
-    def start() -> None:
-        nonlocal current, budget
-        embed = hikari.Embed(title=title, color=constants.COLOR_ALFRED, timestamp=timestamp)
-        # A brief footer: who posted, and how much is in the log. Overflow embeds say
-        # "continued" so the update count is not silently repeated.
-        text = "Alfred · continued" if embeds_ else "Alfred" + (f" · {total} updates" if total else "")
-        embed.set_footer(text, icon=constants.CHANGELOG_FOOTER_ICON)
-        embeds_.append(embed)
-        current = embed
-        budget = MAX_EMBED_TOTAL - len(title) - len(embed.description or "") - len(text)
-
-    for category in entry.categories:
-        name = _clamp(category.name or "Changes", MAX_FIELD_NAME)
-        value = "\n".join(f"- {item}" for item in category.items) or "..."
-        chunks = [value[i : i + MAX_FIELD_VALUE] for i in range(0, len(value), MAX_FIELD_VALUE)]
-
-        for index, chunk in enumerate(chunks):
-            part_name = name if index == 0 else f"{name} ({index + 1})"
-            cost = len(part_name) + len(chunk)
-            if current is None or len(current.fields) >= MAX_FIELDS or budget < cost:
-                start()
-            current.add_field(name=part_name, value=chunk, inline=False)
-            budget -= cost
-
-    if current is None:
-        start()
-    return tuple(embeds_)
-
 
 def _source_label(track: lavalink.AudioTrack) -> str:
     """Give the source a short, human-readable label for metadata rows."""
@@ -110,11 +37,11 @@ def _source_label(track: lavalink.AudioTrack) -> str:
     }.get(track.source_name, track.source_name.capitalize() or "Audio")
 
 
-def track_line(track: lavalink.AudioTrack, *, credit_author: bool = True) -> str:
+def track_line(track: lavalink.AudioTrack) -> str:
     """One compact queue line: linked title, length, artist and requester."""
     title = trim(track.title, QUEUE_TRACK_TITLE_LIMIT)
     line = f"[{title}]({track.uri}) `{track_length(track)}`"
-    if credit_author and track.source_name in sources.CREDITED_SOURCE_NAMES and track.author:
+    if track.source_name in sources.CREDITED_SOURCE_NAMES and track.author:
         line += f" • {trim(track.author, TRACK_AUTHOR_LIMIT)}"
     if track.requester is not None:
         line += f" · <@{track.requester}>"
@@ -161,7 +88,7 @@ def queue_pages(track_count: int, page_size: int) -> int:
     """
     if page_size <= 0:
         return 1
-    return max(1, -(-track_count // page_size))
+    return max(1, math.ceil(track_count / page_size))
 
 
 def queue(

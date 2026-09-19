@@ -19,15 +19,17 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import logging
 
 import hikari
 import lavalink
 import lightbulb
-from loguru import logger
 
 from alfred.music.player import AlfredPlayer
 from alfred.ui import embeds
 from alfred.ui.menus import NowPlayingMenu
+
+logger = logging.getLogger(__name__)
 
 # How often the progress bar is re-drawn. The bar is ten blocks wide, so a block is a tenth
 # of the track - on a three minute song that is 18 seconds, and refreshing much faster only
@@ -78,13 +80,13 @@ class NowPlayingManager:
             )
         except hikari.HikariError as e:
             buttons.cancel()
-            logger.warning("Failed to post the now playing view on guild {}: {}", player.guild_id, e)
+            logger.warning("Failed to post the now playing view on guild %s: %s", player.guild_id, e)
             return
 
         refresh = asyncio.create_task(self._refresh(player, player.text_channel_id, message.id))
 
         self._views[player.guild_id] = _View(player.text_channel_id, message.id, buttons, refresh)
-        logger.info("Posted the now playing view on guild {}", player.guild_id)
+        logger.info("Posted the now playing view on guild %s", player.guild_id)
 
     async def _refresh(self, player: AlfredPlayer, channel_id: int, message_id: int) -> None:
         """Re-draw the view's progress bar on a timer, until `hide` cancels this."""
@@ -116,12 +118,12 @@ class NowPlayingManager:
         except (hikari.NotFoundError, hikari.ForbiddenError):
             # The message was deleted by hand, or the bot lost the channel. Nothing is left to
             # refresh, and every later tick would raise exactly the same error.
-            logger.debug("Stopped refreshing the now playing view on guild {}", player.guild_id)
+            logger.debug("Stopped refreshing the now playing view on guild %s", player.guild_id)
             return False
         except hikari.HikariError as e:
             # A transient REST failure. The next tick redraws from the player anyway, so a
             # missed frame costs nothing worth retrying for.
-            logger.debug("Failed to refresh the now playing view on guild {}: {}", player.guild_id, e)
+            logger.debug("Failed to refresh the now playing view on guild %s: %s", player.guild_id, e)
 
         return True
 
@@ -142,4 +144,4 @@ class NowPlayingManager:
         # NotFound: someone deleted the message by hand. Either way the view is gone.
         with contextlib.suppress(hikari.NotFoundError, hikari.ForbiddenError):
             await self._bot.rest.delete_message(view.channel_id, view.message_id)
-        logger.info("Deleted the now playing view on guild {}", guild_id)
+        logger.info("Deleted the now playing view on guild %s", guild_id)

@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 import random
-import re
 from typing import Any
 
 import hikari
 import lavalink
-from loguru import logger
 
 from alfred import errors
 from alfred.music import sources
@@ -17,7 +16,7 @@ from alfred.music.player import AlfredPlayer
 from alfred.music.player import PlaylistRef
 from alfred.music.player import set_playlist
 
-URL_RX = re.compile(r"https?://(?:www\.)?.+")
+logger = logging.getLogger(__name__)
 
 RICH_PLAYLIST_TYPES = ("artist", "album", "playlist")
 
@@ -52,6 +51,11 @@ class Queued:
     @property
     def count(self) -> int:
         return len(self.tracks)
+
+
+def _is_url(query: str) -> bool:
+    """Whether a query should be loaded as-is rather than searched for."""
+    return query.startswith(("http://", "https://"))
 
 
 def get_player(lavalink_client: lavalink.Client, guild_id: int) -> AlfredPlayer | None:
@@ -90,13 +94,13 @@ async def join(
     try:
         player = lavalink_client.player_manager.create(guild_id=guild_id)
     except lavalink.LavalinkError as e:
-        logger.error("Failed to create player on guild {}: {}", guild_id, e)
+        logger.error("Failed to create player on guild %s: %s", guild_id, e)
         raise errors.NoNodesAvailable from e
 
     assert isinstance(player, AlfredPlayer)
 
     await bot.update_voice_state(guild_id, channel_id, self_deaf=True)
-    logger.info("Connected to voice channel {} on guild {}", channel_id, guild_id)
+    logger.info("Connected to voice channel %s on guild %s", channel_id, guild_id)
 
     return player, channel_id
 
@@ -116,7 +120,7 @@ async def resolve(
     if not query:
         raise errors.NoResults
 
-    if not URL_RX.match(query):
+    if not _is_url(query):
         query = source.query(query)
 
     return await _load(lavalink_client, query)
@@ -132,12 +136,12 @@ async def _load(lavalink_client: lavalink.Client, identifier: str) -> lavalink.L
     try:
         result = await lavalink_client.get_tracks(identifier)
     except lavalink.LavalinkError as e:
-        logger.error("Track lookup failed for {!r}: {}", identifier, e)
+        logger.error("Track lookup failed for %r: %s", identifier, e)
         raise errors.NoResults("Could not reach the audio server - try again in a moment.") from e
 
     if result.load_type is lavalink.LoadType.ERROR:
         message = result.error.message if result.error is not None else "unknown error"
-        logger.warning("Lavalink failed to load {!r}: {}", identifier, message)
+        logger.warning("Lavalink failed to load %r: %s", identifier, message)
         raise errors.NoResults(f"Could not load that query: {message}")
 
     if result.load_type is lavalink.LoadType.EMPTY or not result.tracks:
@@ -233,7 +237,7 @@ def _add_playlist(
     result_type = plugin_info.get("type") if plugin_info.get("type") in RICH_PLAYLIST_TYPES else "playlist"
 
     name = result.playlist_info.name or plugin_info.get("author") or "Unknown"
-    url = plugin_info.get("url") or (query if query and URL_RX.match(query) else None)
+    url = plugin_info.get("url") or (query if query and _is_url(query) else None)
     playlist = PlaylistRef(name=name, url=url)
 
     tracks = list(result.tracks)

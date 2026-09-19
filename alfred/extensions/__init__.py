@@ -8,5 +8,4 @@ EXTENSIONS: Final = (
     "alfred.extensions.general",
     "alfred.extensions.play",
     "alfred.extensions.queue",
-    "alfred.extensions.admin",
 )

@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import logging
+
 import hikari
 import lavalink
 import lightbulb
-from loguru import logger
 
 from alfred.extensions import hooks
 from alfred.music import service
 from alfred.ui import responses
+
+logger = logging.getLogger(__name__)
 
 loader = lightbulb.Loader()
 
@@ -80,50 +83,25 @@ async def _react_to_voice_state(
     lavalink_client: lavalink.Client,
     event: hikari.VoiceStateUpdateEvent,
 ) -> None:
-    """
-    Keep the player in step with who is listening.
-
-    The bot leaves when it is alone, and - when one person is listening - follows their
-    deafen/undeafen as pause/resume.
-    """
+    """Stop the player when the bot is disconnected, and leave a channel once it is empty."""
     me = bot.get_me()
     if me is None:
         return
 
     guild_id = event.guild_id
-    player = service.get_player(lavalink_client, guild_id)
     bot_channel_id = service.voice_channel_of(bot, guild_id, me.id)
 
     if event.state.user_id == me.id:
+        player = service.get_player(lavalink_client, guild_id)
         if bot_channel_id is None and player is not None:
-            logger.info("Disconnected from voice on guild {}", guild_id)
+            logger.info("Disconnected from voice on guild %s", guild_id)
             await player.stop()
         return
 
     if bot_channel_id is None:
         return
 
-    old_state, new_state = event.old_state, event.state
-    left_bot_channel = old_state is not None and old_state.channel_id == bot_channel_id
-    in_bot_channel = new_state.channel_id == bot_channel_id
-    if not (left_bot_channel or in_bot_channel):
-        return
-
     states = bot.cache.get_voice_states_view_for_guild(guild_id)
-    present = [state for state in states.values() if state.channel_id == bot_channel_id]
-
-    if len(present) == 1:  # Just the bot.
-        logger.info("Left empty voice channel on guild {}", guild_id)
+    if not any(state.channel_id == bot_channel_id and state.user_id != me.id for state in states.values()):
+        logger.info("Left empty voice channel on guild %s", guild_id)
         await bot.update_voice_state(guild_id, None)
-        return
-
-    # Deafen-to-pause only makes sense while a single person is listening.
-    if len(present) != 2 or player is None or old_state is None or not in_bot_channel:
-        return
-
-    if old_state.is_self_deafened and not new_state.is_self_deafened and player.paused:
-        await player.set_pause(False)
-        logger.info("Resumed playback on guild {} - listener undeafened", guild_id)
-    elif not old_state.is_self_deafened and new_state.is_self_deafened and player.is_playing and not player.paused:
-        await player.set_pause(True)
-        logger.info("Paused playback on guild {} - listener deafened", guild_id)

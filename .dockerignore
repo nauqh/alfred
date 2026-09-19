@@ -18,8 +18,9 @@ logs/
 
 tests/
 docs/
-# The change log the bot posts on restart. Mounted by docker-compose, so it is kept out of
-# the image - an edit must reach the bot without a rebuild.
+landing/
+.github/
+scripts/
 CHANGELOG.md
 .pytest_cache/
 .ruff_cache/

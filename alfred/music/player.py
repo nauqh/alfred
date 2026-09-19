@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import logging
 
 import lavalink
-from loguru import logger
+
+logger = logging.getLogger(__name__)
 
 PLAYLIST_KEY = "alfred.playlist"
 
@@ -40,21 +42,6 @@ class AlfredPlayer(lavalink.DefaultPlayer):
         # that queued a track.
         self.text_channel_id: int | None = None
 
-    async def skip(self) -> lavalink.AudioTrack | None:
-        """Play the next track, returning the one that was skipped."""
-        skipped = self.current
-        await self.play()
-        return skipped
-
-    def remove(self, index: int) -> lavalink.AudioTrack:
-        """
-        Remove a track from the queue by index.
-
-        Raises:
-            IndexError: If there is no track at that index.
-        """
-        return self.queue.pop(index)
-
     async def stop(self) -> None:
         """
         Stop playback and reset the player: queue, loop and shuffle.
@@ -65,7 +52,7 @@ class AlfredPlayer(lavalink.DefaultPlayer):
         try:
             await super().stop()
         except (lavalink.LavalinkError, OSError, asyncio.TimeoutError) as e:
-            logger.warning("Failed to stop player on guild {} cleanly: {}", self.guild_id, e)
+            logger.warning("Failed to stop player on guild %s cleanly: %s", self.guild_id, e)
             self.current = None
 
         self.queue.clear()

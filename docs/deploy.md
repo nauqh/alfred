@@ -103,14 +103,11 @@ started successfully in approx 2 seconds
 `restart: unless-stopped` combined with `systemctl enable docker` restores the
 stack automatically after a reboot.
 
-Two optional variables are worth setting on a real deploy, since both default to
-off and neither announces its absence:
-
-- `LOG_DIR=logs` writes `bot.log` and `track.log` into the mounted `./logs`
-  directory. Left unset, the mount in `docker-compose.yml` is inert and
-  `docker compose logs` is the only record.
-- `STARTUP_CHANNEL_ID` is where the bot posts the change log when it restarts,
-  which is how a deploy announces itself. Unset, restarts are silent.
+One optional variable is worth setting on a real deploy, since it defaults to
+off and does not announce its absence: `LOG_DIR=logs` writes `bot.log` and
+`track.log` into the mounted `./logs` directory, both rotating at midnight and
+keeping ten days. Left unset, the mount in `docker-compose.yml` is inert and
+`docker compose logs` is the only record.
 
 ## 4. Updating
 
@@ -119,7 +116,6 @@ Deploys are manual. The appropriate command depends on what changed:
 | Changed | Command |
 |---|---|
 | Code | `git pull && docker compose up -d --build bot` |
-| Change log (`CHANGELOG.md`) | `git pull && docker compose restart bot` - the file is mounted in, so a new entry reaches the bot without a rebuild |
 | `.env` | `docker compose up -d` |
 | `lavalink/application.yml` | `docker compose restart lavalink` (bind mount) |
 
@@ -183,8 +179,8 @@ breaks again in the future, repeat the device flow.
 | | |
 |---|---|
 | `docker compose logs -f` | All logs - one line per track, one per command |
-| `/stats` in Discord | Node uptime, players, memory, CPU - owner only |
-| `/info` in Discord | Node version, plugins, sources |
+| `curl -H "Authorization: $LAVALINK_PASSWORD" localhost:2333/v4/stats` | Node uptime, players, memory, CPU |
+| `curl -H "Authorization: $LAVALINK_PASSWORD" localhost:2333/v4/info` | Node version, plugins, sources |
 
 `Authorization missing for 127.0.0.1 on GET /version` every ten seconds is the
 healthcheck, which deliberately omits the password - a 401 still confirms the

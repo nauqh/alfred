@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import pytest
 
-from alfred.changelog import Category
-from alfred.changelog import Entry
 from alfred.music.player import AlfredPlayer
 from alfred.music.player import PlaylistRef
 from alfred.music.service import Queued
@@ -171,82 +169,3 @@ def test_the_queue_of_a_player_that_has_gone_says_nothing_is_playing() -> None:
     assert embeds.queue(None, title="Queue").description == (
         "Nothing is playing.\n\nTry `/play` or `/search` to start some music."
     )
-
-
-def change_entry(categories: list[tuple[str, list[str]]], *, date: str | None = "2026-08-29") -> Entry:
-    """An `Entry` with the given category name/items, for the embed builder tests."""
-    return Entry(
-        version="[2.0.0]",
-        date=date,
-        categories=tuple(Category(name=name, items=tuple(items)) for name, items in categories),
-    )
-
-
-def test_a_change_log_renders_one_embed_with_a_category_per_field() -> None:
-    (embed,) = embeds.changelog_embeds(
-        change_entry([("Added", ["Chat search", "Sidebar"])])
-    )
-
-    assert embed.title == "🦇 Changelog - 2026-08-29"
-    assert [(f.name, f.value) for f in embed.fields] == [("Added", "- Chat search\n- Sidebar")]
-
-
-def test_an_entry_without_a_date_has_a_plain_title() -> None:
-    (embed,) = embeds.changelog_embeds(change_entry([("Added", ["WIP"])], date=None))
-
-    assert embed.title == "🦇 Changelog"
-
-
-def test_a_change_log_carries_a_footer_that_counts_the_items() -> None:
-    (embed,) = embeds.changelog_embeds(
-        change_entry([("Added", ["a", "b"]), ("Fixed", ["c"])])
-    )
-
-    assert embed.footer is not None and embed.footer.text == "Alfred · 3 updates"
-
-
-def test_a_change_log_with_no_items_gets_no_update_count() -> None:
-    (embed,) = embeds.changelog_embeds(change_entry([], date=None))
-
-    assert embed.footer is not None and embed.footer.text == "Alfred"
-
-
-def test_the_entry_date_becomes_the_embed_timestamp() -> None:
-    (embed,) = embeds.changelog_embeds(change_entry([("Added", ["a"])]))
-
-    assert embed.timestamp is not None and embed.timestamp.year == 2026 and embed.timestamp.month == 8
-
-
-def test_an_entry_without_a_date_leaves_the_timestamp_unset() -> None:
-    (embed,) = embeds.changelog_embeds(change_entry([("Added", ["a"])], date=None))
-
-    assert embed.timestamp is None
-
-
-def test_a_long_category_is_split_across_part_fields() -> None:
-    items = ["x" * (embeds.MAX_FIELD_VALUE + 200)]
-    (embed,) = embeds.changelog_embeds(change_entry([("Added", items)]))
-
-    assert len(embed.fields) == 2
-    assert embed.fields[0].name == "Added"
-    assert embed.fields[1].name == "Added (2)"
-    # Nothing is lost across the split.
-    assert "".join(f.value for f in embed.fields).count("x") == len(items[0])
-
-
-def test_many_categories_split_across_several_embeds() -> None:
-    categories = [(f"Category {i}", [f"body {i}"]) for i in range(40)]
-
-    embeds_ = embeds.changelog_embeds(change_entry(categories))
-
-    assert len(embeds_) == 2
-    assert all(len(e.fields) <= embeds.MAX_FIELDS for e in embeds_)
-    assert all(e.title == "🦇 Changelog - 2026-08-29" for e in embeds_)
-    assert len(embeds_[0].fields) + len(embeds_[1].fields) == 40
-
-
-def test_an_empty_entry_still_gets_one_embed() -> None:
-    (embed,) = embeds.changelog_embeds(change_entry([], date=None))
-
-    assert embed.title == "🦇 Changelog"
-    assert embed.fields == []

@@ -8,6 +8,8 @@ All notable changes to the household are recorded here, sir - one keeps the mast
 
 - Conversation. One no longer answers when addressed; the household attends to music alone
 - The week's report, and the ledger of plays that informed it
+- The log posted to the channel upon restart, and the household inventory `/stats` and `/info`
+- Pausing when the last listener covers their ears; the card's own button remains
 
 ### Changed
 

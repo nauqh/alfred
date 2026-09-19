@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 
 import hikari
 import lavalink
 import lightbulb
-from loguru import logger
 
 from alfred import constants
 from alfred import errors
@@ -18,6 +18,8 @@ from alfred.ui import embeds
 from alfred.ui import responses
 from alfred.ui.formatting import trim
 from alfred.ui.menus import QueuePanelMenu
+
+logger = logging.getLogger(__name__)
 
 loader = lightbulb.Loader()
 
@@ -36,8 +38,7 @@ class Now(
         assert ctx.guild_id is not None
 
         player = service.get_player(lavalink_client, ctx.guild_id)
-        if player is None:
-            raise errors.PlayerNotPlaying
+        assert player is not None
 
         await responses.respond(ctx, embed=embeds.now_playing(player))
 
@@ -54,10 +55,10 @@ class Skip(
         assert ctx.guild_id is not None
 
         player = service.get_player(lavalink_client, ctx.guild_id)
-        if player is None:
-            raise errors.PlayerNotPlaying
+        assert player is not None
 
-        skipped = await player.skip()
+        skipped = player.current
+        await player.play()
         description = (
             f"⏭️ Skipped: [{skipped.title}]({skipped.uri})" if skipped is not None else "⏭️ Skipped the current track"
         )
@@ -74,10 +75,6 @@ class Queue(
     @lightbulb.invoke
     async def invoke(self, ctx: lightbulb.Context, lavalink_client: lavalink.Client = lightbulb.di.INJECTED) -> None:
         assert ctx.guild_id is not None
-
-        player = service.get_player(lavalink_client, ctx.guild_id)
-        if player is None:
-            raise errors.PlayerNotPlaying
 
         # The player controls live on the now playing view, which follows the current track.
         # The only buttons here move this message's window over the queue.
@@ -99,7 +96,7 @@ async def _run_panel(ctx: lightbulb.Context, menu: QueuePanelMenu, response_id: 
 
     `attach` blocks until the timeout rather than running in the background: it discards the
     menu from the client's registry in a `finally`, which `attach_persistent` never does - see
-    the note in `alfred.ui.nowplaying` and the risk recorded in `docs/prd.md`.
+    the note in `alfred.ui.nowplaying`.
 
     The embed is deliberately left behind. Buttons that no longer answer are worse than none,
     but the page someone stopped on is still a readable snapshot of the queue.
@@ -112,7 +109,7 @@ async def _run_panel(ctx: lightbulb.Context, menu: QueuePanelMenu, response_id: 
     except (hikari.NotFoundError, hikari.ForbiddenError):
         pass  # Someone deleted the message, or the bot lost the channel. Either way the buttons are gone.
     except hikari.HikariError as e:
-        logger.debug("Failed to retire the queue panel's buttons: {}", e)
+        logger.debug("Failed to retire the queue panel's buttons: %s", e)
 
 
 @lightbulb.di.with_di
@@ -153,11 +150,10 @@ class Remove(
         assert ctx.guild_id is not None
 
         player = service.get_player(lavalink_client, ctx.guild_id)
-        if player is None:
-            raise errors.PlayerNotPlaying
+        assert player is not None
 
         try:
-            removed = player.remove(self.track - 1)
+            removed = player.queue.pop(self.track - 1)
         except IndexError:
             raise errors.AlfredError("There is no track at that position in the queue.") from None
 

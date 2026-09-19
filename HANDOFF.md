@@ -1,31 +1,37 @@
 # Handoff
 
-Working notes for picking this up cold. Not documentation - `docs/` and the code comments
-are that. This is the context that would otherwise have to be re-derived.
+Working notes for picking this up cold. Not documentation - `README.md`, `docs/deploy.md` and
+the code comments are that. This is the context that would otherwise have to be re-derived.
 
-Last updated: 2026-09-18.
+Last updated: 2026-09-20.
 
 ## Where things stand
 
-Alfred plays music. Nothing else. Nine commands in four extensions.
+Alfred plays music. Nothing else. Seven commands in three extensions.
 
 | | State |
 |---|---|
 | Play / search / now / queue / skip / remove / leave | Working |
-| `/stats` / `/info` | Working |
 | Hearing you | Not possible - see below |
-| The change log posted on restart | Working, off unless `STARTUP_CHANNEL_ID` is set |
+| `/stats` and `/info` (node diagnostics) | **Removed 2026-09-20.** Scope decision, not a defect |
+| The change log posted on restart | **Removed 2026-09-20.** Same decision |
+| Deafen-to-pause | **Removed 2026-09-20.** The card's Pause button is the only manual path |
 | Answering @mentions (LLM chat) | **Removed 2026-09-18.** Scope decision, not a defect |
 | The Sunday recap and play history | **Removed 2026-09-18.** Same decision |
 | Speaking (`/say`, TTS) | Removed 2026-08-20 and not back. The node no longer enables `flowerytts` |
 
-**Do not rebuild either of the removed features without being asked.** Both worked; both
-were cut on 2026-09-18 because this is a music bot. The chat package answered @mentions over
-OpenRouter and could run five commands by tool call; the recap posted a Sunday summary off a
-SQLite play history. Their code, tests, dependencies (`aiohttp`, `tzdata`), the `data/`
-volume and the `GUILD_MESSAGES` intent all went with them.
+**Do not rebuild any of the removed features without being asked.** They all worked; they
+were cut because this is a music bot. The chat package answered @mentions over OpenRouter and
+could run five commands by tool call; the recap posted a Sunday summary off a SQLite play
+history. Their code, tests, dependencies (`aiohttp`, `tzdata`), the `data/` volume and the
+`GUILD_MESSAGES` intent all went with them.
 
-The history is where to look if either is wanted back rather than rewritten. Note the
+The 2026-09-20 pass also cut what nothing read: multi-node Lavalink config (`LAVALINK_NODES`),
+the `loguru` dependency (the stdlib does rotation and the bridge is gone), `docs/design.md`,
+`docs/prd.md` and `docs/ui_design.md` - what was load-bearing in the first is now a section in
+`README.md`. Node health is read with `curl` against `/v4/stats`, per `docs/deploy.md`.
+
+The history is where to look if any of them is wanted back rather than rewritten. Note the
 precedent: the talking feature set was cut on 2026-08-20 and a narrower piece of it returned
 on 2026-08-24 (`9fdcd98`), so a removal note in `git log` does not by itself tell you what is
 live. What has never come back is voice - no `/say`, no TTS, no hearing.
@@ -83,6 +89,9 @@ Consequences that were checked and are not worth rechecking:
   the bot, with `LAVALINK_HOST=127.0.0.1`.
 - **Nothing is written to disk but the log.** No database, no state file, no scheduled task.
   A restart drops the queue, which is intended.
+- **Logging is the standard library**, configured once in `alfred/log_config.py`. Modules use
+  `logging.getLogger(__name__)` and `%s` placeholders; played tracks go to `log_config.track_logger`,
+  which is the only thing in `track.log`. Files appear only when `LOG_DIR` is set.
 
 ## Constraints to keep
 

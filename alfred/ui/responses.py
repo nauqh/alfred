@@ -7,15 +7,15 @@ uses for player feedback are scheduled here instead.
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 
 import hikari
 import lightbulb
-from loguru import logger
 
-DEFAULT_DELETE_AFTER = 60.0
+logger = logging.getLogger(__name__)
 
-_delete_after = DEFAULT_DELETE_AFTER
+_delete_after = 60.0
 _pending: set[asyncio.Task[None]] = set()
 
 
@@ -38,11 +38,6 @@ async def respond(ctx: lightbulb.Context, **kwargs: Any) -> None:
     task.add_done_callback(_pending.discard)
 
 
-async def respond_error(ctx: lightbulb.Context, message: str) -> None:
-    """Reply to a command with an ephemeral error message."""
-    await ctx.respond(message, ephemeral=True)
-
-
 async def _delete_later(ctx: lightbulb.Context, response_id: hikari.Snowflakeish, delay: float) -> None:
     await asyncio.sleep(delay)
     try:
@@ -50,4 +45,4 @@ async def _delete_later(ctx: lightbulb.Context, response_id: hikari.Snowflakeish
     except (hikari.NotFoundError, hikari.ForbiddenError):
         pass
     except hikari.HikariError as e:
-        logger.debug("Failed to clean up response {}: {}", response_id, e)
+        logger.debug("Failed to clean up response %s: %s", response_id, e)

@@ -29,12 +29,7 @@ def test_items_prefer_plugin_info() -> None:
         }
     )
 
-    assert (item.title, item.author, item.uri, item.item_type) == (
-        "Greatest Hits",
-        "Artist",
-        "https://example.com/album",
-        "album",
-    )
+    assert (item.title, item.author, item.uri) == ("Greatest Hits", "Artist", "https://example.com/album")
 
 
 def test_items_survive_a_payload_with_nothing_in_it() -> None:
@@ -50,7 +45,6 @@ def test_a_full_response_is_parsed() -> None:
             "albums": [{"info": {"name": "Album"}, "pluginInfo": {"url": "u"}}],
             "artists": [{"info": {"name": "Artist"}, "pluginInfo": {"url": "u"}}],
             "playlists": [{"info": {"name": "Playlist"}, "pluginInfo": {"url": "u"}}],
-            "texts": ["suggestion"],
         }
     )
 
@@ -60,19 +54,19 @@ def test_a_full_response_is_parsed() -> None:
         "Artist",
         "Playlist",
     )
-    assert result.texts == ("suggestion",)
-    assert result.is_empty is False
 
 
 def test_an_absent_section_is_empty_rather_than_missing() -> None:
     result = LavaSearchResult.from_payload({"tracks": [TRACK_PAYLOAD]})
 
     assert result.albums == ()
-    assert result.is_empty is False
+    assert len(result.tracks) == 1
 
 
-def test_an_empty_response_reports_itself_empty() -> None:
-    assert LavaSearchResult.from_payload({}).is_empty is True
+def test_an_empty_response_parses_to_empty_sections() -> None:
+    result = LavaSearchResult.from_payload({})
+
+    assert (result.tracks, result.albums, result.artists, result.playlists) == ((), (), (), ())
 
 
 class FakeNode:
@@ -104,7 +98,7 @@ async def test_a_204_from_the_plugin_reads_as_no_results() -> None:
     # lavalink.py surfaces "204 No Content" as `True`.
     result = await search.load_search(FakeNode(True), "spsearch:nothing")  # type: ignore[arg-type]
 
-    assert result.is_empty is True
+    assert result.tracks == ()
 
 
 @pytest.mark.asyncio
@@ -113,4 +107,4 @@ async def test_a_failed_request_reads_as_no_results() -> None:
 
     result = await search.load_search(FakeNode(lavalink.ClientError("boom")), "spsearch:x")  # type: ignore[arg-type]
 
-    assert result.is_empty is True
+    assert result.tracks == ()

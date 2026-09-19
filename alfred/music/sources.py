@@ -17,8 +17,6 @@ class Source:
     display_name: str
     search_prefix: str
     source_name: str
-    playable: bool = True
-    """Whether Lavalink can stream this source directly, rather than mirroring it onto another one."""
 
     def query(self, query: str) -> str:
         """Build a Lavalink search query for this source."""
@@ -26,9 +24,8 @@ class Source:
 
 
 YOUTUBE: Final = Source("YouTube", "ytsearch", "youtube")
-YOUTUBE_MUSIC: Final = Source("YouTube Music", "ytmsearch", "youtube")
 DEEZER: Final = Source("Deezer", "dzsearch", "deezer")
-SPOTIFY: Final = Source("Spotify", "spsearch", "spotify", playable=False)
+SPOTIFY: Final = Source("Spotify", "spsearch", "spotify")
 
 SEARCHABLE: Final = (SPOTIFY, DEEZER, YOUTUBE)
 """Sources offered by the ``source`` option of ``/search``."""

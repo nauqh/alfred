@@ -19,8 +19,7 @@ it what to do.
 - `/search` with live autocomplete for tracks, artists, albums and playlists via [LavaSearch](https://github.com/topi314/LavaSearch)
 - Now playing card with Pause, Skip and Loop buttons, and a progress bar that keeps moving
 - `/queue` pages through the whole queue, ten tracks at a time
-- The change log posted to the channel when the bot restarts, so a deploy announces itself
-- Nothing else is unprompted - every other message is a reply to a command
+- Nothing is unprompted - every message is a reply to a command, or the now playing card
 
 ## Quick start
 
@@ -60,7 +59,7 @@ uv run alfred                                 # second terminal, LAVALINK_HOST=1
 
 ## Commands
 
-Nine commands; `/play` connects to your voice channel on its own - there is
+Seven commands; `/play` connects to your voice channel on its own - there is
 no `/join`.
 
 | Group | Commands | |
@@ -68,14 +67,13 @@ no `/join`.
 | **Music** | `/play` `/search` | add a track, playlist or URL to the queue |
 | **Queue** | `/now` `/queue` `/skip` `/remove` | the current track, the list, move past a track, drop something |
 | **Voice** | `/leave` | disconnect and clear |
-| **Owner** | `/stats` `/info` | node health, and what the node is running |
 
 | | |
 |---|---|
 | Loop and shuffle are **options**, not commands | Set once as tracks are queued. Loop is also a button |
 | `/search` narrows by source and type | Track, artist, album or playlist |
 | `/queue` and `/now` need no voice check | Reading what is playing is open to anyone, including paging through the queue; acting on the player takes the bot's voice channel *and* a claim on the track - whoever queued it, or the bot's owner. `/skip` and the buttons apply the same rule |
-| There is no `/pause` | Deafening yourself pauses playback when you are the only listener, and undeafening resumes it. The panel's Pause button is the only manual path |
+| There is no `/pause` | The now playing card's Pause button is the only path |
 | The bot leaves when no one is left in the channel | Queue state is irrelevant - it stays even with nothing queued |
 
 ### The now playing view
@@ -137,27 +135,31 @@ Everything is read from the environment; `.env` is loaded if present.
 `cp .env.example .env` gives working defaults, so only two variables have no
 default: `DISCORD_TOKEN` and `CIPHER_PASSWORD`.
 
-Two worth knowing:
+One worth knowing: `DEFAULT_GUILDS` registers commands to named guilds while
+developing. Guild commands appear instantly; global ones take up to an hour to
+propagate.
 
-- `LAVALINK_NODES` - a JSON array of node objects, for more than one node.
-  Partial objects fall back to the single-node variables:
+Set `LOG_DIR` and the bot also writes `bot.log` and `track.log`, both rotating
+at midnight and keeping ten days.
 
-  ```sh
-  LAVALINK_NODES='[{"name": "primary", "region": "asia"}, {"name": "backup", "host": "10.0.0.4"}]'
-  ```
+## How it fits together
 
-- `DEFAULT_GUILDS` - register commands to named guilds while developing. Guild
-  commands appear instantly; global ones take up to an hour to propagate.
+`alfred.bot` builds the hikari bot, the lightbulb client and the Lavalink client,
+and hands the last two to everything else through lightbulb's DI registry. From
+there the tree splits three ways, and the split is the point: nothing in `music/`
+imports anything in `ui/`.
 
-### The restart log
-
-| Variable | Effect |
+| | |
 |---|---|
-| `STARTUP_CHANNEL_ID` | Where the bot posts the newest `CHANGELOG.md` entry when it restarts. Unset, it restarts silently |
+| `alfred/music/` | Talking to Lavalink: resolving queries, filling the queue, the player subclass. Returns plain values, never embeds |
+| `alfred/ui/` | Everything Discord sees: embeds, buttons, and the now playing view that follows the current track |
+| `alfred/extensions/` | The slash commands, and the checks they run first as lightbulb hooks |
 
-`CHANGELOG.md` is mounted into the container rather than baked into the image, so
-editing it and running `docker compose restart bot` posts the new entry without a
-rebuild.
+Two rules hold the rest together. Player state is never cached - every button
+press and every redraw looks the player up again, so a panel left open acts on
+what is playing now. And the now playing view is driven by Lavalink's track
+events rather than by the commands, so it follows the player however the track
+changed.
 
 ## Development
 
@@ -183,10 +185,7 @@ only. `--frozen` fails the build when the lock has drifted, so a forgotten
 | | |
 |---|---|
 | [docs/deploy.md](docs/deploy.md) | Run it on a VPS: box prep, secrets, updates, YouTube OAuth |
-| [docs/design.md](docs/design.md) | How it is put together |
-| [docs/prd.md](docs/prd.md) | Product requirements and acceptance criteria |
 | [HANDOFF.md](HANDOFF.md) | Working notes: what is settled, what not to re-open |
-| [docs/ui_design.md](docs/ui_design.md) | The 2026-08 view-design exploration, kept as a record |
 
 ## Credits
 

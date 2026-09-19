@@ -37,8 +37,8 @@ def _activity_names(bot: FakeBot) -> list[str]:
 
 
 @pytest.mark.asyncio
-async def test_start_sets_the_default_activity(presence: Presence, bot: FakeBot) -> None:
-    await presence.start()
+async def test_quiet_sets_the_default_activity(presence: Presence, bot: FakeBot) -> None:
+    await presence.quiet()
 
     assert bot.activities[-1].type is hikari.ActivityType.LISTENING
     assert _activity_names(bot) == [constants.ACTIVITY_NAME]
@@ -48,7 +48,7 @@ async def test_start_sets_the_default_activity(presence: Presence, bot: FakeBot)
 async def test_a_track_starting_overshadows_the_default(
     presence: Presence, bot: FakeBot
 ) -> None:
-    await presence.start()
+    await presence.quiet()
     await presence.track_started(make_track("Never Gonna Give You Up"))
 
     assert _activity_names(bot) == [constants.ACTIVITY_NAME, "Never Gonna Give You Up - Author"]

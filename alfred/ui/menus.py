@@ -14,10 +14,11 @@ and steps aside.
 
 from __future__ import annotations
 
+import logging
+
 import hikari
 import lavalink
 import lightbulb
-from loguru import logger
 
 from alfred import constants
 from alfred import errors
@@ -26,9 +27,7 @@ from alfred.music import service
 from alfred.music.player import AlfredPlayer
 from alfred.ui import embeds
 
-QUEUE_PREV_LABEL = "Prev"
-QUEUE_NEXT_LABEL = "Next"
-
+logger = logging.getLogger(__name__)
 
 def turn_away_message(mention: str, label: str) -> str:
     """The butler's refusal, for a press the presser had no right to make."""
@@ -74,24 +73,15 @@ class NowPlayingMenu(lightbulb.components.Menu):
         self._lavalink = lavalink_client
         self._guild_id = guild_id
 
-        self.pause_button = self.add_interactive_button(
-            self._pause_style(),
-            self.on_pause,
-            label=self._pause_label(),
-            emoji=self._pause_emoji(),
-        )
+        self.pause_button = self.add_interactive_button(hikari.ButtonStyle.SECONDARY, self.on_pause, label="Pause")
         self.skip_button = self.add_interactive_button(
             hikari.ButtonStyle.SECONDARY,
             self.on_skip,
             label="Skip",
             emoji=constants.EMOJI_SKIP,
         )
-        self.loop_button = self.add_interactive_button(
-            self._loop_style(),
-            self.on_loop,
-            label=self._loop_label(),
-            emoji=self._loop_emoji(),
-        )
+        self.loop_button = self.add_interactive_button(hikari.ButtonStyle.SECONDARY, self.on_loop, label="Loop: off")
+        self.refresh_labels()
         if track_url and track_url.startswith(("http://", "https://")):
             self.add_link_button(track_url, label="Link", emoji=constants.EMOJI_LINK)
 
@@ -103,43 +93,23 @@ class NowPlayingMenu(lightbulb.components.Menu):
         """The panel this menu sits under: the current track and its progress."""
         return embeds.now_playing(self.player())
 
-    def _pause_label(self) -> str:
-        player = self.player()
-        return "Resume" if player is not None and player.paused else "Pause"
-
-    def _pause_emoji(self) -> str:
-        player = self.player()
-        return constants.EMOJI_RESUME if player is not None and player.paused else constants.EMOJI_PAUSE
-
-    def _pause_style(self) -> hikari.ButtonStyle:
-        player = self.player()
-        return hikari.ButtonStyle.SUCCESS if player is not None and player.paused else hikari.ButtonStyle.SECONDARY
-
-    def _loop_label(self) -> str:
-        player = self.player()
-        return LOOP_LABELS.get(player.loop if player is not None else 0, "Loop: off")
-
-    def _loop_emoji(self) -> str:
-        player = self.player()
-        if player is not None and player.loop == lavalink.DefaultPlayer.LOOP_SINGLE:
-            return constants.EMOJI_LOOP_SINGLE
-        return constants.EMOJI_LOOP
-
-    def _loop_style(self) -> hikari.ButtonStyle:
-        player = self.player()
-        if player is not None and player.loop != lavalink.DefaultPlayer.LOOP_NONE:
-            return hikari.ButtonStyle.PRIMARY
-        return hikari.ButtonStyle.SECONDARY
-
     def refresh_labels(self) -> None:
-        """Bring the labels, styles and emojis back in step with the player, before the view is edited."""
-        self.pause_button.label = self._pause_label()
-        self.pause_button.emoji = self._pause_emoji()
-        self.pause_button.style = self._pause_style()
+        """Bring the labels, styles and emojis back in step with the player."""
+        player = self.player()
+        paused = player is not None and player.paused
+        loop = player.loop if player is not None else lavalink.DefaultPlayer.LOOP_NONE
 
-        self.loop_button.label = self._loop_label()
-        self.loop_button.emoji = self._loop_emoji()
-        self.loop_button.style = self._loop_style()
+        self.pause_button.label = "Resume" if paused else "Pause"
+        self.pause_button.emoji = constants.EMOJI_RESUME if paused else constants.EMOJI_PAUSE
+        self.pause_button.style = hikari.ButtonStyle.SUCCESS if paused else hikari.ButtonStyle.SECONDARY
+
+        self.loop_button.label = LOOP_LABELS.get(loop, "Loop: off")
+        self.loop_button.emoji = (
+            constants.EMOJI_LOOP_SINGLE if loop == lavalink.DefaultPlayer.LOOP_SINGLE else constants.EMOJI_LOOP
+        )
+        self.loop_button.style = (
+            hikari.ButtonStyle.SECONDARY if loop == lavalink.DefaultPlayer.LOOP_NONE else hikari.ButtonStyle.PRIMARY
+        )
 
     async def check(self, ctx: lightbulb.components.MenuContext) -> AlfredPlayer | None:
         """
@@ -191,15 +161,8 @@ class NowPlayingMenu(lightbulb.components.Menu):
         current = player.current
         if current is not None and ctx.user.id == current.requester:
             return True
-        return await self._is_owner(ctx)
-
-    async def _is_owner(self, ctx: lightbulb.components.MenuContext) -> bool:
-        """
-        Whether the presser owns the bot's application.
-
-        Delegates to `alfred.owner.is_owner` - the same answer `hooks.may_control` gives the
-        slash commands, so a button and its command cannot disagree.
-        """
+        # The same answer `hooks.may_control` gives the slash commands, so a button and its
+        # command cannot disagree.
         return await owner.is_owner(ctx.client, ctx.user.id)
 
     async def on_pause(self, ctx: lightbulb.components.MenuContext) -> None:
@@ -208,7 +171,7 @@ class NowPlayingMenu(lightbulb.components.Menu):
             return
 
         await player.set_pause(not player.paused)
-        logger.info("Playback {} on guild {} by button", "paused" if player.paused else "resumed", self._guild_id)
+        logger.info("Playback %s on guild %s by button", "paused" if player.paused else "resumed", self._guild_id)
         await self.redraw(ctx)
 
     async def on_skip(self, ctx: lightbulb.components.MenuContext) -> None:
@@ -220,7 +183,7 @@ class NowPlayingMenu(lightbulb.components.Menu):
         # there is nothing to redraw here - only acknowledge and step aside.
         await ctx.defer(edit=True)
         await player.play()
-        logger.info("Track skipped on guild {} by button", self._guild_id)
+        logger.info("Track skipped on guild %s by button", self._guild_id)
         ctx.stop_interacting()
 
     async def on_loop(self, ctx: lightbulb.components.MenuContext) -> None:
@@ -262,14 +225,14 @@ class QueuePanelMenu(lightbulb.components.Menu):
         self.prev_button = self.add_interactive_button(
             hikari.ButtonStyle.SECONDARY,
             self.on_prev,
-            label=QUEUE_PREV_LABEL,
+            label="Prev",
             emoji=constants.EMOJI_PREV_PAGE,
             disabled=True,
         )
         self.next_button = self.add_interactive_button(
             hikari.ButtonStyle.SECONDARY,
             self.on_next,
-            label=QUEUE_NEXT_LABEL,
+            label="Next",
             emoji=constants.EMOJI_NEXT_PAGE,
         )
         self.refresh_buttons()
