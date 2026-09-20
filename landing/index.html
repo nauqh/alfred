@@ -1599,7 +1599,7 @@
                 <div class="cyber-body">
                   <div class="cyber-title">Track added</div>
                   <div class="cyber-line"><a href="#" class="discord-link">Something in the Rain</a></div>
-                  <div class="cyber-line">Author &middot; Deezer <span class="dcode">4:11</span></div>
+                  <div class="cyber-line">Unknown artist &middot; Deezer <span class="dcode">4:11</span></div>
                   <div class="cyber-gap"></div>
                   <div class="cyber-line"><span class="discord-mention">@nauqh</span></div>
                 </div>
@@ -1613,7 +1613,6 @@
                   <div class="cyber-line cyber-h3">
                     <a href="#" id="sim-track-title" class="discord-link">Something in the Rain</a>
                   </div>
-                  <div class="cyber-line">by <strong id="sim-artist">Author</strong></div>
                   <div class="cyber-bar mono" id="sim-bar"></div>
                   <div class="cyber-sub">Requested: <span class="discord-mention">@nauqh</span> &bull; Deezer &bull; || Playing <a href="#" class="discord-link">Rainy Nights</a></div>
 
@@ -1641,15 +1640,15 @@
                   <div class="cyber-title">Queue</div>
                   <div class="cyber-line"><strong>Now Playing:</strong></div>
                   <div class="cyber-line">
-                    <a href="#" class="discord-link">Something in the Rain</a> <span class="dcode">4:11</span> &bull; Author &middot; Deezer
+                    <a href="#" class="discord-link">Something in the Rain</a> <span class="dcode">4:11</span> &middot; Deezer
                   </div>
                   <div class="cyber-gap"></div>
                   <div class="cyber-line"><strong>Up next:</strong></div>
                   <div class="cyber-line">
-                    <span class="dcode">1.</span> <a href="#" class="discord-link">Way Down We Go</a> <span class="dcode">3:42</span> &bull; Author &middot; <span class="discord-mention">@nauqh</span>
+                    <span class="dcode">1.</span> <a href="#" class="discord-link">Way Down We Go</a> <span class="dcode">3:42</span> &middot; <span class="discord-mention">@nauqh</span>
                   </div>
                   <div class="cyber-line">
-                    <span class="dcode">2.</span> <a href="#" class="discord-link">Rockstar</a> <span class="dcode">3:22</span> &bull; Author &middot; <span class="discord-mention">@nauqh</span>
+                    <span class="dcode">2.</span> <a href="#" class="discord-link">Rockstar</a> <span class="dcode">3:22</span> &middot; <span class="discord-mention">@nauqh</span>
                   </div>
                   <div class="cyber-sub">Total: 3 tracks &middot; 11:15</div>
                 </div>
@@ -2091,9 +2090,9 @@ flowchart TD
     // Mirrors alfred/ui/formatting.py, so the mock shows what the bot actually draws:
     // an 18-cell playhead line, not a percentage bar.
     const tracks = [
-      { title: "Something in the Rain", artist: "Author", pos: 118, len: 251 },
-      { title: "Way Down We Go",        artist: "Author", pos: 45,  len: 222 },
-      { title: "Rockstar",              artist: "Author", pos: 130, len: 202 }
+      { title: "Something in the Rain", pos: 118, len: 251 },
+      { title: "Way Down We Go",        pos: 45,  len: 222 },
+      { title: "Rockstar",              pos: 130, len: 202 }
     ];
 
     const PROGRESS_LINE_WIDTH = 18;
@@ -2143,7 +2142,6 @@ flowchart TD
       currentTrackIdx = (currentTrackIdx + 1) % tracks.length;
       const t = tracks[currentTrackIdx];
       document.getElementById('sim-track-title').innerText = t.title;
-      document.getElementById('sim-artist').innerText = t.artist;
       renderBar();
     }
 
