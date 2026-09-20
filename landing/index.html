@@ -287,6 +287,13 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: stretch;
+    /* Fill the screen below the sticky 72px nav, which sits in flow above this.
+       `min-height`, not `height`: if the copy or the screenshot ever needs more room
+       the panel grows rather than clipping. `dvh` second so it wins where supported -
+       on mobile `100vh` is the tallest the chrome ever gets, which leaves the bottom
+       of the hero cut off until the browser bar collapses. */
+    min-height: calc(100vh - 72px);
+    min-height: calc(100dvh - 72px);
   }
 
   .hero-left {
@@ -1305,6 +1312,7 @@
   @media (max-width: 1024px) {
     .hero-split {
       grid-template-columns: 1fr;
+      min-height: 0;
     }
     .hero-left {
       border-right: none;
