@@ -855,7 +855,7 @@
   }
 
   .source-notes-box {
-    margin-top: 20px;
+    margin-top: 24px;
     background: #fbfbf9;
     border: 1px dashed var(--line);
     border-radius: 12px;
@@ -866,6 +866,11 @@
 
   .source-notes-box strong {
     color: var(--ink);
+  }
+
+  .source-notes-box a {
+    color: var(--accent);
+    text-decoration: underline;
   }
 
   /* ================= ARCHITECTURE SECTION ================= */
@@ -1712,13 +1717,6 @@
               </tbody>
             </table>
           </div>
-
-          <div class="source-notes-box mono">
-            <strong>Source Configuration Caveats:</strong><br>
-            • <strong>YouTube:</strong> Zero credentials required; handled via local yt-cipher server.<br>
-            • <strong>Spotify:</strong> Requires <code>clientId</code> and <code>clientSecret</code> in configuration.<br>
-            • <strong>Deezer:</strong> Disabled until <code>masterDecryptionKey</code> is provided.
-          </div>
         </div>
 
       </div>
@@ -1868,6 +1866,14 @@ flowchart TD
         </div>
 
       </div>
+
+      <div class="source-notes-box mono">
+        <strong>Before your first run:</strong><br>
+        • <strong>YouTube</strong> needs no credentials locally - the bundled yt-cipher server handles it. On a VPS, YouTube blocks the host IP and you will need OAuth; the <a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank">deploy guide</a> walks through it.<br>
+        • <strong>Spotify</strong> registers without credentials but fails per request, so <code>/search</code> returns nothing until <code>clientId</code> and <code>clientSecret</code> are set.<br>
+        • <strong>Deezer</strong> is off until configured - LavaSrc refuses to start with <code>deezer: true</code> and an empty <code>masterDecryptionKey</code>, so enable it in the same edit that fills the key.
+      </div>
+
     </div>
   </section>
 
