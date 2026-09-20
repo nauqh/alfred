@@ -241,23 +241,26 @@
      confirm is what makes a control feel dead. Short and eased-out so the release
      reads as instant. */
   .btn-primary:active,
-  .btn-secondary:active,
   .btn-dark:active,
   .newsletter-btn:active {
     transform: translateY(0) scale(0.975);
     transition: transform 90ms cubic-bezier(0.2, 0, 0.2, 1);
   }
 
-  .feature-card:active,
   .doc-card:active {
     transform: translateY(-2px) scale(0.995);
     transition: transform 90ms cubic-bezier(0.2, 0, 0.2, 1);
   }
 
+  /* A lattice cell deepens instead of lifting - it cannot leave the grid. */
+  .feature-card:active {
+    background: rgba(39, 16, 20, 0.04);
+    transition: background 90ms ease;
+  }
+
   /* A pointer-coarse device has no hover, so the lift must not stick after a tap. */
   @media (hover: none) {
     .btn-primary:hover,
-    .btn-secondary:hover,
     .btn-dark:hover {
       transform: none;
     }
@@ -273,21 +276,27 @@
   }
 
   /* ================= HERO SECTION ================= */
+  /* Two full-bleed panels split by a hairline - the same lattice logic as the features
+     grid. The left panel reproduces the container's gutter so its text still lines up
+     with every section below it; the right panel runs off the viewport edge. */
   .hero-section {
-    padding: clamp(96px, 12vh, 140px) 0 96px;
+    border-bottom: 1px solid var(--line);
   }
 
-  .hero-grid {
+  .hero-split {
     display: grid;
-    grid-template-columns: 1.15fr 1fr;
-    gap: 48px;
-    align-items: center;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
   }
 
   .hero-left {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    justify-content: center;
+    border-right: 1px solid var(--line);
+    padding: clamp(64px, 9vh, 104px) clamp(32px, 4vw, 60px) clamp(64px, 9vh, 104px)
+             max(32px, calc((100vw - 1440px) / 2 + 32px));
   }
 
   h1 {
@@ -301,6 +310,8 @@
     text-wrap: balance;
   }
 
+  /* The marker sits behind the text on its own layer, inset slightly top and bottom so
+     it reads as a highlighter stroke rather than a filled box. */
   .highlight-wrap {
     position: relative;
     display: inline-block;
@@ -322,98 +333,53 @@
   }
 
   .hero-desc {
-    font-size: 16px;
-    line-height: 1.6;
+    font-size: 17px;
+    line-height: 1.55;
     color: var(--body);
-    font-weight: 500;
-    max-width: 560px;
-    margin-bottom: 28px;
-  }
-
-  .hero-ctas {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 0;
-    flex-wrap: wrap;
+    font-weight: 400;
+    max-width: 44ch;
+    margin-bottom: 36px;
   }
 
   .btn-primary {
-    background: var(--accent);
+    background: var(--ink);
     color: #ffffff;
-    border-radius: 999px;
-    padding: 14px 30px;
-    font-size: 15.5px;
+    border-radius: 9px;
+    padding: 15px 26px;
+    font-size: 15px;
     font-weight: 700;
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    box-shadow: 0 6px 20px rgba(58, 117, 130, 0.35);
-    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+    transition: background 0.15s ease, transform 0.15s ease;
   }
 
   .btn-primary:hover {
-    background: var(--accent-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 26px rgba(58, 117, 130, 0.45);
-  }
-
-  .btn-secondary {
-    background: #ffffff;
-    color: var(--ink);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 14px 26px;
-    font-size: 15.5px;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    transition: background 0.15s, border-color 0.15s, transform 0.15s;
-  }
-
-  .btn-secondary:hover {
-    background: #f1f3ee;
-    border-color: #d2d6cb;
-    transform: translateY(-1px);
-  }
-
-  .tech-badges {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .tech-badge {
-    background: rgba(39, 16, 20, 0.04);
-    border: 1px solid var(--line);
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 11.5px;
-    font-weight: 600;
-    color: var(--body-muted);
+    background: #341e26;
   }
 
   /* HERO SCREENSHOT FRAME */
   .hero-right {
     position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding: clamp(44px, 7vh, 76px) 0 clamp(44px, 7vh, 76px) clamp(28px, 4vw, 60px);
+    background:
+      radial-gradient(120% 90% at 18% 12%, rgba(188, 229, 236, 0.55), transparent 62%),
+      linear-gradient(180deg, #f2f5f1, #edf1ec);
   }
 
+  /* Wider than its panel and clipped by it, so the window reads as continuing past the
+     edge of the screen rather than sitting in the page as a card. */
   .screenshot-frame {
+    flex: 0 0 auto;
+    width: calc(100% + 140px);
     background: var(--discord-window);
     border: 1px solid rgba(39, 16, 20, 0.12);
-    border-radius: 18px;
-    box-shadow:
-      0 24px 60px rgba(39, 16, 20, 0.14),
-      0 4px 16px rgba(0, 0, 0, 0.06);
+    border-right: none;
+    border-radius: 14px 0 0 14px;
+    box-shadow: 0 30px 70px rgba(39, 16, 20, 0.16);
     overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-
-  .screenshot-frame:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 32px 72px rgba(39, 16, 20, 0.18);
   }
 
   .window-header {
@@ -487,70 +453,67 @@
   }
 
   /* ================= FEATURES GRID ================= */
+  /* A continuous hairline lattice rather than floating cards: the container draws the
+     top and left edges, each cell draws its own right and bottom, so no line is ever
+     doubled and the count of cells does not matter. Cells share the page ground - no
+     fill, no radius, no shadow - so the rules are the only structure. */
   .features-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
+    border-top: 1px solid var(--line);
+    border-left: 1px solid var(--line);
   }
 
   .feature-card {
-    background: var(--card-bg);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 32px 28px;
-    box-shadow: 0 4px 16px rgba(39, 16, 20, 0.03);
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 34px 32px 38px;
     display: flex;
     flex-direction: column;
-    transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+    transition: background 0.18s ease;
   }
 
+  /* No lift: a translate would pull a cell out of the lattice and break the rules it
+     shares with its neighbours. The whole cell warming is the hover affordance. */
   .feature-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 28px rgba(39, 16, 20, 0.07);
-    border-color: #d3d7cd;
+    background: rgba(39, 16, 20, 0.018);
   }
 
   .feature-icon-box {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    background: var(--accent-soft);
+    width: 52px;
+    height: 52px;
+    border-radius: 13px;
+    background: rgba(39, 16, 20, 0.045);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 20px;
-    color: var(--accent);
-    font-size: 20px;
+    margin-bottom: 30px;
+    color: var(--ink);
+  }
+
+  .feature-icon-box svg {
+    width: 21px;
+    height: 21px;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .feature-card h3 {
-    font-size: 19px;
-    font-weight: 700;
+    font-size: 19.5px;
+    font-weight: 500;
     color: var(--ink);
-    letter-spacing: -0.016em;
-    margin-bottom: 10px;
+    letter-spacing: -0.014em;
+    margin-bottom: 12px;
   }
 
   .feature-card p {
     font-size: 14.5px;
     color: var(--body);
-    line-height: 1.55;
-  }
-
-  .feature-pill-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 18px;
-  }
-
-  .source-pill {
-    font-size: 11.5px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 4px;
-    background: #f1f3ee;
-    color: var(--body);
+    line-height: 1.58;
+    max-width: 34ch;
   }
 
   /* ================= COMMANDS & INTERACTIVE PLAYER ================= */
@@ -1288,9 +1251,6 @@
 
   .footer-legal-links a {
     font-weight: 600;
-  }
-
-  .footer-legal-links a {
     color: var(--body-muted);
     transition: color 0.15s;
   }
@@ -1301,9 +1261,21 @@
 
   /* ================= RESPONSIVE ================= */
   @media (max-width: 1024px) {
-    .hero-grid {
+    .hero-split {
       grid-template-columns: 1fr;
-      gap: 48px;
+    }
+    .hero-left {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+      padding: 56px 32px 60px;
+    }
+    .hero-right {
+      padding: 40px 32px;
+    }
+    .screenshot-frame {
+      width: 100%;
+      border-right: 1px solid rgba(39, 16, 20, 0.12);
+      border-radius: 14px;
     }
     .commands-layout {
       grid-template-columns: 1fr;
@@ -1329,8 +1301,11 @@
     h1 {
       font-size: 36px;
     }
-    .hero-section {
-      padding: 44px 0 60px;
+    .hero-left {
+      padding: 44px 24px 48px;
+    }
+    .hero-right {
+      padding: 28px 24px 36px;
     }
     .section-wrap {
       padding: 60px 0;
@@ -1372,16 +1347,11 @@
     }
 
     /* Keep the affordance, drop the travel. */
-    .btn-primary:hover,
-    .btn-secondary:hover,
     .btn-dark:hover,
-    .feature-card:hover,
     .doc-card:hover,
     .btn-primary:active,
-    .btn-secondary:active,
     .btn-dark:active,
     .newsletter-btn:active,
-    .feature-card:active,
     .doc-card:active {
       transform: none !important;
     }
@@ -1414,10 +1384,18 @@
       border-bottom: 1px solid var(--ink);
     }
 
-    .feature-card,
-    .doc-card,
-    .btn-secondary {
+    .doc-card {
       border: 1px solid var(--ink);
+    }
+
+    .features-grid {
+      border-top-color: var(--ink);
+      border-left-color: var(--ink);
+    }
+
+    .feature-card {
+      border-right-color: var(--ink);
+      border-bottom-color: var(--ink);
     }
   }
 </style>
@@ -1453,22 +1431,17 @@
 
   <!-- ================= HERO SECTION ================= -->
   <section class="hero-section">
-    <div class="container hero-grid">
+    <div class="hero-split">
 
       <div class="hero-left">
-        <h1>
-          The <span class="highlight-wrap">self-hosted</span> music bot for Discord server
-        </h1>
+        <h1>The <span class="highlight-wrap">self-hosted</span> music bot for Discord</h1>
 
         <p class="hero-desc">
-          Play music from YouTube, Spotify, and Deezer right in your voice channel. Fast autocomplete search, one reactive player card per track, and nothing posted that you did not ask for.
+          Play from YouTube, Spotify and Deezer straight into your voice channel.
+          Autocomplete search, one player card per track, and nothing posted unprompted.
         </p>
 
-        <div class="hero-ctas">
-          <a href="#quickstart" class="btn-primary mono">
-            Deploy Now <span class="play-arrow"></span>
-          </a>
-        </div>
+        <a href="#quickstart" class="btn-primary">Deploy now</a>
       </div>
 
       <div class="hero-right">
@@ -1500,78 +1473,55 @@
       </div>
 
       <div class="features-grid">
+
         <div class="feature-card">
-          <div class="feature-icon-box">🎵</div>
-          <h3>Multi-Source Streaming</h3>
-          <p>Stream directly from YouTube, Spotify, and Deezer. Supports tracks, full albums, playlists, and raw audio URLs.</p>
-          <div class="feature-pill-list mono">
-            <span class="source-pill">YouTube</span>
-            <span class="source-pill">Spotify</span>
-            <span class="source-pill">Deezer</span>
-            <span class="source-pill">Direct URLs</span>
+          <div class="feature-icon-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
           </div>
+          <h3>Multi-source streaming</h3>
+          <p>Stream directly from YouTube, Spotify, and Deezer. Tracks, full albums, playlists, and raw audio URLs all resolve the same way.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon-box">⚡</div>
-          <h3>LavaSearch Autocomplete</h3>
-          <p>Instant search suggestions right inside Discord's slash command input. Filter by track name, artist, album, or playlist.</p>
-          <div class="feature-pill-list mono">
-            <span class="source-pill">/search</span>
-            <span class="source-pill">Live Query</span>
-            <span class="source-pill">LavaSearch</span>
+          <div class="feature-icon-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
           </div>
+          <h3>LavaSearch autocomplete</h3>
+          <p>Instant suggestions inside Discord's slash command input. Narrow by track, artist, album, or playlist before you ever hit enter.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon-box">🎛️</div>
-          <h3>Now Playing View</h3>
-          <p>One reactive card per track. Pause, Skip, and cycle Loop modes with Discord buttons and instant in-place state updates.</p>
-          <div class="feature-pill-list mono">
-            <span class="source-pill">Follows Track</span>
-            <span class="source-pill">In-Place Redraw</span>
-            <span class="source-pill">Button Actions</span>
+          <div class="feature-icon-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>
           </div>
+          <h3>Now playing view</h3>
+          <p>One reactive card per track. Pause, Skip and cycle Loop from Discord buttons, and the card redraws in place on every press.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon-box">🔇</div>
-          <h3>Quiet Unless Asked</h3>
+          <div class="feature-icon-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h3>Quiet unless asked</h3>
           <p>Every message is a reply to a command, or the now playing card that follows the current track. Alfred posts nothing else, ever.</p>
-          <div class="feature-pill-list mono">
-            <span class="source-pill">No Spam</span>
-            <span class="source-pill">Reply Only</span>
-          </div>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon-box">👂</div>
-          <h3>Auto-Leave</h3>
-          <p>Alfred disconnects the moment the last listener leaves the channel, queue or no queue. It never lingers in an empty room holding a voice slot.</p>
-          <div class="feature-pill-list mono">
-            <span class="source-pill">Leaves Empty</span>
-            <span class="source-pill">No Idle Timer</span>
+          <div class="feature-icon-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
           </div>
+          <h3>Auto-leave</h3>
+          <p>Alfred disconnects the moment the last listener leaves, queue or no queue. It never lingers in an empty room holding a voice slot.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon-box">🛡️</div>
-          <h3>yt-cipher Bypass</h3>
-          <p>Includes a companion cipher server that executes obfuscated YouTube player scripts to resolve streaming signatures reliably.</p>
-          <div class="feature-pill-list mono">
-            <span class="source-pill">yt-cipher</span>
-            <span class="source-pill">Docker Ready</span>
+          <div class="feature-icon-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.9 19.1a10 10 0 0 1 0-14.2"/><path d="M7.8 16.2a6 6 0 0 1 0-8.4"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4"/><path d="M19.1 4.9a10 10 0 0 1 0 14.2"/></svg>
           </div>
+          <h3>Song in the sidebar</h3>
+          <p>While a track plays, Alfred's status shows the song and artist under its name. A glance at the member list tells you what is on.</p>
         </div>
-        <div class="feature-card">
-          <div class="feature-icon-box">🎧</div>
-          <h3>Song in the Sidebar</h3>
-          <p>While a track plays, Alfred's status shows the song and artist under its name, so a glance at the member list tells you what is on. It reverts to the default when the queue ends.</p>
-          <div class="feature-pill-list mono">
-            <span class="source-pill">Rich Presence</span>
-            <span class="source-pill">Auto Revert</span>
-          </div>
-        </div>
+
       </div>
     </div>
   </section>
@@ -1581,7 +1531,7 @@
         <div class="section-tag mono">
           <span class="color-sq sq-blue"></span> 02 / Commands & Interactive UI
         </div>
-        <h2 class="section-title">Seven slash commands. Nothing to learn first.</h2>
+        <h2 class="section-title">Seven slash commands.</h2>
         <p class="section-subtitle">
           `/play` connects to your voice channel automatically - there is no `/join`. Loop and shuffle are options on the command rather than commands of their own. Try the buttons below to test the reactive panel state machine.
         </p>
