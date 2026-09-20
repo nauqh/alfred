@@ -115,10 +115,20 @@
     position: sticky;
     top: 0;
     z-index: 1000;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    /* A big surface should read as thicker than a chip: more blur, and saturation to
+       keep colour passing through it alive rather than grey. */
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     background: rgba(248, 250, 247, 0.72);
-    border-bottom: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  /* A scroll edge effect, not a permanent divider: the separation appears only once
+     content is actually travelling under the bar, so the nav sits flush at rest. */
+  .nav-wrap.is-scrolled {
+    border-bottom-color: var(--line-subtle);
+    box-shadow: 0 1px 12px rgba(30, 20, 24, 0.05);
   }
 
   nav {
@@ -137,7 +147,7 @@
     gap: 12px;
     font-weight: 800;
     font-size: 22px;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.023em;
     color: var(--ink);
   }
 
@@ -227,6 +237,32 @@
     box-shadow: 0 4px 12px rgba(30, 20, 24, 0.15);
   }
 
+  /* Press feedback fires on pointer-down, not on release - waiting for the click to
+     confirm is what makes a control feel dead. Short and eased-out so the release
+     reads as instant. */
+  .btn-primary:active,
+  .btn-secondary:active,
+  .btn-dark:active,
+  .newsletter-btn:active {
+    transform: translateY(0) scale(0.975);
+    transition: transform 90ms cubic-bezier(0.2, 0, 0.2, 1);
+  }
+
+  .feature-card:active,
+  .doc-card:active {
+    transform: translateY(-2px) scale(0.995);
+    transition: transform 90ms cubic-bezier(0.2, 0, 0.2, 1);
+  }
+
+  /* A pointer-coarse device has no hover, so the lift must not stick after a tap. */
+  @media (hover: none) {
+    .btn-primary:hover,
+    .btn-secondary:hover,
+    .btn-dark:hover {
+      transform: none;
+    }
+  }
+
   .play-arrow {
     width: 0;
     height: 0;
@@ -258,7 +294,7 @@
     font-size: clamp(46px, 5.2vw, 70px);
     font-weight: 800;
     line-height: 1.05;
-    letter-spacing: -2.2px;
+    letter-spacing: -0.028em;
     color: var(--ink);
     margin-bottom: 22px;
     max-width: 640px;
@@ -430,7 +466,7 @@
     font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.067em;
     color: var(--accent);
     margin-bottom: 12px;
   }
@@ -439,7 +475,7 @@
     font-size: clamp(28px, 3.2vw, 38px);
     font-weight: 800;
     line-height: 1.18;
-    letter-spacing: -1px;
+    letter-spacing: -0.024em;
     color: var(--ink);
     margin-bottom: 14px;
   }
@@ -491,7 +527,7 @@
     font-size: 19px;
     font-weight: 700;
     color: var(--ink);
-    letter-spacing: -0.3px;
+    letter-spacing: -0.016em;
     margin-bottom: 10px;
   }
 
@@ -785,7 +821,7 @@
     font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.042em;
     color: var(--body-muted);
     border-bottom: 1px solid var(--line);
   }
@@ -850,7 +886,7 @@
     font-weight: 700;
     color: var(--body-muted);
     text-transform: uppercase;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.05em;
     margin-bottom: 24px;
     padding-bottom: 16px;
     border-bottom: 1px solid var(--line-subtle);
@@ -1024,7 +1060,7 @@
     font-weight: 700;
     color: var(--orange-dot);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.042em;
     margin-bottom: 8px;
   }
 
@@ -1098,7 +1134,7 @@
   .footer-brand-title {
     font-size: 36px;
     font-weight: 800;
-    letter-spacing: -1.2px;
+    letter-spacing: -0.033em;
     color: var(--ink);
     line-height: 1;
   }
@@ -1127,7 +1163,7 @@
   .newsletter-heading {
     font-size: 26px;
     font-weight: 800;
-    letter-spacing: -0.8px;
+    letter-spacing: -0.031em;
     color: var(--ink);
     margin-bottom: 6px;
     line-height: 1.15;
@@ -1201,8 +1237,7 @@
     border-right: none;
   }
 
-  .footer-cell:nth-child(3),
-  .footer-cell:nth-child(4) {
+  .footer-cell:nth-last-child(-n + 2) {
     border-bottom: none;
   }
 
@@ -1211,7 +1246,7 @@
     font-weight: 700;
     color: var(--ink);
     margin-bottom: 18px;
-    letter-spacing: -0.2px;
+    letter-spacing: -0.013em;
   }
 
   .footer-cell-links {
@@ -1245,9 +1280,14 @@
     gap: 16px;
   }
 
+  /* A sentence, not a link row - flex would make the text and the link separate
+     items and open a gap in the middle of it. */
   .footer-legal-links {
-    display: flex;
-    gap: 24px;
+    display: block;
+  }
+
+  .footer-legal-links a {
+    font-weight: 600;
   }
 
   .footer-legal-links a {
@@ -1314,6 +1354,72 @@
       flex-direction: column;
     }
   }
+  /* ================= USER MOTION & DISPLAY PREFERENCES ================= */
+
+  /* Reduced motion is not "no feedback" - it is feedback without vestibular travel.
+     Colour and opacity changes stay; translation, scaling and the smooth-scroll
+     hijack go. Lenis is also never constructed under this query (see the script). */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    /* Keep the affordance, drop the travel. */
+    .btn-primary:hover,
+    .btn-secondary:hover,
+    .btn-dark:hover,
+    .feature-card:hover,
+    .doc-card:hover,
+    .btn-primary:active,
+    .btn-secondary:active,
+    .btn-dark:active,
+    .newsletter-btn:active,
+    .feature-card:active,
+    .doc-card:active {
+      transform: none !important;
+    }
+  }
+
+  /* Frostier, not glassier: raise the background to near-opaque and drop the blur,
+     rather than removing the layer and letting content collide with the nav. */
+  @media (prefers-reduced-transparency: reduce) {
+    .nav-wrap {
+      background: var(--bg);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+
+  /* Solid surfaces with a defined border - translucency and hairlines both go. */
+  @media (prefers-contrast: more) {
+    :root {
+      --body: #2a2226;
+      --body-muted: #4c4044;
+      --line: #b9bdb4;
+      --line-subtle: #b9bdb4;
+    }
+
+    .nav-wrap {
+      background: var(--bg);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border-bottom: 1px solid var(--ink);
+    }
+
+    .feature-card,
+    .doc-card,
+    .btn-secondary {
+      border: 1px solid var(--ink);
+    }
+  }
 </style>
 </head>
 <body>
@@ -1355,7 +1461,7 @@
         </h1>
 
         <p class="hero-desc">
-          Play music from YouTube, Spotify, and Deezer right in your voice channel - or @mention Alfred to queue a song by name. Fast autocomplete search, clean single-message controls, and a recap every Sunday.
+          Play music from YouTube, Spotify, and Deezer right in your voice channel. Fast autocomplete search, one reactive player card per track, and nothing posted that you did not ask for.
         </p>
 
         <div class="hero-ctas">
@@ -1431,20 +1537,20 @@
         <div class="feature-card">
           <div class="feature-icon-box">🔇</div>
           <h3>Quiet Unless Asked</h3>
-          <p>Commands and mentions get replies; a change log on restart and the weekly recap land in a channel you choose. Nothing else is ever posted unprompted.</p>
+          <p>Every message is a reply to a command, or the now playing card that follows the current track. Alfred posts nothing else, ever.</p>
           <div class="feature-pill-list mono">
             <span class="source-pill">No Spam</span>
-            <span class="source-pill">Opt-In Posts</span>
+            <span class="source-pill">Reply Only</span>
           </div>
         </div>
 
         <div class="feature-card">
           <div class="feature-icon-box">👂</div>
-          <h3>Smart Deafen & Auto-Leave</h3>
-          <p>Deafening yourself automatically pauses playback when you are the sole listener. Alfred disconnects when voice channels empty.</p>
+          <h3>Auto-Leave</h3>
+          <p>Alfred disconnects the moment the last listener leaves the channel, queue or no queue. It never lingers in an empty room holding a voice slot.</p>
           <div class="feature-pill-list mono">
-            <span class="source-pill">Auto-Pause</span>
-            <span class="source-pill">Auto-Leave</span>
+            <span class="source-pill">Leaves Empty</span>
+            <span class="source-pill">No Idle Timer</span>
           </div>
         </div>
 
@@ -1457,28 +1563,6 @@
             <span class="source-pill">Docker Ready</span>
           </div>
         </div>
-        <div class="feature-card">
-          <div class="feature-icon-box">🦇</div>
-          <h3>Weekly Recap</h3>
-          <p>Every Sunday morning Alfred posts a card of the week: top five tracks, total listening time, and the top listener. A quiet week gets a quiet line instead of silence.</p>
-          <div class="feature-pill-list mono">
-            <span class="source-pill">Top Tracks</span>
-            <span class="source-pill">Listening Time</span>
-            <span class="source-pill">Scheduled</span>
-          </div>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon-box">💬</div>
-          <h3>AI Butler</h3>
-          <p>@mention Alfred to ask a question or queue something in plain words - "@Alfred play bohemian rhapsody" really queues it. It can search, show the queue, and skip, all from chat.</p>
-          <div class="feature-pill-list mono">
-            <span class="source-pill">@mention</span>
-            <span class="source-pill">Tool Calling</span>
-            <span class="source-pill">Chat Search</span>
-          </div>
-        </div>
-
         <div class="feature-card">
           <div class="feature-icon-box">🎧</div>
           <h3>Song in the Sidebar</h3>
@@ -1497,9 +1581,9 @@
         <div class="section-tag mono">
           <span class="color-sq sq-blue"></span> 02 / Commands & Interactive UI
         </div>
-        <h2 class="section-title">Nine concise slash commands. An AI butler on top.</h2>
+        <h2 class="section-title">Seven slash commands. Nothing to learn first.</h2>
         <p class="section-subtitle">
-          `/play` connects to your voice channel automatically - no `/join` needed. Prefer typing? @mention Alfred and ask in plain words; it answers, and runs these commands for you. Try the buttons below to test the reactive panel state machine.
+          `/play` connects to your voice channel automatically - there is no `/join`. Loop and shuffle are options on the command rather than commands of their own. Try the buttons below to test the reactive panel state machine.
         </p>
       </div>
 
@@ -1605,11 +1689,6 @@
               </thead>
               <tbody class="mono">
                 <tr>
-                  <td><span class="cmd-group-tag">CHAT</span></td>
-                  <td><span class="cmd-badge">@Alfred</span></td>
-                  <td>Ask, search or queue by mention - runs /play, /search, /now, /queue, /skip for you</td>
-                </tr>
-                <tr>
                   <td><span class="cmd-group-tag">MUSIC</span></td>
                   <td><span class="cmd-badge">/play</span></td>
                   <td>Add track, playlist or URL to queue with auto voice join</td>
@@ -1643,16 +1722,6 @@
                   <td><span class="cmd-group-tag">VOICE</span></td>
                   <td><span class="cmd-badge">/leave</span></td>
                   <td>Disconnect bot from voice and clear player state</td>
-                </tr>
-                <tr>
-                  <td><span class="cmd-group-tag">OWNER</span></td>
-                  <td><span class="cmd-badge">/stats</span></td>
-                  <td>Display Lavalink node health and memory metrics</td>
-                </tr>
-                <tr>
-                  <td><span class="cmd-group-tag">OWNER</span></td>
-                  <td><span class="cmd-badge">/info</span></td>
-                  <td>Show running bot versions, plugins, and Lavalink info</td>
                 </tr>
               </tbody>
             </table>
@@ -1825,7 +1894,7 @@ flowchart TD
         </div>
         <h2 class="section-title">Deep dive into deployment and architecture.</h2>
         <p class="section-subtitle">
-          Comprehensive guides covering production operations, internal design specs, and multi-node clusters.
+          Production operations, how the codebase is put together, and the decisions behind it.
         </p>
       </div>
 
@@ -1839,22 +1908,22 @@ flowchart TD
           <span class="doc-link mono">Read deploy.md &rarr;</span>
         </a>
 
-        <a href="https://github.com/nauqh/alfred/blob/main/docs/design.md" target="_blank" class="doc-card">
+        <a href="https://github.com/nauqh/alfred/blob/main/README.md" target="_blank" class="doc-card">
           <div>
             <div class="doc-tag mono">Architecture</div>
-            <h3>Design Specifications</h3>
-            <p>In-depth architectural overview of state transitions, voice listener tracking, and Lavalink packet event handlers.</p>
+            <h3>How It Fits Together</h3>
+            <p>The three-way split between the music layer, the UI layer and the commands, and the two rules that hold it together.</p>
           </div>
-          <span class="doc-link mono">Read design.md &rarr;</span>
+          <span class="doc-link mono">Read README.md &rarr;</span>
         </a>
 
-        <a href="https://github.com/nauqh/alfred/blob/main/docs/prd.md" target="_blank" class="doc-card">
+        <a href="https://github.com/nauqh/alfred/blob/main/HANDOFF.md" target="_blank" class="doc-card">
           <div>
-            <div class="doc-tag mono">Product Spec</div>
-            <h3>PRD &amp; Acceptance</h3>
-            <p>Product requirements, acceptance criteria, test assertions, and source compatibility matrices.</p>
+            <div class="doc-tag mono">Working Notes</div>
+            <h3>Decisions &amp; Constraints</h3>
+            <p>What is settled and why: the voice-receive limit, what was deliberately removed, and what not to re-open.</p>
           </div>
-          <span class="doc-link mono">Read prd.md &rarr;</span>
+          <span class="doc-link mono">Read HANDOFF.md &rarr;</span>
         </a>
       </div>
     </div>
@@ -1875,7 +1944,7 @@ flowchart TD
               <div class="footer-brand-title">alfred</div>
             </div>
             <p class="footer-brand-desc">
-              The music bot for self-hosted servers. Play by command or by @mention, with a weekly recap every Sunday and a quiet-but-present change log.
+              The music bot for self-hosted servers. Seven slash commands, one reactive player card, and a Lavalink node doing the streaming.
             </p>
           </div>
         </div>
@@ -1886,7 +1955,7 @@ flowchart TD
           <!-- YELLOW NEWSLETTER BANNER -->
           <div class="footer-newsletter-card">
             <h3 class="newsletter-heading">Release wisdom straight to your inbox</h3>
-            <p class="newsletter-sub">Get the latest updates, deployment tips, weekly recaps, and audio source fixes.</p>
+            <p class="newsletter-sub">Get the latest updates, deployment tips, and audio source fixes.</p>
             <form class="newsletter-form" onsubmit="event.preventDefault(); alert('Subscribed for Alfred updates!');">
               <input type="email" class="newsletter-input mono" placeholder="Enter your email" required>
               <button type="submit" class="newsletter-btn mono">Subscribe</button>
@@ -1899,7 +1968,7 @@ flowchart TD
             <div class="footer-cell">
               <h4 class="footer-cell-title">Product</h4>
               <ul class="footer-cell-links mono">
-                <li><a href="#features">Why Alfred</a></li>
+                <li><a href="#features">Features</a></li>
                 <li><a href="#commands">Commands</a></li>
                 <li><a href="#architecture">Architecture</a></li>
                 <li><a href="#quickstart">Quickstart</a></li>
@@ -1907,32 +1976,12 @@ flowchart TD
             </div>
 
             <div class="footer-cell">
-              <h4 class="footer-cell-title">Resources</h4>
-              <ul class="footer-cell-links mono">
-                <li><a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank">Docs ↗</a></li>
-                <li><a href="https://github.com/nauqh/alfred/blob/main/CHANGELOG.md" target="_blank">Changelog ↗</a></li>
-                <li><a href="https://github.com/nauqh/alfred/blob/main/docs/design.md" target="_blank">Design Spec ↗</a></li>
-                <li><a href="https://github.com/nauqh/alfred/blob/main/docs/prd.md" target="_blank">PRD Spec ↗</a></li>
-                <li><a href="https://github.com/nauqh/alfred/issues" target="_blank">Contact Support ↗</a></li>
-              </ul>
-            </div>
-
-            <div class="footer-cell">
-              <h4 class="footer-cell-title">Company</h4>
-              <ul class="footer-cell-links mono">
-                <li><a href="#quickstart">About Alfred</a></li>
-                <li><a href="https://github.com/bachtran02/MusicCat" target="_blank">MusicCat Rewrite ↗</a></li>
-                <li><a href="https://github.com/nauqh/Ashema" target="_blank">Ashema Origin ↗</a></li>
-                <li><a href="https://github.com/nauqh/alfred/blob/main/pyproject.toml" target="_blank">MIT License ↗</a></li>
-              </ul>
-            </div>
-
-            <div class="footer-cell">
-              <h4 class="footer-cell-title">Find us</h4>
+              <h4 class="footer-cell-title">Project</h4>
               <ul class="footer-cell-links mono">
                 <li><a href="https://github.com/nauqh/alfred" target="_blank">GitHub ↗</a></li>
-                <li><a href="https://github.com/nauqh/alfred/issues" target="_blank">Issue Tracker ↗</a></li>
-                <li><a href="https://github.com/nauqh" target="_blank">Nauqh Profile ↗</a></li>
+                <li><a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank">Deploy Guide ↗</a></li>
+                <li><a href="https://github.com/nauqh/alfred/blob/main/CHANGELOG.md" target="_blank">Changelog ↗</a></li>
+                <li><a href="https://github.com/nauqh/alfred/issues" target="_blank">Issues ↗</a></li>
               </ul>
             </div>
 
@@ -1944,11 +1993,9 @@ flowchart TD
 
       <!-- BOTTOM METADATA -->
       <div class="footer-bottom-bar mono">
-        <div class="footer-copy">© 2026 Alfred.</div>
+        <div class="footer-copy">© 2026 Alfred · MIT</div>
         <div class="footer-legal-links">
-          <a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank">Deploy Guide</a>
-          <a href="https://github.com/nauqh/alfred/blob/main/docs/design.md" target="_blank">Design Docs</a>
-          <a href="https://github.com/nauqh/alfred" target="_blank">GitHub</a>
+          Developed by <a href="https://nauqh.dev" target="_blank" rel="noopener">Nauqh</a>
         </div>
       </div>
 
@@ -1960,32 +2007,73 @@ flowchart TD
 
   <!-- ================= INTERACTION SCRIPT ================= -->
   <script>
-    // Initialize Lenis Smooth Scroll
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      orientation: 'vertical',
-      gestureOrientation: 'vertical',
-      smoothWheel: true,
-      wheelMultiplier: 1,
-      touchMultiplier: 2,
+    // Smooth scroll is a vestibular trigger, and CSS alone cannot switch it off - the
+    // library drives scroll from rAF. So the preference is read here and Lenis is never
+    // constructed when it is set; the browser's own scrolling is used instead. The query
+    // is live, so a user toggling the OS setting gets the change without a reload.
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let lenis = null;
+
+    function startLenis() {
+      if (lenis || reduceMotion.matches || typeof Lenis === 'undefined') return;
+      lenis = new Lenis({
+        duration: 1.2,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        orientation: 'vertical',
+        gestureOrientation: 'vertical',
+        smoothWheel: true,
+        wheelMultiplier: 1,
+        touchMultiplier: 2,
+      });
+
+      (function raf(time) {
+        if (!lenis) return;
+        lenis.raf(time);
+        requestAnimationFrame(raf);
+      })();
+    }
+
+    function stopLenis() {
+      if (!lenis) return;
+      lenis.destroy();
+      lenis = null;
+    }
+
+    startLenis();
+    reduceMotion.addEventListener('change', () => {
+      reduceMotion.matches ? stopLenis() : startLenis();
     });
 
-    function raf(time) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
+    // Scroll edge effect: the nav only separates itself from content once there is
+    // content behind it. Passive listener + a rAF gate so this never blocks scrolling.
+    const navWrap = document.querySelector('.nav-wrap');
+    let edgeQueued = false;
+    function syncNavEdge() {
+      edgeQueued = false;
+      navWrap.classList.toggle('is-scrolled', window.scrollY > 8);
     }
-    requestAnimationFrame(raf);
+    window.addEventListener('scroll', () => {
+      if (edgeQueued) return;
+      edgeQueued = true;
+      requestAnimationFrame(syncNavEdge);
+    }, { passive: true });
+    syncNavEdge();
 
-    // Lenis Smooth Scroll Anchor Navigation
+    // Anchor navigation. Hands off to Lenis when it is running, and to the platform
+    // when it is not - `scrollIntoView` honours the same preference natively, so the
+    // jump is instant under reduced motion rather than a 1.2s glide.
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function (e) {
         const href = this.getAttribute('href');
         if (href === '#' || !href) return;
         const target = document.querySelector(href);
-        if (target) {
-          e.preventDefault();
+        if (!target) return;
+        e.preventDefault();
+        if (lenis) {
           lenis.scrollTo(target, { offset: -90, duration: 1.2 });
+        } else {
+          const top = target.getBoundingClientRect().top + window.scrollY - 90;
+          window.scrollTo({ top, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
         }
       });
     });
