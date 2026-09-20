@@ -73,9 +73,21 @@ services:
       # curl, not `nc`: the image has no netcat, and a check that cannot run is a check
       # that always fails - the bot then waits on a node that is already serving.
       #
-      # No `-f`: /version answers 401 without the server password, and a 401 is proof the
-      # node is up and answering. What is being tested is that it responds at all.
-      test: ["CMD", "curl", "-sS", "-o", "/dev/null", "http://localhost:2333/version"]
+      # Authenticated, and with `-f`. Lavalink 4.2.2 has no auth-exempt health endpoint -
+      # `/version`, `/v4/info`, `/v4/stats` and `/` all answer 401 without the password,
+      # and `/health`, `/healthz`, `/ping`, `/actuator/health` do not exist (verified
+      # against the 4.2.2 jar). Without `-f`, curl exits 0 on that 401, so the old check
+      # passed against any node that merely answered - wrong password, plugins failed to
+      # load, 500s - and `depends_on: service_healthy` then started the bot against a node
+      # it could not use. It also logged a WARN every 10s, which is what drowns a real
+      # unauthorized request.
+      #
+      # `${LAVALINK_PASSWORD}` is interpolated by compose from `.env` (as CIPHER_PASSWORD
+      # above is), not by a shell in the container - so this stays exec-form `CMD` and
+      # needs no `/bin/sh`. It is the same credential the bot authenticates with, so the
+      # node reports unhealthy when it and `application.yml` diverge, which is the failure
+      # this is actually here to catch.
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "-H", "Authorization: ${LAVALINK_PASSWORD:-youshallnotpass}", "http://localhost:2333/version"]
       interval: 10s
       timeout: 5s
       retries: 10

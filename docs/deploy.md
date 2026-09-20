@@ -182,6 +182,8 @@ breaks again in the future, repeat the device flow.
 | `curl -H "Authorization: $LAVALINK_PASSWORD" localhost:2333/v4/stats` | Node uptime, players, memory, CPU |
 | `curl -H "Authorization: $LAVALINK_PASSWORD" localhost:2333/v4/info` | Node version, plugins, sources |
 
-`Authorization missing for 127.0.0.1 on GET /version` every ten seconds is the
-healthcheck, which deliberately omits the password - a 401 still confirms the
-node is responding.
+The healthcheck authenticates, so `Authorization missing for 127.0.0.1 on GET
+/version` every ten seconds is no longer expected noise. Seeing it now means
+either something else is probing the node unauthenticated, or `LAVALINK_PASSWORD`
+in `.env` has drifted from `server.password` in `lavalink/application.yml` - in
+which case the node reports unhealthy and the bot will not start against it.
