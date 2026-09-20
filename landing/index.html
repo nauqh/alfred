@@ -358,26 +358,25 @@
   }
 
   /* HERO SCREENSHOT FRAME */
+  /* The right padding mirrors the left panel's gutter, so the screenshot's right edge
+     lands on the same line as every section below it. The panel background stays
+     full-bleed; only the content is held to the container measure. Without this the
+     panel is a bare 50vw and the frame grows without limit on a wide display. */
   .hero-right {
-    position: relative;
-    overflow: hidden;
     display: flex;
     align-items: center;
-    padding: clamp(44px, 7vh, 76px) 0 clamp(44px, 7vh, 76px) clamp(28px, 4vw, 60px);
+    padding: clamp(44px, 7vh, 76px) max(32px, calc((100vw - 1440px) / 2 + 32px))
+             clamp(44px, 7vh, 76px) clamp(28px, 4vw, 60px);
     background:
       radial-gradient(120% 90% at 18% 12%, rgba(188, 229, 236, 0.55), transparent 62%),
       linear-gradient(180deg, #f2f5f1, #edf1ec);
   }
 
-  /* Wider than its panel and clipped by it, so the window reads as continuing past the
-     edge of the screen rather than sitting in the page as a card. */
   .screenshot-frame {
-    flex: 0 0 auto;
-    width: calc(100% + 140px);
+    width: 100%;
     background: var(--discord-window);
     border: 1px solid rgba(39, 16, 20, 0.12);
-    border-right: none;
-    border-radius: 14px 0 0 14px;
+    border-radius: 14px;
     box-shadow: 0 30px 70px rgba(39, 16, 20, 0.16);
     overflow: hidden;
   }
@@ -542,37 +541,23 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 
-  /* COMMACT CYBER DECK CARDS */
+  /* Discord embed geometry: 4px accent rail, 4px radius, 80px thumbnail top-right,
+     16px/600 title, 14px/1.375 description. Taken from what the client renders, so the
+     mock reads as a screenshot rather than an approximation of one. */
   .cyber-card {
     background: var(--discord-embed);
     border-left: 4px solid var(--accent);
     border-radius: 4px;
-    padding: 12px 14px;
+    padding: 12px 16px 16px;
     margin-bottom: 8px;
-  }
-
-  .cyber-card.row {
+    max-width: 520px;
     display: flex;
-    align-items: center;
-    gap: 12px;
+    gap: 16px;
+    align-items: flex-start;
   }
 
-  .cyber-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 6px;
-  }
-
-  .cyber-thumb-ph {
-    font-size: 11px;
-    color: var(--discord-text-muted);
-    border: 1px dashed rgba(255, 255, 255, 0.15);
-    border-radius: 6px;
-    padding: 4px 6px;
-    white-space: nowrap;
-    flex-shrink: 0;
+  .cyber-card.now-playing {
+    border-left-color: var(--discord-blurple);
   }
 
   .cyber-body {
@@ -580,33 +565,59 @@
     min-width: 0;
   }
 
-  .cyber-card.now-playing {
-    border-left: 4px solid var(--discord-blurple);
+  .cyber-thumb {
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+    border-radius: 3px;
+    object-fit: cover;
+    object-position: center 15%;
   }
 
   .cyber-title {
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 600;
     color: var(--discord-text-header);
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
 
-  .cyber-track {
-    font-size: 13px;
-    font-weight: 600;
-    color: #00a8fc;
+  /* `### heading` inside a description renders larger than the body text. */
+  .cyber-h3 {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
+    margin-bottom: 2px;
+  }
+
+  .cyber-line {
+    font-size: 14px;
+    line-height: 1.375;
+    color: var(--discord-text-normal);
     word-break: break-word;
   }
 
-  .cyber-artist {
-    font-size: 12px;
-    color: var(--discord-text-normal);
+  .cyber-line + .cyber-line {
     margin-top: 2px;
   }
 
+  .cyber-gap {
+    height: 14px;
+  }
+
+  /* The playhead is drawn with box-drawing characters, so it needs a fixed-width face;
+     anything proportional makes the bar jitter as the position changes. */
   .cyber-bar {
-    font-size: 12px;
+    font-size: 14px;
     color: var(--discord-text-normal);
+    margin-top: 6px;
+    white-space: nowrap;
+    overflow-x: auto;
+  }
+
+  /* `-# text` - Discord's small subtext. Muted and smaller, not italic. */
+  .cyber-sub {
+    font-size: 13px;
+    color: var(--discord-text-muted);
     margin-top: 8px;
   }
 
@@ -622,28 +633,53 @@
   .discord-mention {
     background: rgba(88, 101, 242, 0.3);
     color: #c9cdfb;
-    padding: 0 4px;
-    border-radius: 4px;
-    font-weight: 600;
+    padding: 0 2px;
+    border-radius: 3px;
+    font-weight: 500;
   }
 
-  .queue-item-row {
-    margin-bottom: 2px;
+  /* Inline code: near-black chip, slightly smaller than the line it sits in. */
+  .dcode {
+    background: #1e1f22;
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 0.85em;
+    font-family: 'JetBrains Mono', monospace;
   }
 
-  .cyber-now {
+  /* "nauqh used /play" - the header Discord puts above an application command reply.
+     Without it the embeds read as messages the bot posted unprompted. */
+  .sim-cmd-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 13px;
-    color: var(--discord-text-normal);
-    margin-bottom: 4px;
-  }
-
-  .cyber-sub {
-    font-size: 11px;
     color: var(--discord-text-muted);
-    margin-top: 8px;
-    font-style: italic;
+    margin-bottom: 6px;
+    padding-left: 22px;
   }
 
+  .sim-cmd-avatar {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center 15%;
+  }
+
+  .sim-cmd-user {
+    color: var(--discord-text-header);
+    font-weight: 500;
+  }
+
+  .sim-cmd-chip {
+    color: #c9cdfb;
+    font-weight: 500;
+  }
+
+  .sim-cmd-chip:hover {
+    text-decoration: underline;
+  }
 
   .sim-channel-name {
     display: flex;
@@ -720,10 +756,11 @@
     background: var(--discord-btn);
     color: var(--discord-text-header);
     border: none;
-    border-radius: 4px;
-    padding: 5px 11px;
-    font-size: 12px;
-    font-weight: 600;
+    border-radius: 3px;
+    height: 32px;
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -1272,11 +1309,6 @@
     .hero-right {
       padding: 40px 32px;
     }
-    .screenshot-frame {
-      width: 100%;
-      border-right: 1px solid rgba(39, 16, 20, 0.12);
-      border-radius: 14px;
-    }
     .commands-layout {
       grid-template-columns: 1fr;
     }
@@ -1548,83 +1580,88 @@
             <div class="sim-tag-live mono">INTERACTIVE DEMO</div>
           </div>
 
+          <div class="sim-cmd-header">
+            <img src="alfred_avatar.jpg" alt="" class="sim-cmd-avatar">
+            <span><span class="sim-cmd-user">nauqh</span> used <a href="#commands" class="sim-cmd-chip">/play</a></span>
+          </div>
+
           <div class="discord-msg">
             <img src="alfred_avatar.jpg" alt="Alfred" class="msg-avatar">
             <div class="msg-body">
               <div class="msg-meta">
                 <span class="bot-author">Alfred</span>
                 <span class="bot-tag">BOT</span>
-                <span class="msg-time mono">Today at 7:42 PM</span>
+                <span class="msg-time">Today at 7:42 PM</span>
               </div>
 
-              <!-- CARD 1: TRACK ADDED -->
-              <div class="cyber-card row">
+              <!-- /play -> embeds.queued() -->
+              <div class="cyber-card">
                 <div class="cyber-body">
                   <div class="cyber-title">Track added</div>
-                  <div class="cyber-track">Something in the Rain</div>
-                  <div class="cyber-sub mono">Artist • 04:11</div>
+                  <div class="cyber-line"><a href="#" class="discord-link">Something in the Rain</a></div>
+                  <div class="cyber-line">Author &middot; Deezer <span class="dcode">4:11</span></div>
+                  <div class="cyber-gap"></div>
+                  <div class="cyber-line"><span class="discord-mention">@nauqh</span></div>
                 </div>
-                <div class="cyber-thumb-ph">[Thumbnail]</div>
+                <img src="alfred_avatar.jpg" alt="" class="cyber-thumb">
               </div>
 
-              <!-- CARD 2: NOW PLAYING (interactive) - Option B Cyber Deck mockup -->
+              <!-- the now playing view -> embeds.now_playing() -->
               <div class="cyber-card now-playing">
-                <div class="cyber-head">
-                  <div class="cyber-title">Now Playing</div>
-                  <img id="sim-thumb-now" class="cyber-thumb" alt="">
-                </div>
                 <div class="cyber-body">
-                  <div class="cyber-track">
-                    <a href="https://soundcloud.com" id="sim-track-title" class="discord-link">Something in the Rain</a>
+                  <div class="cyber-title">Now Playing</div>
+                  <div class="cyber-line cyber-h3">
+                    <a href="#" id="sim-track-title" class="discord-link">Something in the Rain</a>
                   </div>
-                  <div id="sim-artist" class="cyber-artist">Artist</div>
-                  <div class="cyber-bar mono">
-                    ▶ <span id="sim-bar">01:58 / 04:11 ▰▰▰▰▰▱▱▱▱▱▱ [ 42% ]</span>
-                  </div>
-                  <div id="sim-subtext" class="cyber-sub mono">Requested: <span class="discord-mention">@nauqh</span> • || Playing: Rainy Nights</div>
+                  <div class="cyber-line">by <strong id="sim-artist">Author</strong></div>
+                  <div class="cyber-bar mono" id="sim-bar"></div>
+                  <div class="cyber-sub">Requested: <span class="discord-mention">@nauqh</span> &bull; Deezer &bull; || Playing <a href="#" class="discord-link">Rainy Nights</a></div>
 
-                  <div class="discord-button-row mono">
+                  <div class="discord-button-row">
                     <button id="btn-pause" class="d-btn" onclick="togglePause()">
-                      <span id="pause-icon">⏸️</span> <span id="pause-text">Pause</span>
+                      <span id="pause-icon"></span> <span id="pause-text">Pause</span>
                     </button>
                     <button id="btn-skip" class="d-btn" onclick="skipTrack()">
-                      ⏭️ Skip
+                      &#9197;&#65039; Skip
                     </button>
                     <button id="btn-loop" class="d-btn" onclick="cycleLoop()">
-                      <span id="loop-icon">🔁</span> <span id="loop-text">Loop: off</span>
+                      <span id="loop-icon">&#128257;</span> <span id="loop-text">Loop: off</span>
                     </button>
                     <button class="d-btn btn-link" onclick="event.preventDefault()">
-                      🔗 Link
+                      &#128279; Link
                     </button>
                   </div>
                 </div>
+                <img src="alfred_avatar.jpg" alt="" class="cyber-thumb" id="sim-thumb-now">
               </div>
 
-              <!-- CARD 3: QUEUE - Option C mockup -->
-              <div class="cyber-card row">
+              <!-- /queue -> embeds.queue() -->
+              <div class="cyber-card">
                 <div class="cyber-body">
                   <div class="cyber-title">Queue</div>
-                  <div class="cyber-now">
-                    <strong>Currently Playing</strong> <a href="#" class="discord-link">Way Down We Go</a> <span class="mono">03:42</span>
+                  <div class="cyber-line"><strong>Now Playing:</strong></div>
+                  <div class="cyber-line">
+                    <a href="#" class="discord-link">Something in the Rain</a> <span class="dcode">4:11</span> &bull; Author &middot; Deezer
                   </div>
-                  <div class="cyber-track" style="margin-top: 8px;"><strong>Up Next:</strong></div>
-                  <div class="cyber-track queue-item-row">
-                    <span class="mono">1.</span> <a href="#" class="discord-link">Rockstar</a> <span class="mono">03:33</span>
+                  <div class="cyber-gap"></div>
+                  <div class="cyber-line"><strong>Up next:</strong></div>
+                  <div class="cyber-line">
+                    <span class="dcode">1.</span> <a href="#" class="discord-link">Way Down We Go</a> <span class="dcode">3:42</span> &bull; Author &middot; <span class="discord-mention">@nauqh</span>
                   </div>
-                  <div class="cyber-track queue-item-row">
-                    <span class="mono">2.</span> <a href="#" class="discord-link">Something in the Rain</a> <span class="mono">04:11</span>
+                  <div class="cyber-line">
+                    <span class="dcode">2.</span> <a href="#" class="discord-link">Rockstar</a> <span class="dcode">3:22</span> &bull; Author &middot; <span class="discord-mention">@nauqh</span>
                   </div>
-                  <div class="cyber-sub mono">Total: 3 tracks</div>
+                  <div class="cyber-sub">Total: 3 tracks &middot; 11:15</div>
                 </div>
-                <img id="sim-thumb-queue" class="cyber-thumb" alt="">
+                <img src="alfred_avatar.jpg" alt="" class="cyber-thumb">
               </div>
 
               <div class="sim-hint mono">
-                <span>💡</span> Press buttons to test reactive updates. The card redraws in place on every press.
+                <span>&#128161;</span> Press the buttons - the card redraws in place, exactly as it does in Discord.
               </div>
             </div>
           </div>
-          </div>
+        </div>
 
         <!-- COMMANDS TABLE -->
         <div>
@@ -2050,13 +2087,18 @@ flowchart TD
       });
     }
 
-    // Interactive Discord Player Demo State
+    // Interactive Discord Player Demo State.
+    // Mirrors alfred/ui/formatting.py, so the mock shows what the bot actually draws:
+    // an 18-cell playhead line, not a percentage bar.
     const tracks = [
-      { title: "Something in the Rain", artist: "Artist", time: "01:58", total: "04:11", progress: 42 },
-      { title: "Way Down We Go", artist: "Album", time: "00:45", total: "03:42", progress: 14 },
-      { title: "Rockstar", artist: "Artist", time: "02:10", total: "03:22", progress: 58 }
+      { title: "Something in the Rain", artist: "Author", pos: 118, len: 251 },
+      { title: "Way Down We Go",        artist: "Author", pos: 45,  len: 222 },
+      { title: "Rockstar",              artist: "Author", pos: 130, len: 202 }
     ];
-    const playlistName = "Rainy Nights";
+
+    const PROGRESS_LINE_WIDTH = 18;
+    const EMOJI_PAUSE = "⏸️";
+    const EMOJI_RESUME = "▶️";
 
     let currentTrackIdx = 0;
     let isPaused = false;
@@ -2064,54 +2106,57 @@ flowchart TD
     const loopModes = ["off", "track", "queue"];
     const loopEmojis = { off: "🔁", track: "🔂", queue: "🔁" };
 
+    // formatting.format_time - largest unit the duration actually needs.
+    function formatTime(totalSeconds) {
+      const s = Math.max(0, Math.floor(totalSeconds));
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = String(s % 60).padStart(2, '0');
+      return h ? h + ':' + String(m).padStart(2, '0') + ':' + sec : m + ':' + sec;
+    }
+
+    // formatting.progress_line - filled run, playhead, empty run; always 18 cells.
+    function progressLine(fraction) {
+      const f = Math.min(Math.max(fraction, 0), 1);
+      const cursor = Math.round(f * (PROGRESS_LINE_WIDTH - 1));
+      return '━'.repeat(cursor) + '●' + '─'.repeat(PROGRESS_LINE_WIDTH - cursor - 1);
+    }
+
+    // formatting.player_bar - the leading glyph reports what is happening, not what the
+    // button would do, so it shows the resume glyph while paused.
+    function renderBar() {
+      const t = tracks[currentTrackIdx];
+      const glyph = isPaused ? EMOJI_RESUME : EMOJI_PAUSE;
+      document.getElementById('sim-bar').innerText =
+        glyph + ' ' + formatTime(t.pos) + ' ' + progressLine(t.pos / t.len) + ' ' + formatTime(t.len);
+    }
+
     function togglePause() {
       isPaused = !isPaused;
-      const pauseText = document.getElementById('pause-text');
-      const pauseIcon = document.getElementById('pause-icon');
-      const btn = document.getElementById('btn-pause');
-
-      if (isPaused) {
-        pauseText.innerText = 'Resume';
-        pauseIcon.innerText = '▶️';
-        btn.classList.add('btn-success');
-      } else {
-        pauseText.innerText = 'Pause';
-        pauseIcon.innerText = '⏸️';
-        btn.classList.remove('btn-success');
-      }
+      document.getElementById('pause-text').innerText = isPaused ? 'Resume' : 'Pause';
+      document.getElementById('pause-icon').innerText = isPaused ? EMOJI_RESUME : EMOJI_PAUSE;
+      document.getElementById('btn-pause').classList.toggle('btn-success', isPaused);
+      renderBar();
     }
 
     function skipTrack() {
       currentTrackIdx = (currentTrackIdx + 1) % tracks.length;
-      updateTrackDisplay();
+      const t = tracks[currentTrackIdx];
+      document.getElementById('sim-track-title').innerText = t.title;
+      document.getElementById('sim-artist').innerText = t.artist;
+      renderBar();
     }
 
     function cycleLoop() {
       loopModeIdx = (loopModeIdx + 1) % loopModes.length;
-      const loopText = document.getElementById('loop-text');
-      const loopIcon = document.getElementById('loop-icon');
-      const btn = document.getElementById('btn-loop');
       const mode = loopModes[loopModeIdx];
-      loopText.innerText = 'Loop: ' + mode;
-      loopIcon.innerText = loopEmojis[mode];
-
-      if (mode !== 'off') {
-        btn.classList.add('btn-active');
-      } else {
-        btn.classList.remove('btn-active');
-      }
+      document.getElementById('loop-text').innerText = 'Loop: ' + mode;
+      document.getElementById('loop-icon').innerText = loopEmojis[mode];
+      document.getElementById('btn-loop').classList.toggle('btn-active', mode !== 'off');
     }
 
-    function updateTrackDisplay() {
-      const track = tracks[currentTrackIdx];
-      document.getElementById('sim-track-title').innerText = track.title;
-      document.getElementById('sim-artist').innerText = track.artist;
-      document.getElementById('sim-thumb-now').src = track.thumb;
-      document.getElementById('sim-subtext').innerHTML = 'Requested: <span class="discord-mention">@nauqh</span> • || Playing: ' + playlistName;
-      const filled = Math.round((track.progress / 100) * 10);
-      document.getElementById('sim-bar').innerText =
-        track.time + ' / ' + track.total + ' ' + '▰'.repeat(filled) + '▱'.repeat(10 - filled) + ' [ ' + track.progress + '% ]';
-    }
+    document.getElementById('pause-icon').innerText = EMOJI_PAUSE;
+    renderBar();
   </script>
 
   <!-- Mermaid.js for Architecture Flowchart -->
