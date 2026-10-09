@@ -39,7 +39,7 @@
 
     --rail: min(1120px, calc(100% - 2 * clamp(20px, 7vw, 160px)));
     --pad: clamp(24px, 4vw, 48px);
-    --nav-h: 64px;
+    --nav-h: 80px;
 
     --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
     --sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -89,10 +89,11 @@
     outline-offset: 2px;
   }
 
-  /* ================= GRID ================= */
-  /* A band is full-bleed and closes with a full-width rule; the rail inside it is the
-     centred column with a hairline each side. Stacked bands line the rails up into two
-     continuous verticals, and a spacer band is an empty rail row between sections. */
+  /* ================= SECTIONS ================= */
+  /* A band is full-bleed and closes with one full-width rule; the rail inside it is the
+     centred content column. Whitespace separates sections. Hairlines are kept for
+     grouping inside a section (the feature and command grids), not drawn around the
+     page. */
   .band {
     background: var(--white);
     border-bottom: 1px solid var(--line);
@@ -111,26 +112,13 @@
   .rail {
     width: var(--rail);
     margin: 0 auto;
-    border-left: 1px solid var(--line);
-    border-right: 1px solid var(--line);
-  }
-
-  .black .rail {
-    border-color: var(--black-line);
-  }
-
-  .spacer .rail {
-    height: clamp(96px, 11vw, 160px);
+    padding-block: clamp(88px, 10vw, 136px);
   }
 
   /* ================= NAV ================= */
+  /* In flow, not sticky: it sits on top of the hero and scrolls away with it. */
   .nav-wrap {
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    background: rgba(0, 0, 0, 0.78);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    background: var(--black);
     border-bottom: 1px solid var(--black-line);
     color: var(--black-text);
   }
@@ -230,7 +218,7 @@
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
     align-items: end;
     gap: 24px 64px;
-    padding: 80px var(--pad) 56px;
+    padding-bottom: 56px;
   }
 
   h2 {
@@ -364,7 +352,7 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 1px;
     background: var(--line);
-    border-top: 1px solid var(--line);
+    border: 1px solid var(--line);
   }
 
   .feature {
@@ -412,13 +400,10 @@
   .shots {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1px;
-    background: var(--line);
-    border-top: 1px solid var(--line);
+    gap: 24px;
   }
 
   .shot {
-    background: var(--white);
     display: flex;
     flex-direction: column;
   }
@@ -428,6 +413,7 @@
     display: grid;
     place-items: center;
     padding: clamp(24px, 3.5vw, 44px);
+    border-radius: 6px;
     background:
       radial-gradient(80% 70% at 20% 0%, rgba(188, 229, 236, 0.35), transparent 70%),
       linear-gradient(160deg, var(--teal) 0%, var(--teal-deep) 100%);
@@ -442,8 +428,7 @@
   }
 
   .shot figcaption {
-    padding: 24px var(--pad) 32px;
-    border-top: 1px solid var(--line);
+    padding-top: 20px;
   }
 
   .shot figcaption p {
@@ -452,110 +437,145 @@
   }
 
   /* ================= COMMANDS ================= */
-  /* Tabs pick a group; the grid keeps every command visible and brings the picked
-     group forward, so the reader sees both the whole set and where each one belongs. */
-  .cmd-tabs {
+  /* All seven commands at once, in two balanced columns: Queue (four) on the left,
+     Music (two) over Voice (one and a note) on the right. Nothing is hidden, so
+     nothing leaves a hole. Teal tints mark everything you would type. */
+  .cmd-cols {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    border-top: 1px solid var(--line);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: stretch;
+  }
+
+  /* Default stretch: whichever column is shorter grows its cards to match, so both
+     columns end on the same line. */
+  .cmd-stack {
+    display: grid;
+    gap: 24px;
+  }
+
+  /* Rows share any extra height, so a card stretched to match its neighbour column
+     spreads out instead of ending in a blank strip. */
+  .cmd-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--white);
+  }
+
+  .cmd-card .cmd-row {
+    flex: 1;
+  }
+
+  .cmd-card-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 22px 28px 20px;
     border-bottom: 1px solid var(--line);
   }
 
-  .cmd-tab {
-    height: 52px;
-    border: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    background: var(--white);
-    font: inherit;
-    font-size: 14px;
-    color: var(--muted);
-    cursor: pointer;
-    transition: color 0.15s, background 0.15s, border-color 0.15s;
-  }
-
-  .cmd-tab + .cmd-tab {
-    border-left: 1px solid var(--line);
-  }
-
-  .cmd-tab:hover {
-    color: var(--ink);
-  }
-
-  .cmd-tab[aria-pressed="true"] {
-    background: var(--paper);
-    color: var(--ink);
-    border-bottom-color: var(--teal);
-  }
-
-  .cmd-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1px;
-    background: var(--line);
-  }
-
-  .cmd {
-    display: grid;
-    grid-template-columns: 36px minmax(0, 1fr);
-    gap: 4px 16px;
-    align-items: center;
-    align-content: start;
-    padding: 22px var(--pad) 24px;
-    background: var(--white);
-    color: var(--muted);
-    transition: background 0.2s ease, color 0.2s ease;
-  }
-
-  .cmd .icon {
-    width: 36px;
-    height: 36px;
+  .cmd-card-head h3 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 26px;
+    letter-spacing: -0.015em;
     margin: 0;
-    grid-row: span 2;
-    align-self: start;
-    color: var(--muted);
-    transition: color 0.2s ease;
   }
 
-  .cmd .icon svg {
-    width: 17px;
-    height: 17px;
+  .cmd-card-head p {
+    font-size: 14px;
+    color: var(--body);
   }
 
-  .cmd-name {
+  .cmd-count {
+    margin-left: auto;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: rgba(58, 117, 130, 0.12);
     font-family: var(--mono);
-    font-size: 15px;
-    font-weight: 500;
-  }
-
-  .cmd p {
-    font-size: 13.5px;
-    line-height: 1.5;
-  }
-
-  .cmd-grid[data-active="music"] .cmd[data-group="music"],
-  .cmd-grid[data-active="queue"] .cmd[data-group="queue"],
-  .cmd-grid[data-active="voice"] .cmd[data-group="voice"] {
-    background: var(--paper);
-    color: var(--ink);
-  }
-
-  .cmd-grid[data-active="music"] .cmd[data-group="music"] .icon,
-  .cmd-grid[data-active="queue"] .cmd[data-group="queue"] .icon,
-  .cmd-grid[data-active="voice"] .cmd[data-group="voice"] .icon {
-    background: var(--white);
+    font-size: 12px;
     color: var(--teal);
   }
 
-  .cmd-grid[data-active="music"] .cmd[data-group="music"] p,
-  .cmd-grid[data-active="queue"] .cmd[data-group="queue"] p,
-  .cmd-grid[data-active="voice"] .cmd[data-group="voice"] p {
+  .cmd-row {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 0 18px;
+    padding: 22px 28px;
+  }
+
+  .cmd-row + .cmd-row {
+    border-top: 1px solid var(--line);
+  }
+
+  .cmd-row .icon {
+    margin: 0;
+    background: rgba(58, 117, 130, 0.1);
+    color: var(--teal);
+  }
+
+  .cmd-row h4 {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 3px;
+  }
+
+  .cmd-row p {
+    font-size: 14.5px;
+    color: #2e2e2e;
+  }
+
+  /* How you would actually type it, set like Discord's own input. */
+  .cmd-usage {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 5px 10px;
+    border: 1px solid rgba(58, 117, 130, 0.25);
+    border-radius: 4px;
+    background: rgba(188, 229, 236, 0.3);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink);
+  }
+
+  .cmd-usage span {
+    color: var(--teal);
+  }
+
+  .cmd-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    list-style: none;
+    font-size: 12.5px;
     color: var(--body);
+  }
+
+  .cmd-options li:not(:first-child) {
+    font-family: var(--mono);
+    padding: 1px 7px;
+    border: 1px solid rgba(58, 117, 130, 0.3);
+    border-radius: 3px;
+    color: var(--teal);
+  }
+
+  .cmd-aside {
+    margin: 0 28px 24px;
+    padding: 14px 16px;
+    border-left: 2px solid var(--teal);
+    border-radius: 0 4px 4px 0;
+    background: rgba(188, 229, 236, 0.3);
+    font-size: 14px;
+    color: #2e2e2e;
   }
 
   /* ================= STATEMENT ================= */
   .statement {
-    padding: 120px var(--pad);
     text-align: center;
   }
 
@@ -570,42 +590,209 @@
   }
 
   /* ================= HOW IT WORKS ================= */
-  /* A real sequence, so it is numbered. */
-  .flow {
+  /* A diagram drawn in HTML so it reflows instead of shrinking. Two kinds of edge:
+     grey for control (commands and instructions), teal for audio. The teal path runs
+     from the sources through Lavalink to the voice channel and never touches Alfred,
+     which is the point the section makes. */
+  .diagram {
+    --control: #9a9a9a;
+    --audio: var(--teal);
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1px;
-    background: var(--line);
-    border-top: 1px solid var(--line);
-    list-style: none;
-    counter-reset: step;
+    grid-template-columns: repeat(3, minmax(0, 1fr) 96px) minmax(0, 1fr);
+    grid-template-rows: auto 80px auto;
+    align-items: center;
+    padding: 64px clamp(20px, 4vw, 56px) 72px;
+    background: var(--paper);
+    border-radius: 6px;
   }
 
-  .flow li {
-    position: relative;
+  .dg-node {
     background: var(--white);
-    padding: 32px var(--pad) 40px;
-    counter-increment: step;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 20px 20px 22px;
+    height: 100%;
   }
 
-  .flow li::before {
-    content: counter(step);
+  .dg-node.is-audio {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px rgba(58, 117, 130, 0.1);
+  }
+
+  .dg-num {
     display: block;
     font-family: var(--serif);
-    font-size: 44px;
+    font-size: 30px;
     line-height: 1;
     color: var(--teal);
-    margin-bottom: 28px;
+    margin-bottom: 18px;
   }
 
-  .flow p {
-    font-size: 14.5px;
+  .dg-node h3 {
+    font-size: 15.5px;
+    margin-bottom: 4px;
+  }
+
+  .dg-node p {
+    font-size: 13.5px;
+    line-height: 1.5;
     color: var(--body);
+  }
+
+  /* An edge is a line with an arrowhead and a short label above it. */
+  .dg-edge {
+    position: relative;
+    align-self: stretch;
+    color: var(--control);
+  }
+
+  .dg-edge.is-audio {
+    color: var(--audio);
+  }
+
+  .dg-edge::before {
+    content: "";
+    position: absolute;
+    left: 8px;
+    right: 12px;
+    top: 50%;
+    border-top: 1.5px solid currentColor;
+  }
+
+  .dg-edge::after {
+    content: "";
+    position: absolute;
+    right: 6px;
+    top: calc(50% - 4.5px);
+    border-left: 8px solid currentColor;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+
+  .dg-edge span {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    bottom: calc(50% + 10px);
+    font-size: 11.5px;
+    line-height: 1.3;
+    text-align: center;
+    color: var(--body);
+  }
+
+  .dg-edge.is-audio span {
+    color: var(--teal);
+  }
+
+  .dg-1 { grid-area: 1 / 1; }
+  .dg-e1 { grid-area: 1 / 2; }
+  .dg-2 { grid-area: 1 / 3; }
+  .dg-e2 { grid-area: 1 / 4; }
+  .dg-3 { grid-area: 1 / 5; }
+  .dg-e3 { grid-area: 1 / 6; }
+  .dg-4 { grid-area: 1 / 7; }
+
+  /* Sources sit under Lavalink and feed up into it. */
+  .dg-up {
+    grid-area: 2 / 5;
+    height: 100%;
+  }
+
+  .dg-up::before {
+    left: 50%;
+    right: auto;
+    top: 12px;
+    bottom: 6px;
+    border-top: none;
+    border-left: 1.5px solid currentColor;
+  }
+
+  .dg-up::after {
+    left: calc(50% - 4.25px);
+    right: auto;
+    top: 4px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: none;
+    border-bottom: 8px solid currentColor;
+  }
+
+  .dg-up span {
+    left: calc(50% + 12px);
+    right: auto;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .dg-sources {
+    grid-area: 3 / 4 / 4 / 7;
+    padding: 18px 20px 20px;
+    border: 1px dashed #bdbdbd;
+    border-radius: 6px;
+    background: var(--white);
+  }
+
+  .dg-sources h3 {
+    font-size: 13.5px;
+    margin-bottom: 12px;
+  }
+
+  .dg-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    list-style: none;
+    margin-bottom: 12px;
+  }
+
+  .dg-chips li {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 3px 8px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: var(--paper);
+  }
+
+  .dg-sources p {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--body);
+  }
+
+  .dg-legend {
+    grid-area: 3 / 1 / 4 / 4;
+    align-self: end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    list-style: none;
+    font-size: 12.5px;
+    color: var(--body);
+  }
+
+  .dg-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dg-legend li::before {
+    content: "";
+    width: 22px;
+    border-top: 1.5px solid var(--control);
+  }
+
+  .dg-legend li.is-audio::before {
+    border-top-color: var(--audio);
   }
 
   /* ================= QUICKSTART ================= */
   .code-card {
-    margin: 0 var(--pad) 64px;
+    margin-bottom: 48px;
     border: 1px solid var(--black-line);
     border-radius: 6px;
     overflow: hidden;
@@ -718,7 +905,7 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
     gap: 8px 48px;
-    padding: 26px var(--pad);
+    padding: 26px 0;
     border-bottom: 1px solid var(--black-line);
     font-size: 14.5px;
     color: var(--black-muted);
@@ -750,13 +937,13 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto;
     align-items: baseline;
     gap: 8px 48px;
-    padding: 28px var(--pad);
-    border-bottom: 1px solid var(--line);
+    padding: 28px 16px;
+    margin: 0 -16px;
     transition: background 0.15s ease;
   }
 
-  .docs li:last-child a {
-    border-bottom: none;
+  .docs li + li {
+    border-top: 1px solid var(--line);
   }
 
   .docs a:hover {
@@ -789,7 +976,7 @@
     align-items: flex-end;
     justify-content: space-between;
     gap: 32px;
-    padding: 72px var(--pad) 64px;
+    padding-bottom: 64px;
   }
 
   .footer-cta .logo {
@@ -801,17 +988,16 @@
     max-width: 14ch;
   }
 
+  footer .rail {
+    padding-bottom: 0;
+  }
+
   .footer-links {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1px;
-    background: var(--black-line);
+    gap: 32px;
+    padding: 36px 0 48px;
     border-top: 1px solid var(--black-line);
-  }
-
-  .footer-links > div {
-    background: var(--black);
-    padding: 28px var(--pad) 36px;
   }
 
   .footer-links h3 {
@@ -840,7 +1026,7 @@
     flex-wrap: wrap;
     justify-content: space-between;
     gap: 12px;
-    padding: 22px var(--pad);
+    padding: 22px 0 28px;
     border-top: 1px solid var(--black-line);
     font-size: 12.5px;
     color: var(--black-muted);
@@ -858,13 +1044,66 @@
     .head {
       grid-template-columns: minmax(0, 1fr);
       align-items: start;
-      padding: 64px var(--pad) 40px;
+      padding-bottom: 40px;
     }
-    /* Six features split evenly in two; eight commands split evenly in two. */
-    .features,
-    .cmd-grid,
-    .flow {
+    /* Six features split evenly in two. */
+    .features {
       grid-template-columns: repeat(2, 1fr);
+    }
+    .cmd-cols {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    /* Stacked: nodes in a column, edges turn vertical and point down. The sources
+       box drops below the chain, so no arrow seems to run from it into the voice
+       channel. */
+    .diagram {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .diagram > * {
+      width: 100%;
+      max-width: 560px;
+    }
+    .dg-1 { order: 1; }
+    .dg-e1 { order: 2; }
+    .dg-2 { order: 3; }
+    .dg-e2 { order: 4; }
+    .dg-3 { order: 5; }
+    .dg-e3 { order: 6; }
+    .dg-4 { order: 7; }
+    .dg-up { display: none; }
+    .dg-sources { order: 8; margin-top: 32px; }
+    .dg-legend { order: 9; margin-top: 28px; }
+    .dg-edge {
+      height: 64px;
+    }
+    .dg-edge:not(.dg-up)::before {
+      left: 50%;
+      right: auto;
+      top: 6px;
+      bottom: 12px;
+      border-top: none;
+      border-left: 1.5px solid currentColor;
+    }
+    .dg-edge:not(.dg-up)::after {
+      left: calc(50% - 4.25px);
+      right: auto;
+      top: auto;
+      bottom: 4px;
+      border-top: 8px solid currentColor;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: none;
+    }
+    .dg-edge span {
+      left: calc(50% + 14px);
+      right: auto;
+      top: 50%;
+      bottom: auto;
+      transform: translateY(-50%);
+      text-align: left;
+      white-space: nowrap;
     }
     .shots {
       grid-template-columns: minmax(0, 1fr);
@@ -877,9 +1116,6 @@
     }
     .nav-links {
       display: none;
-    }
-    .spacer .rail {
-      height: 80px;
     }
     .hero {
       min-height: 0;
@@ -898,22 +1134,19 @@
       white-space: nowrap;
     }
     .features,
-    .cmd-grid,
-    .flow,
     .footer-links {
       grid-template-columns: minmax(0, 1fr);
     }
-    .cmd-tab {
-      font-size: 13px;
+    .cmd-card-head,
+    .cmd-row {
+      padding-left: 20px;
+      padding-right: 20px;
     }
-    .statement {
-      padding: 80px var(--pad);
+    .cmd-card-head p {
+      display: none;
     }
-    .code-card {
-      margin: 0 0 48px;
-      border-radius: 0;
-      border-left: none;
-      border-right: none;
+    .cmd-aside {
+      margin: 0 20px 20px;
     }
     .caveats li,
     .docs a {
@@ -941,14 +1174,6 @@
     }
   }
 
-  @media (prefers-reduced-transparency: reduce) {
-    .nav-wrap {
-      background: var(--black);
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-    }
-  }
-
   @media (prefers-contrast: more) {
     :root {
       --body: #222222;
@@ -956,12 +1181,6 @@
       --line: #8c8c8c;
       --black-line: rgba(255, 255, 255, 0.45);
       --black-muted: rgba(255, 255, 255, 0.88);
-    }
-
-    .nav-wrap {
-      background: var(--black);
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
     }
   }
 </style>
@@ -1017,8 +1236,6 @@
     </div>
   </section>
 
-  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
-
   <!-- ================= FEATURES ================= -->
   <section id="features" class="band">
     <div class="rail">
@@ -1062,8 +1279,6 @@
     </div>
   </section>
 
-  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
-
   <!-- ================= SCREENSHOTS ================= -->
   <section class="band" aria-labelledby="shots-title">
     <div class="rail">
@@ -1095,76 +1310,96 @@
     </div>
   </section>
 
-  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
-
   <!-- ================= COMMANDS ================= -->
   <section id="commands" class="band">
     <div class="rail">
       <div class="head">
         <h2>Seven commands</h2>
-        <p><code>/play</code> joins your voice channel on its own. Loop and shuffle are options on it, not extra commands.</p>
+        <p><code>/play</code> joins your voice channel on its own, so there is nothing to set up first. Each command is shown the way you would type it.</p>
       </div>
 
-      <div class="cmd-tabs" role="group" aria-label="Command group">
-        <button type="button" class="cmd-tab" data-group="music" aria-pressed="true" onclick="showGroup(this)">Music</button>
-        <button type="button" class="cmd-tab" data-group="queue" aria-pressed="false" onclick="showGroup(this)">Queue</button>
-        <button type="button" class="cmd-tab" data-group="voice" aria-pressed="false" onclick="showGroup(this)">Voice</button>
-      </div>
-
-      <div class="cmd-grid" data-active="music">
-        <div class="cmd" data-group="music">
-          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 4 13 8-13 8z"/></svg></div>
-          <span class="cmd-name">/play</span>
-          <p>Queue a track, playlist or URL</p>
+      <div class="cmd-cols">
+        <div class="cmd-stack">
+          <div class="cmd-card">
+            <div class="cmd-card-head"><h3>Queue</h3><p>See and change what is next</p><span class="cmd-count">4</span></div>
+            <div class="cmd-row">
+              <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+              <div>
+                <h4>/now</h4>
+                <p>Show the track that is playing now.</p>
+                <code class="cmd-usage">/now</code>
+              </div>
+            </div>
+            <div class="cmd-row">
+              <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg></div>
+              <div>
+                <h4>/queue</h4>
+                <p>Show the queue.</p>
+                <code class="cmd-usage">/queue</code>
+              </div>
+            </div>
+            <div class="cmd-row">
+              <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 4 10 8-10 8z"/><path d="M19 5v14"/></svg></div>
+              <div>
+                <h4>/skip</h4>
+                <p>Skip the current track.</p>
+                <code class="cmd-usage">/skip</code>
+              </div>
+            </div>
+            <div class="cmd-row">
+              <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></div>
+              <div>
+                <h4>/remove</h4>
+                <p>Remove a track from the queue by its number.</p>
+                <code class="cmd-usage">/remove <span>track:</span> 2</code>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="cmd" data-group="music">
-          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
-          <span class="cmd-name">/search</span>
-          <p>Find a track with autocomplete</p>
-        </div>
-        <div class="cmd" data-group="queue">
-          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
-          <span class="cmd-name">/now</span>
-          <p>Show what is playing</p>
-        </div>
-        <div class="cmd" data-group="queue">
-          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg></div>
-          <span class="cmd-name">/queue</span>
-          <p>See what is up next</p>
-        </div>
-        <div class="cmd" data-group="queue">
-          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 4 10 8-10 8z"/><path d="M19 5v14"/></svg></div>
-          <span class="cmd-name">/skip</span>
-          <p>Move to the next track</p>
-        </div>
-        <div class="cmd" data-group="queue">
-          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></div>
-          <span class="cmd-name">/remove</span>
-          <p>Drop a track from the queue</p>
-        </div>
-        <div class="cmd" data-group="voice">
-          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></div>
-          <span class="cmd-name">/leave</span>
-          <p>Disconnect and clear the queue</p>
-        </div>
-        <div class="cmd" data-group="music">
-          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></div>
-          <span class="cmd-name">loop, shuffle</span>
-          <p>Options on /play and /search</p>
+        <div class="cmd-stack">
+          <div class="cmd-card">
+            <div class="cmd-card-head"><h3>Music</h3><p>Find something and play it</p><span class="cmd-count">2</span></div>
+            <div class="cmd-row">
+              <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 4 13 8-13 8z"/></svg></div>
+              <div>
+                <h4>/play</h4>
+                <p>Play a track or playlist URL, or search YouTube for it.</p>
+                <code class="cmd-usage">/play <span>query:</span> daft punk get lucky</code>
+                <ul class="cmd-options"><li>Options</li><li>next</li><li>loop</li><li>shuffle</li></ul>
+              </div>
+            </div>
+            <div class="cmd-row">
+              <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
+              <div>
+                <h4>/search</h4>
+                <p>Search one source for a track, artist, album or playlist, with suggestions as you type.</p>
+                <code class="cmd-usage">/search <span>query:</span> get lucky</code>
+                <ul class="cmd-options"><li>Options</li><li>type</li><li>source</li><li>next</li><li>loop</li><li>shuffle</li></ul>
+              </div>
+            </div>
+          </div>
+          <div class="cmd-card">
+            <div class="cmd-card-head"><h3>Voice</h3><p>Your voice connection</p><span class="cmd-count">1</span></div>
+            <div class="cmd-row">
+              <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></div>
+              <div>
+                <h4>/leave</h4>
+                <p>Leave the voice channel and clear the queue.</p>
+                <code class="cmd-usage">/leave</code>
+              </div>
+            </div>
+            <p class="cmd-aside">You rarely need it: Alfred leaves on its own when the last listener does.</p>
+          </div>
         </div>
       </div>
     </div>
   </section>
-
-  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
 
   <section class="band paper">
     <div class="rail statement">
       <p>Music in your voice channel. Nothing extra in your text channels.</p>
     </div>
   </section>
-
-  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
 
   <!-- ================= HOW IT WORKS ================= -->
   <section id="how" class="band">
@@ -1174,28 +1409,50 @@
         <p>Alfred handles your commands. A separate Lavalink node does the audio, so a long track never slows the bot down.</p>
       </div>
 
-      <ol class="flow">
-        <li>
-          <h3>You run a command</h3>
-          <p>A slash command or a button press on the player card, in Discord.</p>
-        </li>
-        <li>
-          <h3>Alfred handles it</h3>
-          <p>The bot keeps the queue and player state, and tells the audio node what to play.</p>
-        </li>
-        <li>
-          <h3>Lavalink fetches the audio</h3>
-          <p>A separate Java node finds the track and decodes it.</p>
-        </li>
-        <li>
-          <h3>Sound reaches the channel</h3>
-          <p>Audio streams straight to your voice channel, never through the bot.</p>
-        </li>
-      </ol>
+      <div class="diagram" role="img" aria-label="You send a command in Discord to Alfred. Alfred tells the Lavalink node what to play. Lavalink pulls audio from YouTube, Spotify, SoundCloud and Deezer, with yt-cipher solving YouTube signatures, and streams it straight to the voice channel without passing through Alfred.">
+        <div class="dg-node dg-1">
+          <span class="dg-num">1</span>
+          <h3>You, in Discord</h3>
+          <p>A slash command or a button on the player card.</p>
+        </div>
+        <div class="dg-edge dg-e1"><span>command</span></div>
+        <div class="dg-node dg-2">
+          <span class="dg-num">2</span>
+          <h3>Alfred</h3>
+          <p>Keeps the queue and player state. Never handles audio.</p>
+        </div>
+        <div class="dg-edge dg-e2"><span>what to play</span></div>
+        <div class="dg-node dg-3 is-audio">
+          <span class="dg-num">3</span>
+          <h3>Lavalink</h3>
+          <p>A separate Java node that finds and decodes the track.</p>
+        </div>
+        <div class="dg-edge dg-e3 is-audio"><span>audio over UDP</span></div>
+        <div class="dg-node dg-4 is-audio">
+          <span class="dg-num">4</span>
+          <h3>Voice channel</h3>
+          <p>Everyone in the call hears it.</p>
+        </div>
+
+        <div class="dg-edge dg-up is-audio"><span>audio from</span></div>
+        <div class="dg-sources">
+          <h3>Lavalink pulls audio from</h3>
+          <ul class="dg-chips">
+            <li>YouTube</li>
+            <li>Spotify</li>
+            <li>SoundCloud</li>
+            <li>Deezer</li>
+          </ul>
+          <p>A bundled yt-cipher container solves YouTube's signatures for Lavalink.</p>
+        </div>
+
+        <ul class="dg-legend" aria-hidden="true">
+          <li>Control</li>
+          <li class="is-audio">Audio</li>
+        </ul>
+      </div>
     </div>
   </section>
-
-  <div class="band black spacer" aria-hidden="true"><div class="rail"></div></div>
 
   <!-- ================= QUICKSTART ================= -->
   <section id="quickstart" class="band black">
@@ -1262,9 +1519,6 @@
     </div>
   </section>
 
-  <div class="band black spacer" aria-hidden="true"><div class="rail"></div></div>
-  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
-
   <!-- ================= DOCS ================= -->
   <section id="docs" class="band">
     <div class="rail">
@@ -1298,8 +1552,6 @@
       </ul>
     </div>
   </section>
-
-  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
 
   <!-- ================= FOOTER ================= -->
   <footer class="band black">
@@ -1393,21 +1645,6 @@
       reduceMotion.matches ? stopLenis() : startLenis();
     });
 
-    // Scroll edge effect: the nav only separates itself from content once there is
-    // content behind it. Passive listener + a rAF gate so this never blocks scrolling.
-    const navWrap = document.querySelector('.nav-wrap');
-    let edgeQueued = false;
-    function syncNavEdge() {
-      edgeQueued = false;
-      navWrap.classList.toggle('is-scrolled', window.scrollY > 8);
-    }
-    window.addEventListener('scroll', () => {
-      if (edgeQueued) return;
-      edgeQueued = true;
-      requestAnimationFrame(syncNavEdge);
-    }, { passive: true });
-    syncNavEdge();
-
     // Anchor navigation. Hands off to Lenis when it is running, and to the platform
     // when it is not - `scrollIntoView` honours the same preference natively, so the
     // jump is instant under reduced motion rather than a 1.2s glide.
@@ -1419,9 +1656,9 @@
         if (!target) return;
         e.preventDefault();
         if (lenis) {
-          lenis.scrollTo(target, { offset: -90, duration: 1.2 });
+          lenis.scrollTo(target, { offset: -24, duration: 1.2 });
         } else {
-          const top = target.getBoundingClientRect().top + window.scrollY - 90;
+          const top = target.getBoundingClientRect().top + window.scrollY - 24;
           window.scrollTo({ top, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
         }
       });
@@ -1447,13 +1684,6 @@
           setTimeout(() => { btnText.innerText = original; }, 2000);
         }
       });
-    }
-
-
-    // Command groups: the grid keeps every command visible and brings one group forward.
-    function showGroup(btn) {
-      document.querySelector('.cmd-grid').dataset.active = btn.dataset.group;
-      document.querySelectorAll('.cmd-tab').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
     }
   </script>
 </body>
