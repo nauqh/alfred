@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="alfred_avatar.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300..500&family=Geist:wght@400..600&family=Geist+Mono:wght@400..500&display=swap" rel="stylesheet">
 <!-- Lenis Smooth Scroll CSS -->
 <link rel="stylesheet" href="https://unpkg.com/lenis@1.1.20/dist/lenis.css">
 <style>
@@ -19,51 +19,31 @@
   }
 
   :root {
-    /* Teak-inspired Palette Tokens */
-    --bg: #f8faf7;
-    --grid: rgba(39, 16, 20, 0.016);
-    --ink: #1e1418;
-    --body: #4c4044;
-    --body-muted: #786b70;
-    --line: #e6e8e2;
-    --line-subtle: #eeefe9;
-    --card-bg: #ffffff;
+    /* Black, white and grey carry the page; Alfred's teal, taken from the avatar, is the
+       only colour, and it marks what is live or selected. */
+    --white: #ffffff;
+    --paper: #f5f5f4;
+    --ink: #000000;
+    --body: #4a4a4a;
+    --muted: #8a8a8a;
+    --line: #e2e2e0;
 
-    /* Accents */
-    --accent: #3a7582;
-    --accent-hover: #2d606c;
-    --accent-soft: rgba(58, 117, 130, 0.08);
-    --highlight: #bce5ec;
+    --black: #000000;
+    --black-line: rgba(255, 255, 255, 0.14);
+    --black-text: #ffffff;
+    --black-muted: rgba(255, 255, 255, 0.6);
 
-    /* Category dots */
-    --green-dot: #03af54;
-    --blue-dot: #3a7582;
-    --pink-dot: #d3379f;
-    --orange-dot: #d4562d;
-    --purple-dot: #8352ec;
+    --teal: #3a7582;
+    --teal-pale: #bce5ec;
+    --teal-deep: #10272c;
 
-    /* Dark / Code / Discord Tokens */
-    --code-bg: #151316;
-    --code-border: #28242a;
-    --code-text: #e6e2e8;
-    --code-muted: #8e8794;
-    --code-accent: #65d6c8;
+    --rail: min(1120px, calc(100% - 2 * clamp(20px, 7vw, 160px)));
+    --pad: clamp(24px, 4vw, 48px);
+    --nav-h: 64px;
 
-    --discord-window: #1e1f22;
-    --discord-chat: #313338;
-    --discord-embed: #2b2d31;
-    --discord-sidebar: #2b2d31;
-    --discord-blurple: #5865f2;
-    --discord-blurple-hover: #4752c4;
-    --discord-text-header: #f2f3f5;
-    --discord-text-normal: #dbdee1;
-    --discord-text-muted: #949ba4;
-    --discord-btn: #4e5058;
-    --discord-btn-hover: #6d6f78;
-    --discord-btn-active: #3b3d44;
-    --discord-btn-danger: #da373c;
-    --discord-btn-danger-hover: #a1282c;
-    --discord-btn-success: #248046;
+    --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+    --sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   }
 
   html.lenis, html.lenis body {
@@ -82,21 +62,16 @@
     pointer-events: none;
   }
 
+  /* The page ground is black so the nav's translucent material reads dark before any
+     band is under it. Light bands paint their own ground. */
   body {
-    background-color: var(--bg);
-    background-image:
-      linear-gradient(to right, var(--grid) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-    background-size: 72px 72px;
+    background: var(--black);
     color: var(--ink);
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--sans);
+    font-size: 16px;
     line-height: 1.6;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
-  }
-
-  .mono {
-    font-family: 'JetBrains Mono', monospace;
   }
 
   a {
@@ -104,10 +79,48 @@
     text-decoration: none;
   }
 
-  .container {
-    max-width: 1440px;
+  code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+  }
+
+  /* ================= GRID ================= */
+  /* A band is full-bleed and closes with a full-width rule; the rail inside it is the
+     centred column with a hairline each side. Stacked bands line the rails up into two
+     continuous verticals, and a spacer band is an empty rail row between sections. */
+  .band {
+    background: var(--white);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .band.paper {
+    background: var(--paper);
+  }
+
+  .band.black {
+    background: var(--black);
+    color: var(--black-text);
+    border-bottom-color: var(--black-line);
+  }
+
+  .rail {
+    width: var(--rail);
     margin: 0 auto;
-    padding: 0 32px;
+    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+  }
+
+  .black .rail {
+    border-color: var(--black-line);
+  }
+
+  .spacer .rail {
+    height: clamp(96px, 11vw, 160px);
   }
 
   /* ================= NAV ================= */
@@ -115,27 +128,17 @@
     position: sticky;
     top: 0;
     z-index: 1000;
-    /* A big surface should read as thicker than a chip: more blur, and saturation to
-       keep colour passing through it alive rather than grey. */
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    background: rgba(248, 250, 247, 0.72);
-    border-bottom: 1px solid transparent;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  /* A scroll edge effect, not a permanent divider: the separation appears only once
-     content is actually travelling under the bar, so the nav sits flush at rest. */
-  .nav-wrap.is-scrolled {
-    border-bottom-color: var(--line-subtle);
-    box-shadow: 0 1px 12px rgba(30, 20, 24, 0.05);
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border-bottom: 1px solid var(--black-line);
+    color: var(--black-text);
   }
 
   nav {
-    max-width: 1440px;
-    height: 72px;
+    width: var(--rail);
+    height: var(--nav-h);
     margin: 0 auto;
-    padding: 0 32px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -144,1241 +147,783 @@
   .logo {
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-weight: 800;
-    font-size: 22px;
-    letter-spacing: -0.023em;
-    color: var(--ink);
+    gap: 10px;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: -0.02em;
   }
 
-  .logo-avatar {
-    width: 34px;
-    height: 34px;
+  .logo img {
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     object-fit: cover;
     object-position: center 15%;
-    border: 1.5px solid rgba(39, 16, 20, 0.15);
-    box-shadow: 0 2px 8px rgba(39, 16, 20, 0.12);
   }
 
   .nav-links {
     display: flex;
-    align-items: center;
-    gap: 22px;
+    gap: 32px;
     list-style: none;
   }
 
   .nav-links a {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 13.5px;
-    font-weight: 600;
-    color: var(--body);
-    transition: color 0.15s, transform 0.15s;
-  }
-
-  .nav-links a:hover {
-    color: var(--ink);
-  }
-
-  .color-sq {
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-    display: inline-block;
-    flex-shrink: 0;
-  }
-
-  .sq-green { background: var(--green-dot); }
-  .sq-blue { background: var(--blue-dot); }
-  .sq-purple { background: var(--purple-dot); }
-  .sq-pink { background: var(--pink-dot); }
-  .sq-orange { background: var(--orange-dot); }
-
-  .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .github-nav-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13.5px;
-    font-weight: 600;
-    color: var(--body);
+    font-size: 14px;
+    color: var(--black-muted);
     transition: color 0.15s;
   }
 
-  .github-nav-link:hover {
-    color: var(--ink);
+  .nav-links a:hover {
+    color: var(--black-text);
   }
 
-  .btn-dark {
-    background: var(--ink);
-    color: #ffffff;
-    border: none;
-    border-radius: 999px;
-    padding: 7px 15px;
-    font-size: 13px;
-    font-weight: 600;
+  /* ================= BUTTONS ================= */
+  .btn {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    gap: 8px;
+    height: 44px;
+    padding: 0 20px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    font-size: 14.5px;
+    font-weight: 500;
     cursor: pointer;
-    transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
+    transition: background 0.15s ease, border-color 0.15s ease;
   }
 
-  .btn-dark:hover {
-    background: #341e26;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(30, 20, 24, 0.15);
-  }
-
-  /* Press feedback fires on pointer-down, not on release - waiting for the click to
-     confirm is what makes a control feel dead. Short and eased-out so the release
-     reads as instant. */
-  .btn-primary:active,
-  .btn-dark:active,
-  .newsletter-btn:active {
-    transform: translateY(0) scale(0.975);
+  /* Feedback on pointer-down, short and eased-out, so release reads as instant. */
+  .btn:active {
+    transform: scale(0.975);
     transition: transform 90ms cubic-bezier(0.2, 0, 0.2, 1);
   }
 
-  .doc-card:active {
-    transform: translateY(-2px) scale(0.995);
-    transition: transform 90ms cubic-bezier(0.2, 0, 0.2, 1);
+  .btn-sm {
+    height: 36px;
+    padding: 0 14px;
+    font-size: 13.5px;
   }
 
-  /* A lattice cell deepens instead of lifting - it cannot leave the grid. */
-  .feature-card:active {
-    background: rgba(39, 16, 20, 0.04);
-    transition: background 90ms ease;
-  }
-
-  /* A pointer-coarse device has no hover, so the lift must not stick after a tap. */
-  @media (hover: none) {
-    .btn-primary:hover,
-    .btn-dark:hover {
-      transform: none;
-    }
-  }
-
-  .play-arrow {
-    width: 0;
-    height: 0;
-    border-top: 4px solid transparent;
-    border-bottom: 4px solid transparent;
-    border-left: 6px solid currentColor;
-    display: inline-block;
-  }
-
-  /* ================= HERO SECTION ================= */
-  /* Two full-bleed panels split by a hairline - the same lattice logic as the features
-     grid. The left panel reproduces the container's gutter so its text still lines up
-     with every section below it; the right panel runs off the viewport edge. */
-  .hero-section {
-    border-bottom: 1px solid var(--line);
-  }
-
-  .hero-split {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: stretch;
-    /* Fill the screen below the sticky 72px nav, which sits in flow above this.
-       `min-height`, not `height`: if the copy or the screenshot ever needs more room
-       the panel grows rather than clipping. `dvh` second so it wins where supported -
-       on mobile `100vh` is the tallest the chrome ever gets, which leaves the bottom
-       of the hero cut off until the browser bar collapses. */
-    min-height: calc(100vh - 72px);
-    min-height: calc(100dvh - 72px);
-  }
-
-  .hero-left {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    border-right: 1px solid var(--line);
-    padding: clamp(64px, 9vh, 104px) clamp(32px, 4vw, 60px) clamp(64px, 9vh, 104px)
-             max(32px, calc((100vw - 1440px) / 2 + 32px));
-  }
-
-  h1 {
-    font-size: clamp(46px, 5.2vw, 70px);
-    font-weight: 800;
-    line-height: 1.05;
-    letter-spacing: -0.028em;
+  .btn-white {
+    background: var(--white);
     color: var(--ink);
-    margin-bottom: 22px;
-    max-width: 640px;
+  }
+
+  .btn-white:hover {
+    background: var(--teal-pale);
+  }
+
+  .btn-ghost {
+    border-color: rgba(255, 255, 255, 0.3);
+    color: var(--black-text);
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--white);
+  }
+
+  /* ================= SECTION HEAD ================= */
+  /* Title on the left, the one sentence that explains it on the right - the head uses
+     the full width of the rail instead of leaving half of it empty. */
+  .head {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: end;
+    gap: 24px 64px;
+    padding: 80px var(--pad) 56px;
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(34px, 3.8vw, 50px);
+    line-height: 1.06;
+    letter-spacing: -0.022em;
+    font-optical-sizing: auto;
     text-wrap: balance;
   }
 
-  /* The marker sits behind the text on its own layer, inset slightly top and bottom so
-     it reads as a highlighter stroke rather than a filled box. */
-  .highlight-wrap {
-    position: relative;
-    display: inline-block;
-    padding: 0 8px;
-    margin: 0 -3px;
-    z-index: 1;
+  .head p {
+    font-size: 16.5px;
+    color: var(--body);
+    max-width: 44ch;
+    padding-bottom: 4px;
   }
 
-  .highlight-wrap::before {
+  .black .head p {
+    color: var(--black-muted);
+  }
+
+  .head p code {
+    color: var(--ink);
+  }
+
+  /* ================= HERO ================= */
+  /* Text only, centred over a grid that spans the whole width and fades from the
+     middle. The teal glow is the accent's first and largest appearance. */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    min-height: min(820px, calc(100vh - var(--nav-h)));
+    min-height: min(820px, calc(100dvh - var(--nav-h)));
+    padding: 96px 24px 112px;
+    text-align: center;
+    background:
+      radial-gradient(50% 55% at 50% 0%, rgba(58, 117, 130, 0.5), transparent 75%),
+      var(--black);
+  }
+
+  .hero::before {
     content: "";
     position: absolute;
-    top: 6%;
-    bottom: 6%;
-    left: 0;
-    right: 0;
-    background: var(--highlight);
-    border-radius: 6px;
-    z-index: -1;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--black-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--black-line) 1px, transparent 1px);
+    background-size: 88px 88px;
+    background-position: center top;
+    -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 40%, #000 20%, transparent 78%);
+    mask-image: radial-gradient(ellipse 70% 70% at 50% 40%, #000 20%, transparent 78%);
+    pointer-events: none;
+  }
+
+  .hero-inner {
+    position: relative;
+    max-width: 980px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hero-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 40px;
+    padding: 6px 6px 6px 12px;
+    border: 1px solid var(--black-line);
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--black-muted);
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .hero-chip button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    border: none;
+    border-radius: 2px;
+    background: none;
+    color: var(--black-muted);
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .hero-chip button:hover {
+    color: var(--black-text);
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .copied {
+    font-size: 11px;
+    color: var(--teal-pale);
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(48px, 7vw, 108px);
+    line-height: 0.96;
+    letter-spacing: -0.032em;
+    font-optical-sizing: auto;
+    text-wrap: balance;
   }
 
   .hero-desc {
-    font-size: 17px;
-    line-height: 1.55;
-    color: var(--body);
-    font-weight: 400;
+    font-size: 18px;
+    color: var(--black-muted);
     max-width: 44ch;
+    margin: 28px auto 40px;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  /* ================= FEATURES ================= */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border-top: 1px solid var(--line);
+  }
+
+  .feature {
+    background: var(--white);
+    padding: 36px var(--pad) 44px;
+  }
+
+  .icon {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 3px;
+    background: var(--paper);
+    color: var(--teal);
     margin-bottom: 36px;
   }
 
-  .btn-primary {
-    background: var(--ink);
-    color: #ffffff;
-    border-radius: 9px;
-    padding: 15px 26px;
-    font-size: 15px;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    transition: background 0.15s ease, transform 0.15s ease;
-  }
-
-  .btn-primary:hover {
-    background: #341e26;
-  }
-
-  /* HERO SCREENSHOT FRAME */
-  /* The right padding mirrors the left panel's gutter, so the screenshot's right edge
-     lands on the same line as every section below it. The panel background stays
-     full-bleed; only the content is held to the container measure. Without this the
-     panel is a bare 50vw and the frame grows without limit on a wide display. */
-  .hero-right {
-    display: flex;
-    align-items: center;
-    padding: clamp(44px, 7vh, 76px) max(32px, calc((100vw - 1440px) / 2 + 32px))
-             clamp(44px, 7vh, 76px) clamp(28px, 4vw, 60px);
-    background:
-      radial-gradient(120% 90% at 18% 12%, rgba(188, 229, 236, 0.55), transparent 62%),
-      linear-gradient(180deg, #f2f5f1, #edf1ec);
-  }
-
-  .screenshot-frame {
-    width: 100%;
-    background: var(--discord-window);
-    border: 1px solid rgba(39, 16, 20, 0.12);
-    border-radius: 14px;
-    box-shadow: 0 30px 70px rgba(39, 16, 20, 0.16);
-    overflow: hidden;
-  }
-
-  .window-header {
-    background: #141517;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    padding: 0 14px;
-    gap: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  }
-
-  .mac-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-  }
-
-  .mac-red { background: #ff5f56; }
-  .mac-yellow { background: #ffbd2e; }
-  .mac-green { background: #27c93f; }
-
-  .window-title {
-    color: var(--discord-text-muted);
-    font-size: 11px;
-    font-weight: 500;
-    margin-left: 6px;
-  }
-
-  .discord-screenshot {
-    width: 100%;
-    height: auto;
-    display: block;
-  }
-
-  /* ================= SECTION HEADERS ================= */
-  .section-wrap {
-    padding: 84px 0;
-  }
-
-  .section-head {
-    max-width: 720px;
-    margin-bottom: 52px;
-  }
-
-  .section-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.067em;
-    color: var(--accent);
-    margin-bottom: 12px;
-  }
-
-  .section-title {
-    font-size: clamp(28px, 3.2vw, 38px);
-    font-weight: 800;
-    line-height: 1.18;
-    letter-spacing: -0.024em;
-    color: var(--ink);
-    margin-bottom: 14px;
-  }
-
-  .section-subtitle {
-    font-size: 16.5px;
-    color: var(--body);
-    line-height: 1.6;
-  }
-
-  /* ================= FEATURES GRID ================= */
-  /* A continuous hairline lattice rather than floating cards: the container draws the
-     top and left edges, each cell draws its own right and bottom, so no line is ever
-     doubled and the count of cells does not matter. Cells share the page ground - no
-     fill, no radius, no shadow - so the rules are the only structure. */
-  .features-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    border-top: 1px solid var(--line);
-    border-left: 1px solid var(--line);
-  }
-
-  .feature-card {
-    border-right: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-    padding: 34px 32px 38px;
-    display: flex;
-    flex-direction: column;
-    transition: background 0.18s ease;
-  }
-
-  /* No lift: a translate would pull a cell out of the lattice and break the rules it
-     shares with its neighbours. The whole cell warming is the hover affordance. */
-  .feature-card:hover {
-    background: rgba(39, 16, 20, 0.018);
-  }
-
-  .feature-icon-box {
-    width: 52px;
-    height: 52px;
-    border-radius: 13px;
-    background: rgba(39, 16, 20, 0.045);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 30px;
-    color: var(--ink);
-  }
-
-  .feature-icon-box svg {
-    width: 21px;
-    height: 21px;
+  .icon svg {
+    width: 19px;
+    height: 19px;
+    fill: none;
     stroke: currentColor;
     stroke-width: 1.6;
-    fill: none;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
 
-  .feature-card h3 {
-    font-size: 19.5px;
+  h3 {
+    font-size: 17px;
     font-weight: 500;
-    color: var(--ink);
-    letter-spacing: -0.014em;
-    margin-bottom: 12px;
+    letter-spacing: -0.012em;
+    margin-bottom: 8px;
   }
 
-  .feature-card p {
+  .feature p {
     font-size: 14.5px;
     color: var(--body);
-    line-height: 1.58;
     max-width: 34ch;
   }
 
-  /* ================= COMMANDS & INTERACTIVE PLAYER ================= */
-  .commands-layout {
+  /* ================= SCREENSHOTS ================= */
+  /* Real captures from a server, floated on a teal panel cut from the avatar's colour,
+     with what each one shows written underneath. */
+  .shots {
     display: grid;
-    grid-template-columns: 1.15fr 1fr;
-    gap: 40px;
-    align-items: start;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border-top: 1px solid var(--line);
   }
 
-  .discord-sim-box {
-    background: var(--discord-chat);
-    border: 1px solid rgba(0, 0, 0, 0.2);
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
-    color: var(--discord-text-normal);
-  }
-
-  .sim-header {
+  .shot {
+    background: var(--white);
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 18px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-direction: column;
   }
 
-  /* Discord embed geometry: 4px accent rail, 4px radius, 80px thumbnail top-right,
-     16px/600 title, 14px/1.375 description. Taken from what the client renders, so the
-     mock reads as a screenshot rather than an approximation of one. */
-  .cyber-card {
-    background: var(--discord-embed);
-    border-left: 4px solid var(--accent);
-    border-radius: 4px;
-    padding: 12px 16px 16px;
-    margin-bottom: 8px;
-    max-width: 520px;
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-  }
-
-  .cyber-card.now-playing {
-    border-left-color: var(--discord-blurple);
-  }
-
-  .cyber-body {
+  .shot-panel {
     flex: 1;
-    min-width: 0;
+    display: grid;
+    place-items: center;
+    padding: clamp(24px, 3.5vw, 44px);
+    background:
+      radial-gradient(80% 70% at 20% 0%, rgba(188, 229, 236, 0.35), transparent 70%),
+      linear-gradient(160deg, var(--teal) 0%, var(--teal-deep) 100%);
   }
 
-  .cyber-thumb {
-    width: 80px;
-    height: 80px;
-    flex-shrink: 0;
-    border-radius: 3px;
-    object-fit: cover;
-    object-position: center 15%;
-  }
-
-  .cyber-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--discord-text-header);
-    margin-bottom: 8px;
-  }
-
-  /* `### heading` inside a description renders larger than the body text. */
-  .cyber-h3 {
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1.25;
-    margin-bottom: 2px;
-  }
-
-  .cyber-line {
-    font-size: 14px;
-    line-height: 1.375;
-    color: var(--discord-text-normal);
-    word-break: break-word;
-  }
-
-  .cyber-line + .cyber-line {
-    margin-top: 2px;
-  }
-
-  .cyber-gap {
-    height: 14px;
-  }
-
-  /* The playhead is drawn with box-drawing characters, so it needs a fixed-width face;
-     anything proportional makes the bar jitter as the position changes. */
-  .cyber-bar {
-    font-size: 14px;
-    color: var(--discord-text-normal);
-    margin-top: 6px;
-    white-space: nowrap;
-    overflow-x: auto;
-  }
-
-  /* `-# text` - Discord's small subtext. Muted and smaller, not italic. */
-  .cyber-sub {
-    font-size: 13px;
-    color: var(--discord-text-muted);
-    margin-top: 8px;
-  }
-
-  .discord-link {
-    color: #00a8fc;
-    text-decoration: none;
-  }
-
-  .discord-link:hover {
-    text-decoration: underline;
-  }
-
-  .discord-mention {
-    background: rgba(88, 101, 242, 0.3);
-    color: #c9cdfb;
-    padding: 0 2px;
-    border-radius: 3px;
-    font-weight: 500;
-  }
-
-  /* Inline code: near-black chip, slightly smaller than the line it sits in. */
-  .dcode {
-    background: #1e1f22;
-    border-radius: 3px;
-    padding: 1px 4px;
-    font-size: 0.85em;
-    font-family: 'JetBrains Mono', monospace;
-  }
-
-  /* "nauqh used /play" - the header Discord puts above an application command reply.
-     Without it the embeds read as messages the bot posted unprompted. */
-  .sim-cmd-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--discord-text-muted);
-    margin-bottom: 6px;
-    padding-left: 22px;
-  }
-
-  .sim-cmd-avatar {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    object-fit: cover;
-    object-position: center 15%;
-  }
-
-  .sim-cmd-user {
-    color: var(--discord-text-header);
-    font-weight: 500;
-  }
-
-  .sim-cmd-chip {
-    color: #c9cdfb;
-    font-weight: 500;
-  }
-
-  .sim-cmd-chip:hover {
-    text-decoration: underline;
-  }
-
-  .sim-channel-name {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--discord-text-header);
-  }
-
-  .sim-tag-live {
-    font-size: 11px;
-    background: var(--discord-blurple);
-    color: #fff;
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-weight: 700;
-  }
-
-  .discord-msg {
-    display: flex;
-    gap: 14px;
-  }
-
-  .msg-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .msg-body {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .msg-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
-  }
-
-  .bot-author {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--discord-text-header);
-  }
-
-  .bot-tag {
-    background: var(--discord-blurple);
-    color: #ffffff;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 1px 4px;
-    border-radius: 3px;
-    line-height: 1.3;
-  }
-
-  .msg-time {
-    font-size: 12px;
-    color: var(--discord-text-muted);
-  }
-
-
-  /* INTERACTIVE DISCORD BUTTONS */
-  .discord-button-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .d-btn {
-    background: var(--discord-btn);
-    color: var(--discord-text-header);
-    border: none;
-    border-radius: 3px;
-    height: 32px;
-    padding: 0 16px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    transition: background 0.15s, transform 0.1s;
-    user-select: none;
-  }
-
-  .d-btn:hover {
-    background: var(--discord-btn-hover);
-  }
-
-  .d-btn:active {
-    transform: scale(0.97);
-  }
-
-  .d-btn.btn-active {
-    background: var(--discord-blurple);
-  }
-
-  .d-btn.btn-success {
-    background: var(--discord-btn-success);
-  }
-
-  .d-btn.btn-link {
-    background: var(--discord-btn);
-    color: var(--discord-text-muted);
-    cursor: default;
-  }
-
-  .sim-hint {
-    margin-top: 14px;
-    font-size: 12px;
-    color: var(--discord-text-muted);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  /* COMMANDS TABLE */
-  .commands-table-wrap {
-    background: var(--card-bg);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 4px 16px rgba(39, 16, 20, 0.03);
-  }
-
-  .cmd-table {
+  .shot-panel img {
+    display: block;
     width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-  }
-
-  .cmd-table th {
-    background: #f4f6f1;
-    padding: 14px 18px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.042em;
-    color: var(--body-muted);
-    border-bottom: 1px solid var(--line);
-  }
-
-  .cmd-table td {
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--line);
-    font-size: 13.5px;
-    color: var(--body);
-    vertical-align: top;
-  }
-
-  .cmd-table tr:last-child td {
-    border-bottom: none;
-  }
-
-  .cmd-badge {
-    display: inline-block;
-    background: rgba(58, 117, 130, 0.1);
-    color: var(--accent);
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 5px;
-    font-size: 12.5px;
-  }
-
-  .cmd-group-tag {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--ink);
-  }
-
-  .source-notes-box {
-    margin-top: 24px;
-    background: #fbfbf9;
-    border: 1px dashed var(--line);
-    border-radius: 12px;
-    padding: 16px 20px;
-    font-size: 13px;
-    color: var(--body);
-  }
-
-  .source-notes-box strong {
-    color: var(--ink);
-  }
-
-  .source-notes-box a {
-    color: var(--accent);
-    text-decoration: underline;
-  }
-
-  /* ================= ARCHITECTURE SECTION ================= */
-  .mermaid-card {
-    background: var(--card-bg);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 32px 28px;
-    box-shadow: 0 4px 20px rgba(39, 16, 20, 0.03);
-    overflow: hidden;
-  }
-
-  .mermaid-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--body-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--line-subtle);
-  }
-
-  .mermaid-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow-x: auto;
-    padding: 12px 0;
-    min-height: 360px;
-  }
-
-  .mermaid-wrapper .mermaid {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-  }
-
-  .mermaid-wrapper svg {
-    max-width: 100%;
     height: auto;
+    border-radius: 8px;
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08);
   }
 
-  /* ================= QUICKSTART / CODE TABS ================= */
-  .quickstart-card {
-    background: var(--code-bg);
-    border: 1px solid var(--code-border);
-    border-radius: 18px;
-    overflow: hidden;
-    box-shadow: 0 20px 50px rgba(21, 19, 22, 0.35);
+  .shot figcaption {
+    padding: 24px var(--pad) 32px;
+    border-top: 1px solid var(--line);
   }
 
-  .qs-tabs-header {
-    background: #100e11;
-    border-bottom: 1px solid var(--code-border);
-    display: flex;
+  .shot figcaption p {
+    font-size: 14.5px;
+    color: var(--body);
+  }
+
+  /* ================= COMMANDS ================= */
+  /* Tabs pick a group; the grid keeps every command visible and brings the picked
+     group forward, so the reader sees both the whole set and where each one belongs. */
+  .cmd-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .cmd-tab {
+    height: 52px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    background: var(--white);
+    font: inherit;
+    font-size: 14px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+  }
+
+  .cmd-tab + .cmd-tab {
+    border-left: 1px solid var(--line);
+  }
+
+  .cmd-tab:hover {
+    color: var(--ink);
+  }
+
+  .cmd-tab[aria-pressed="true"] {
+    background: var(--paper);
+    color: var(--ink);
+    border-bottom-color: var(--teal);
+  }
+
+  .cmd-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+  }
+
+  .cmd {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 4px 16px;
     align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
+    align-content: start;
+    padding: 22px var(--pad) 24px;
+    background: var(--white);
+    color: var(--muted);
+    transition: background 0.2s ease, color 0.2s ease;
   }
 
-  .qs-tab-buttons {
+  .cmd .icon {
+    width: 36px;
+    height: 36px;
+    margin: 0;
+    grid-row: span 2;
+    align-self: start;
+    color: var(--muted);
+    transition: color 0.2s ease;
+  }
+
+  .cmd .icon svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .cmd-name {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .cmd p {
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+
+  .cmd-grid[data-active="music"] .cmd[data-group="music"],
+  .cmd-grid[data-active="queue"] .cmd[data-group="queue"],
+  .cmd-grid[data-active="voice"] .cmd[data-group="voice"] {
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  .cmd-grid[data-active="music"] .cmd[data-group="music"] .icon,
+  .cmd-grid[data-active="queue"] .cmd[data-group="queue"] .icon,
+  .cmd-grid[data-active="voice"] .cmd[data-group="voice"] .icon {
+    background: var(--white);
+    color: var(--teal);
+  }
+
+  .cmd-grid[data-active="music"] .cmd[data-group="music"] p,
+  .cmd-grid[data-active="queue"] .cmd[data-group="queue"] p,
+  .cmd-grid[data-active="voice"] .cmd[data-group="voice"] p {
+    color: var(--body);
+  }
+
+  /* ================= STATEMENT ================= */
+  .statement {
+    padding: 120px var(--pad);
+    text-align: center;
+  }
+
+  .statement p {
+    font-family: var(--serif);
+    font-size: clamp(32px, 3.8vw, 52px);
+    line-height: 1.1;
+    letter-spacing: -0.022em;
+    max-width: 22ch;
+    margin: 0 auto;
+    text-wrap: balance;
+  }
+
+  /* ================= HOW IT WORKS ================= */
+  /* A real sequence, so it is numbered. */
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border-top: 1px solid var(--line);
+    list-style: none;
+    counter-reset: step;
+  }
+
+  .flow li {
+    position: relative;
+    background: var(--white);
+    padding: 32px var(--pad) 40px;
+    counter-increment: step;
+  }
+
+  .flow li::before {
+    content: counter(step);
+    display: block;
+    font-family: var(--serif);
+    font-size: 44px;
+    line-height: 1;
+    color: var(--teal);
+    margin-bottom: 28px;
+  }
+
+  .flow p {
+    font-size: 14.5px;
+    color: var(--body);
+  }
+
+  /* ================= QUICKSTART ================= */
+  .code-card {
+    margin: 0 var(--pad) 64px;
+    border: 1px solid var(--black-line);
+    border-radius: 6px;
+    overflow: hidden;
+    background: #0f0f0f;
+  }
+
+  .code-tabs {
     display: flex;
-    gap: 4px;
+    border-bottom: 1px solid var(--black-line);
+    padding: 0 12px;
   }
 
   .qs-tab-btn {
-    background: transparent;
+    background: none;
     border: none;
-    color: var(--code-muted);
-    font-size: 12.5px;
-    font-weight: 600;
-    padding: 10px 14px;
-    cursor: pointer;
     border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    padding: 14px 12px 12px;
+    font: inherit;
+    font-size: 13.5px;
+    color: var(--black-muted);
+    cursor: pointer;
     transition: color 0.15s, border-color 0.15s;
   }
 
-  .qs-tab-btn:hover {
-    color: #fff;
+  .qs-tab-btn:hover,
+  .qs-tab-btn.active {
+    color: var(--black-text);
   }
 
   .qs-tab-btn.active {
-    color: #fff;
-    border-bottom-color: var(--accent);
+    border-bottom-color: var(--teal-pale);
   }
 
   .qs-tab-content {
     display: none;
-    padding: 28px;
+    padding: 24px;
   }
 
   .qs-tab-content.active {
     display: block;
   }
 
-  .code-block-wrap {
+  .code-block {
     position: relative;
-    background: #0d0b0e;
-    border: 1px solid #231f26;
-    border-radius: 10px;
+    border: 1px solid var(--black-line);
+    border-radius: 4px;
     padding: 20px 22px;
     margin-bottom: 18px;
     overflow-x: auto;
+    background: var(--black);
   }
 
-  .code-block-wrap pre {
-    color: var(--code-text);
+  .code-block pre {
+    font-family: var(--mono);
     font-size: 13.5px;
-    line-height: 1.65;
-    margin: 0;
+    line-height: 1.75;
+    color: #e6e6e6;
   }
 
-  .code-comment {
-    color: var(--code-muted);
+  .c-comment {
+    color: #7d7d7d;
   }
 
-  .code-cmd {
-    color: var(--code-accent);
+  .c-cmd {
+    color: var(--teal-pale);
   }
 
   .copy-btn {
     position: absolute;
     top: 10px;
     right: 10px;
-    background: #242028;
-    color: #d1cbd8;
-    border: 1px solid #36303c;
-    border-radius: 5px;
-    padding: 3px 8px;
+    padding: 3px 10px;
+    border: 1px solid var(--black-line);
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #e6e6e6;
+    font-family: var(--mono);
     font-size: 11px;
-    font-weight: 600;
     cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s;
   }
 
   .copy-btn:hover {
-    background: #342e3b;
-    color: #ffffff;
+    background: rgba(255, 255, 255, 0.14);
   }
 
-  .qs-instructions {
-    color: #a8a2af;
-    font-size: 13.5px;
-    line-height: 1.6;
-  }
-
-  .qs-instructions strong {
-    color: #ffffff;
-  }
-
-  .qs-instructions code {
-    background: #231f26;
-    color: #e4dfe9;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 12.5px;
-  }
-
-  /* ================= DOCS & RESOURCES ================= */
-  .docs-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-  }
-
-  .doc-card {
-    background: var(--card-bg);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 28px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
-  }
-
-  .doc-card:hover {
-    transform: translateY(-3px);
-    border-color: var(--accent);
-    box-shadow: 0 10px 24px rgba(39, 16, 20, 0.06);
-  }
-
-  .doc-tag {
-    font-size: 11.5px;
-    font-weight: 700;
-    color: var(--orange-dot);
-    text-transform: uppercase;
-    letter-spacing: 0.042em;
-    margin-bottom: 8px;
-  }
-
-  .doc-card h3 {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--ink);
-    margin-bottom: 8px;
-  }
-
-  .doc-card p {
+  .qs-note {
     font-size: 14px;
-    color: var(--body);
-    line-height: 1.5;
-    margin-bottom: 20px;
+    color: var(--black-muted);
   }
 
-  .doc-link {
-    font-size: 13.5px;
-    font-weight: 700;
-    color: var(--accent);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  /* ================= TEAK GRID FOOTER (STRUCTURE FROM IMAGE) ================= */
-  .footer-section {
-    padding: 84px 0 40px;
-    background: transparent;
-  }
-
-  .footer-grid-frame {
-    display: grid;
-    grid-template-columns: 1fr 1.08fr;
-    background: #ffffff;
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 6px 28px rgba(39, 16, 20, 0.04);
-  }
-
-  /* LEFT COLUMN: BRAND */
-  .footer-left-col {
-    padding: 48px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    background: #fafbf9;
-    border-right: 1px solid var(--line);
-    position: relative;
-  }
-
-  .footer-big-brand {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 18px;
-  }
-
-  .footer-big-avatar {
-    width: 68px;
-    height: 68px;
-    border-radius: 50%;
-    object-fit: cover;
-    object-position: center 15%;
-    border: 2px solid rgba(39, 16, 20, 0.15);
-    box-shadow: 0 4px 14px rgba(39, 16, 20, 0.12);
-  }
-
-  .footer-brand-title {
-    font-size: 36px;
-    font-weight: 800;
-    letter-spacing: -0.033em;
-    color: var(--ink);
-    line-height: 1;
-  }
-
-  .footer-brand-desc {
-    font-size: 15px;
-    color: var(--body);
-    max-width: 400px;
-    line-height: 1.6;
-  }
-
-  /* RIGHT COLUMN: NEWSLETTER + 2X2 LINKS GRID */
-  .footer-right-col {
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
-  }
-
-  /* ACCENT NEWSLETTER CALLOUT */
-  .footer-newsletter-card {
-    background: var(--highlight);
-    padding: 40px 44px;
-    border-bottom: 1px solid rgba(39, 16, 20, 0.08);
-  }
-
-  .newsletter-heading {
-    font-size: 26px;
-    font-weight: 800;
-    letter-spacing: -0.031em;
-    color: var(--ink);
-    margin-bottom: 6px;
-    line-height: 1.15;
-  }
-
-  .newsletter-sub {
-    font-size: 14.5px;
-    color: var(--body);
-    margin-bottom: 22px;
-    font-weight: 500;
-  }
-
-  .newsletter-form {
-    display: flex;
-    gap: 10px;
-    max-width: 480px;
-  }
-
-  .newsletter-input {
-    flex: 1;
-    background: #ffffff;
-    border: 1px solid rgba(39, 16, 20, 0.12);
-    border-radius: 999px;
-    padding: 10px 20px;
-    font-size: 13px;
-    color: var(--ink);
-    outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
-  }
-
-  .newsletter-input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(58, 117, 130, 0.15);
-  }
-
-  .newsletter-btn {
-    background: var(--accent);
-    color: #ffffff;
-    border: none;
-    border-radius: 999px;
-    padding: 10px 22px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  .qs-note code,
+  .caveats code {
     white-space: nowrap;
-    box-shadow: 0 2px 10px rgba(58, 117, 130, 0.25);
+    color: var(--black-text);
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 5px;
+    border-radius: 3px;
   }
 
-  .newsletter-btn:hover {
-    background: var(--accent-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(58, 117, 130, 0.35);
+  /* Before-you-run caveats as divided rows: the source on the left, what to do on the
+     right. */
+  .caveats {
+    list-style: none;
+    border-top: 1px solid var(--black-line);
   }
 
-  /* 2X2 LINKS GRID WITH CLEAN BORDER LINES */
-  .footer-links-grid {
+  .caveats li {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    background: #ffffff;
-    flex: 1;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+    gap: 8px 48px;
+    padding: 26px var(--pad);
+    border-bottom: 1px solid var(--black-line);
+    font-size: 14.5px;
+    color: var(--black-muted);
   }
 
-  .footer-cell {
-    padding: 36px 44px;
-    border-right: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-  }
-
-  .footer-cell:nth-child(2n) {
-    border-right: none;
-  }
-
-  .footer-cell:nth-last-child(-n + 2) {
+  .caveats li:last-child {
     border-bottom: none;
   }
 
-  .footer-cell-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--ink);
-    margin-bottom: 18px;
-    letter-spacing: -0.013em;
+  .caveats h3 {
+    color: var(--black-text);
+    font-size: 15.5px;
+    margin: 0;
   }
 
-  .footer-cell-links {
+  .caveats a {
+    color: var(--teal-pale);
+    border-bottom: 1px solid rgba(188, 229, 236, 0.4);
+  }
+
+  /* ================= DOCS ================= */
+  .docs {
     list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    border-top: 1px solid var(--line);
   }
 
-  .footer-cell-links a {
-    font-size: 13.5px;
+  .docs a {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto;
+    align-items: baseline;
+    gap: 8px 48px;
+    padding: 28px var(--pad);
+    border-bottom: 1px solid var(--line);
+    transition: background 0.15s ease;
+  }
+
+  .docs li:last-child a {
+    border-bottom: none;
+  }
+
+  .docs a:hover {
+    background: var(--paper);
+  }
+
+  .docs h3 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 24px;
+    letter-spacing: -0.015em;
+    margin: 0;
+  }
+
+  .docs p {
+    font-size: 14.5px;
     color: var(--body);
-    transition: color 0.15s, transform 0.15s;
-    display: inline-block;
   }
 
-  .footer-cell-links a:hover {
-    color: var(--accent);
-    transform: translateX(3px);
-  }
-
-  /* BOTTOM METADATA BAR */
-  .footer-bottom-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 24px 8px 0;
+  .docs .file {
+    font-family: var(--mono);
     font-size: 13px;
-    color: var(--body-muted);
+    color: var(--teal);
+  }
+
+  /* ================= FOOTER ================= */
+  .footer-cta {
+    display: flex;
     flex-wrap: wrap;
-    gap: 16px;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 32px;
+    padding: 72px var(--pad) 64px;
   }
 
-  /* A sentence, not a link row - flex would make the text and the link separate
-     items and open a gap in the middle of it. */
-  .footer-legal-links {
-    display: block;
+  .footer-cta .logo {
+    margin-bottom: 36px;
   }
 
-  .footer-legal-links a {
-    font-weight: 600;
-    color: var(--body-muted);
+  .footer-cta h2 {
+    font-size: clamp(34px, 4vw, 54px);
+    max-width: 14ch;
+  }
+
+  .footer-links {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--black-line);
+    border-top: 1px solid var(--black-line);
+  }
+
+  .footer-links > div {
+    background: var(--black);
+    padding: 28px var(--pad) 36px;
+  }
+
+  .footer-links h3 {
+    font-size: 13.5px;
+    margin-bottom: 14px;
+  }
+
+  .footer-links ul {
+    list-style: none;
+    display: grid;
+    gap: 10px;
+  }
+
+  .footer-links a {
+    font-size: 13.5px;
+    color: var(--black-muted);
     transition: color 0.15s;
   }
 
-  .footer-legal-links a:hover {
-    color: var(--accent);
+  .footer-links a:hover {
+    color: var(--black-text);
+  }
+
+  .footer-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 22px var(--pad);
+    border-top: 1px solid var(--black-line);
+    font-size: 12.5px;
+    color: var(--black-muted);
+  }
+
+  .footer-bottom a {
+    color: var(--black-text);
   }
 
   /* ================= RESPONSIVE ================= */
   @media (max-width: 1024px) {
-    .hero-split {
-      grid-template-columns: 1fr;
-      min-height: 0;
+    .nav-links {
+      gap: 22px;
     }
-    .hero-left {
-      border-right: none;
-      border-bottom: 1px solid var(--line);
-      padding: 56px 32px 60px;
+    .head {
+      grid-template-columns: minmax(0, 1fr);
+      align-items: start;
+      padding: 64px var(--pad) 40px;
     }
-    .hero-right {
-      padding: 40px 32px;
+    /* Six features split evenly in two; eight commands split evenly in two. */
+    .features,
+    .cmd-grid,
+    .flow {
+      grid-template-columns: repeat(2, 1fr);
     }
-    .commands-layout {
-      grid-template-columns: 1fr;
-    }
-    .features-grid,
-    .arch-grid,
-    .docs-grid {
-      grid-template-columns: 1fr;
-    }
-    .footer-grid-frame {
-      grid-template-columns: 1fr;
-    }
-    .footer-left-col {
-      border-right: none;
-      border-bottom: 1px solid var(--line);
+    .shots {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 680px) {
+    :root {
+      --pad: 20px;
+    }
     .nav-links {
       display: none;
     }
-    h1 {
-      font-size: 36px;
+    .spacer .rail {
+      height: 80px;
     }
-    .hero-left {
-      padding: 44px 24px 48px;
+    .hero {
+      min-height: 0;
+      padding: 80px 16px 96px;
     }
-    .hero-right {
-      padding: 28px 24px 36px;
+    .hero-desc {
+      font-size: 16.5px;
     }
-    .section-wrap {
-      padding: 60px 0;
+    .hero-chip {
+      max-width: 100%;
     }
-    .footer-links-grid {
-      grid-template-columns: 1fr;
+    .hero-chip span:first-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    .footer-cell {
-      border-right: none !important;
-      border-bottom: 1px solid var(--line) !important;
-      padding: 24px 28px;
+    .features,
+    .cmd-grid,
+    .flow,
+    .footer-links {
+      grid-template-columns: minmax(0, 1fr);
     }
-    .footer-cell:last-child {
-      border-bottom: none !important;
+    .cmd-tab {
+      font-size: 13px;
     }
-    .footer-left-col,
-    .footer-newsletter-card {
-      padding: 28px 24px;
+    .statement {
+      padding: 80px var(--pad);
     }
-    .newsletter-form {
-      flex-direction: column;
+    .code-card {
+      margin: 0 0 48px;
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
+    }
+    .caveats li,
+    .docs a {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
-  /* ================= USER MOTION & DISPLAY PREFERENCES ================= */
 
-  /* Reduced motion is not "no feedback" - it is feedback without vestibular travel.
-     Colour and opacity changes stay; translation, scaling and the smooth-scroll
-     hijack go. Lenis is also never constructed under this query (see the script). */
+  /* ================= USER MOTION & DISPLAY PREFERENCES ================= */
+  /* Reduced motion keeps colour and opacity feedback and drops travel and scaling.
+     Lenis is also never constructed under this query (see the script). */
   @media (prefers-reduced-motion: reduce) {
     html {
       scroll-behavior: auto;
@@ -1391,614 +936,418 @@
       scroll-behavior: auto !important;
     }
 
-    /* Keep the affordance, drop the travel. */
-    .btn-dark:hover,
-    .doc-card:hover,
-    .btn-primary:active,
-    .btn-dark:active,
-    .newsletter-btn:active,
-    .doc-card:active {
+    .btn:active {
       transform: none !important;
     }
   }
 
-  /* Frostier, not glassier: raise the background to near-opaque and drop the blur,
-     rather than removing the layer and letting content collide with the nav. */
   @media (prefers-reduced-transparency: reduce) {
     .nav-wrap {
-      background: var(--bg);
+      background: var(--black);
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
-      border-bottom: 1px solid var(--line);
     }
   }
 
-  /* Solid surfaces with a defined border - translucency and hairlines both go. */
   @media (prefers-contrast: more) {
     :root {
-      --body: #2a2226;
-      --body-muted: #4c4044;
-      --line: #b9bdb4;
-      --line-subtle: #b9bdb4;
+      --body: #222222;
+      --muted: #555555;
+      --line: #8c8c8c;
+      --black-line: rgba(255, 255, 255, 0.45);
+      --black-muted: rgba(255, 255, 255, 0.88);
     }
 
     .nav-wrap {
-      background: var(--bg);
+      background: var(--black);
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
-      border-bottom: 1px solid var(--ink);
-    }
-
-    .doc-card {
-      border: 1px solid var(--ink);
-    }
-
-    .features-grid {
-      border-top-color: var(--ink);
-      border-left-color: var(--ink);
-    }
-
-    .feature-card {
-      border-right-color: var(--ink);
-      border-bottom-color: var(--ink);
     }
   }
 </style>
 </head>
 <body>
 
-  <!-- ================= TOP NAV ================= -->
   <div class="nav-wrap">
     <nav>
       <a href="#" class="logo">
-        <img src="alfred_avatar.jpg" alt="Alfred" class="logo-avatar">
+        <img src="alfred_avatar.jpg" alt="">
         <span>alfred</span>
       </a>
 
-      <ul class="nav-links mono">
-        <li><a href="#features"><span class="color-sq sq-green"></span>Features</a></li>
-        <li><a href="#commands"><span class="color-sq sq-blue"></span>Commands</a></li>
-        <li><a href="#architecture"><span class="color-sq sq-purple"></span>Architecture</a></li>
-        <li><a href="#quickstart"><span class="color-sq sq-pink"></span>Quickstart</a></li>
-        <li><a href="#docs"><span class="color-sq sq-orange"></span>Docs</a></li>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#commands">Commands</a></li>
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#quickstart">Quickstart</a></li>
+        <li><a href="#docs">Docs</a></li>
       </ul>
 
-      <div class="nav-right mono">
-        <a href="https://github.com/nauqh/alfred" target="_blank" rel="noopener noreferrer" class="btn-dark">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-          </svg>
-          Star on GitHub <span class="play-arrow"></span>
-        </a>
-      </div>
+      <a href="https://github.com/nauqh/alfred" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-white">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+        </svg>
+        Star on GitHub
+      </a>
     </nav>
   </div>
 
-  <!-- ================= HERO SECTION ================= -->
-  <section class="hero-section">
-    <div class="hero-split">
-
-      <div class="hero-left">
-        <h1>The <span class="highlight-wrap">self-hosted</span> music bot for Discord</h1>
-
-        <p class="hero-desc">
-          Play from YouTube, Spotify and Deezer straight into your voice channel.
-          Autocomplete search, one player card per track, and nothing posted unprompted.
-        </p>
-
-        <a href="#quickstart" class="btn-primary">Deploy now</a>
+  <!-- ================= HERO ================= -->
+  <section class="band black hero">
+    <div class="hero-inner">
+      <div class="hero-chip">
+        <span id="hero-code">git clone https://github.com/nauqh/alfred</span>
+        <button type="button" aria-label="Copy command" onclick="copySnippet('hero-code')">
+          <span id="copy-hero-text" class="copied"></span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        </button>
       </div>
 
-      <div class="hero-right">
-        <div class="screenshot-frame">
-          <div class="window-header">
-            <div class="mac-dot mac-red"></div>
-            <div class="mac-dot mac-yellow"></div>
-            <div class="mac-dot mac-green"></div>
-            <span class="window-title mono">discord / #music-room</span>
-          </div>
-          <img src="thumbnail.png" alt="Alfred Discord Player View" class="discord-screenshot">
-        </div>
-      </div>
+      <h1>The self&#8209;hosted music bot for Discord</h1>
 
+      <p class="hero-desc">
+        Music in the voice channel you are already in. Play from YouTube, Spotify,
+        SoundCloud and Deezer while you game and talk, from a bot you host yourself.
+      </p>
+
+      <div class="hero-actions">
+        <a href="#quickstart" class="btn btn-white">Deploy Alfred</a>
+        <a href="#commands" class="btn btn-ghost">See the commands</a>
+      </div>
     </div>
   </section>
 
-  <!-- ================= FEATURES SECTION ================= -->
-  <section id="features" class="section-wrap">
-    <div class="container">
-      <div class="section-head">
-        <div class="section-tag mono">
-          <span class="color-sq sq-green"></span> 01 / Core Features
-        </div>
-        <h2 class="section-title">Built for servers that care about audio fidelity and clean channels.</h2>
-        <p class="section-subtitle">
-          Audio never touches the main Python bot process. A dedicated Lavalink node handles decoding and playback streaming while Alfred manages your server requests.
-        </p>
+  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
+
+  <!-- ================= FEATURES ================= -->
+  <section id="features" class="band">
+    <div class="rail">
+      <div class="head">
+        <h2>For friends who play with music on</h2>
+        <p>You are in voice, mid-match, talking over the music. Queue a song with one command and it keeps playing while you play.</p>
       </div>
 
-      <div class="features-grid">
-
-        <div class="feature-card">
-          <div class="feature-icon-box">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-          </div>
-          <h3>Multi-source streaming</h3>
-          <p>Stream directly from YouTube, Spotify, and Deezer. Tracks, full albums, playlists, and raw audio URLs all resolve the same way.</p>
+      <div class="features">
+        <div class="feature">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+          <h3>Every source you use</h3>
+          <p>YouTube, Spotify, SoundCloud and Deezer. Tracks, albums, playlists and direct URLs.</p>
         </div>
-
-        <div class="feature-card">
-          <div class="feature-icon-box">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          </div>
-          <h3>LavaSearch autocomplete</h3>
-          <p>Instant suggestions inside Discord's slash command input. Narrow by track, artist, album, or playlist before you ever hit enter.</p>
+        <div class="feature">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
+          <h3>Search as you type</h3>
+          <p>Suggestions appear in the slash command box, by track, artist, album or playlist.</p>
         </div>
-
-        <div class="feature-card">
-          <div class="feature-icon-box">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>
-          </div>
-          <h3>Now playing view</h3>
-          <p>One reactive card per track. Pause, Skip and cycle Loop from Discord buttons, and the card redraws in place on every press.</p>
+        <div class="feature">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9 5 3-5 3z"/></svg></div>
+          <h3>One player card</h3>
+          <p>Pause, skip and loop from its buttons. The card updates in place.</p>
         </div>
-
-        <div class="feature-card">
-          <div class="feature-icon-box">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          </div>
-          <h3>Quiet unless asked</h3>
-          <p>Every message is a reply to a command, or the now playing card that follows the current track. Alfred posts nothing else, ever.</p>
+        <div class="feature">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <h3>Quiet by default</h3>
+          <p>Alfred answers when asked and never posts on its own.</p>
         </div>
-
-        <div class="feature-card">
-          <div class="feature-icon-box">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
-          </div>
-          <h3>Auto-leave</h3>
-          <p>Alfred disconnects the moment the last listener leaves, queue or no queue. It never lingers in an empty room holding a voice slot.</p>
+        <div class="feature">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></div>
+          <h3>Leaves when you do</h3>
+          <p>Disconnects as soon as the last listener leaves the channel.</p>
         </div>
-
-        <div class="feature-card">
-          <div class="feature-icon-box">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.9 19.1a10 10 0 0 1 0-14.2"/><path d="M7.8 16.2a6 6 0 0 1 0-8.4"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4"/><path d="M19.1 4.9a10 10 0 0 1 0 14.2"/></svg>
-          </div>
+        <div class="feature">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.9 19.1a10 10 0 0 1 0-14.2"/><path d="M7.8 16.2a6 6 0 0 1 0-8.4"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4"/><path d="M19.1 4.9a10 10 0 0 1 0 14.2"/></svg></div>
           <h3>Song in the sidebar</h3>
-          <p>While a track plays, Alfred's status shows the song and artist under its name. A glance at the member list tells you what is on.</p>
-        </div>
-
-      </div>
-    </div>
-  </section>
-  <section id="commands" class="section-wrap">
-    <div class="container">
-      <div class="section-head">
-        <div class="section-tag mono">
-          <span class="color-sq sq-blue"></span> 02 / Commands & Interactive UI
-        </div>
-        <h2 class="section-title">Seven slash commands.</h2>
-        <p class="section-subtitle">
-          `/play` connects to your voice channel automatically - there is no `/join`. Loop and shuffle are options on the command rather than commands of their own. Try the buttons below to test the reactive panel state machine.
-        </p>
-      </div>
-
-      <div class="commands-layout">
-
-        <!-- INTERACTIVE DISCORD SIMULATOR -->
-        <div class="discord-sim-box">
-          <div class="sim-header">
-            <div class="sim-channel-name mono">
-              <span>#</span> music-room
-            </div>
-            <div class="sim-tag-live mono">INTERACTIVE DEMO</div>
-          </div>
-
-          <div class="sim-cmd-header">
-            <img src="alfred_avatar.jpg" alt="" class="sim-cmd-avatar">
-            <span><span class="sim-cmd-user">nauqh</span> used <a href="#commands" class="sim-cmd-chip">/play</a></span>
-          </div>
-
-          <div class="discord-msg">
-            <img src="alfred_avatar.jpg" alt="Alfred" class="msg-avatar">
-            <div class="msg-body">
-              <div class="msg-meta">
-                <span class="bot-author">Alfred</span>
-                <span class="bot-tag">BOT</span>
-                <span class="msg-time">Today at 7:42 PM</span>
-              </div>
-
-              <!-- /play -> embeds.queued() -->
-              <div class="cyber-card">
-                <div class="cyber-body">
-                  <div class="cyber-title">Track added</div>
-                  <div class="cyber-line"><a href="#" class="discord-link">Something in the Rain</a></div>
-                  <div class="cyber-line">Unknown artist &middot; Deezer <span class="dcode">4:11</span></div>
-                  <div class="cyber-gap"></div>
-                  <div class="cyber-line"><span class="discord-mention">@nauqh</span></div>
-                </div>
-                <img src="alfred_avatar.jpg" alt="" class="cyber-thumb">
-              </div>
-
-              <!-- the now playing view -> embeds.now_playing() -->
-              <div class="cyber-card now-playing">
-                <div class="cyber-body">
-                  <div class="cyber-title">Now Playing</div>
-                  <div class="cyber-line cyber-h3">
-                    <a href="#" id="sim-track-title" class="discord-link">Something in the Rain</a>
-                  </div>
-                  <div class="cyber-bar mono" id="sim-bar"></div>
-                  <div class="cyber-sub">Requested: <span class="discord-mention">@nauqh</span> &bull; Deezer &bull; || Playing <a href="#" class="discord-link">Rainy Nights</a></div>
-
-                  <div class="discord-button-row">
-                    <button id="btn-pause" class="d-btn" onclick="togglePause()">
-                      <span id="pause-icon"></span> <span id="pause-text">Pause</span>
-                    </button>
-                    <button id="btn-skip" class="d-btn" onclick="skipTrack()">
-                      &#9197;&#65039; Skip
-                    </button>
-                    <button id="btn-loop" class="d-btn" onclick="cycleLoop()">
-                      <span id="loop-icon">&#128257;</span> <span id="loop-text">Loop: off</span>
-                    </button>
-                    <button class="d-btn btn-link" onclick="event.preventDefault()">
-                      &#128279; Link
-                    </button>
-                  </div>
-                </div>
-                <img src="alfred_avatar.jpg" alt="" class="cyber-thumb" id="sim-thumb-now">
-              </div>
-
-              <!-- /queue -> embeds.queue() -->
-              <div class="cyber-card">
-                <div class="cyber-body">
-                  <div class="cyber-title">Queue</div>
-                  <div class="cyber-line"><strong>Now Playing:</strong></div>
-                  <div class="cyber-line">
-                    <a href="#" class="discord-link">Something in the Rain</a> <span class="dcode">4:11</span> &middot; Deezer
-                  </div>
-                  <div class="cyber-gap"></div>
-                  <div class="cyber-line"><strong>Up next:</strong></div>
-                  <div class="cyber-line">
-                    <span class="dcode">1.</span> <a href="#" class="discord-link">Way Down We Go</a> <span class="dcode">3:42</span> &middot; <span class="discord-mention">@nauqh</span>
-                  </div>
-                  <div class="cyber-line">
-                    <span class="dcode">2.</span> <a href="#" class="discord-link">Rockstar</a> <span class="dcode">3:22</span> &middot; <span class="discord-mention">@nauqh</span>
-                  </div>
-                  <div class="cyber-sub">Total: 3 tracks &middot; 11:15</div>
-                </div>
-                <img src="alfred_avatar.jpg" alt="" class="cyber-thumb">
-              </div>
-
-              <div class="sim-hint mono">
-                <span>&#128161;</span> Press the buttons - the card redraws in place, exactly as it does in Discord.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- COMMANDS TABLE -->
-        <div>
-          <div class="commands-table-wrap">
-            <table class="cmd-table">
-              <thead>
-                <tr>
-                  <th>Group</th>
-                  <th>Command</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody class="mono">
-                <tr>
-                  <td><span class="cmd-group-tag">MUSIC</span></td>
-                  <td><span class="cmd-badge">/play</span></td>
-                  <td>Add track, playlist or URL to queue with auto voice join</td>
-                </tr>
-                <tr>
-                  <td><span class="cmd-group-tag">MUSIC</span></td>
-                  <td><span class="cmd-badge">/search</span></td>
-                  <td>Live autocomplete across tracks, artists, and playlists</td>
-                </tr>
-                <tr>
-                  <td><span class="cmd-group-tag">QUEUE</span></td>
-                  <td><span class="cmd-badge">/now</span></td>
-                  <td>Show the track playing right now as a card</td>
-                </tr>
-                <tr>
-                  <td><span class="cmd-group-tag">QUEUE</span></td>
-                  <td><span class="cmd-badge">/queue</span></td>
-                  <td>Open the interactive button panel and track list</td>
-                </tr>
-                <tr>
-                  <td><span class="cmd-group-tag">QUEUE</span></td>
-                  <td><span class="cmd-badge">/skip</span></td>
-                  <td>Move forward to the next queued track</td>
-                </tr>
-                <tr>
-                  <td><span class="cmd-group-tag">QUEUE</span></td>
-                  <td><span class="cmd-badge">/remove</span></td>
-                  <td>Drop a specific track from the queue index</td>
-                </tr>
-                <tr>
-                  <td><span class="cmd-group-tag">VOICE</span></td>
-                  <td><span class="cmd-badge">/leave</span></td>
-                  <td>Disconnect bot from voice and clear player state</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= ARCHITECTURE SECTION ================= -->
-  <section id="architecture" class="section-wrap">
-    <div class="container">
-      <div class="section-head">
-        <div class="section-tag mono">
-          <span class="color-sq sq-purple"></span> 03 / Architecture
-        </div>
-        <h2 class="section-title">Engineered for zero-lag streaming.</h2>
-        <p class="section-subtitle">
-          Alfred isolates control logic from audio transport, guaranteeing high responsiveness even under heavy server load.
-        </p>
-      </div>
-
-      <div class="mermaid-card">
-        <div class="mermaid-header mono">
-          <span class="color-sq sq-purple"></span> Component Topology &amp; Audio Pipeline
-        </div>
-        <div class="mermaid-wrapper">
-          <pre class="mermaid">
-flowchart TD
-    subgraph Discord["Discord Platform"]
-        User["User / Discord Client"]
-        VC["Voice Channel"]
-    end
-
-    subgraph Bot["Alfred Bot"]
-        Hikari["hikari Gateway &amp; lightbulb"]
-        Service["Alfred Service &amp; Player State"]
-    end
-
-    subgraph Node["Lavalink Audio Node (JVM)"]
-        Lavalink["Lavalink Server Engine"]
-        Plugins["LavaSrc · LavaSearch · YouTube Plugin"]
-    end
-
-    subgraph Daemon["Signature Daemon"]
-        Cipher["yt-cipher Container"]
-    end
-
-    subgraph Sources["Audio Sources"]
-        YT["YouTube"]
-        SP["Spotify"]
-        SC["SoundCloud / Deezer / Bandcamp"]
-    end
-
-    User -->|"Slash commands &amp; panel buttons"| Hikari
-    Hikari --> Service
-    Service -->|"REST / WebSocket (lavalink.py)"| Lavalink
-    Lavalink --- Plugins
-    Plugins -->|"JavaScript decipher requests"| Cipher
-    Plugins -->|"Audio stream extraction"| Sources
-    Lavalink ==>|"Direct voice UDP stream"| VC
-          </pre>
+          <p>The member list shows what is playing, right under Alfred's name.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ================= QUICKSTART SECTION ================= -->
-  <section id="quickstart" class="section-wrap">
-    <div class="container">
-      <div class="section-head">
-        <div class="section-tag mono">
-          <span class="color-sq sq-pink"></span> 04 / Quickstart
-        </div>
-        <h2 class="section-title">Up and running in three steps.</h2>
-        <p class="section-subtitle">
-          Choose Docker Compose for production deployments or uv for local development.
-        </p>
+  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
+
+  <!-- ================= SCREENSHOTS ================= -->
+  <section class="band" aria-labelledby="shots-title">
+    <div class="rail">
+      <div class="head">
+        <h2 id="shots-title">It lives in your text channel</h2>
+        <p>Everything Alfred posts is a card: what is playing, how far in, and what comes next.</p>
       </div>
 
-      <div class="quickstart-card">
-        <div class="qs-tabs-header mono">
-          <div class="qs-tab-buttons">
-            <button class="qs-tab-btn active" onclick="switchTab('docker')">Docker Compose (Recommended)</button>
-            <button class="qs-tab-btn" onclick="switchTab('local')">Local Dev (uv + Java)</button>
-            <button class="qs-tab-btn" onclick="switchTab('vps')">VPS Deployment</button>
+      <div class="shots">
+        <figure class="shot">
+          <div class="shot-panel">
+            <img src="alfred-1.png" alt="Alfred's queue card in Discord, showing the current track with a progress bar and two tracks up next">
           </div>
-          <div style="font-size: 11px; color: var(--code-muted); padding: 8px;">BASH / CLI</div>
+          <figcaption>
+            <h3>The queue</h3>
+            <p>The current track with its progress, and the tracks lined up after it.</p>
+          </figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="shot-panel">
+            <img src="alfred-2.png" alt="A Discord conversation where Alfred shows the now playing card, queues a song and lists the queue">
+          </div>
+          <figcaption>
+            <h3>Now playing</h3>
+            <p>Ask what is on and Alfred answers with the card, in the same channel.</p>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
+
+  <!-- ================= COMMANDS ================= -->
+  <section id="commands" class="band">
+    <div class="rail">
+      <div class="head">
+        <h2>Seven commands</h2>
+        <p><code>/play</code> joins your voice channel on its own. Loop and shuffle are options on it, not extra commands.</p>
+      </div>
+
+      <div class="cmd-tabs" role="group" aria-label="Command group">
+        <button type="button" class="cmd-tab" data-group="music" aria-pressed="true" onclick="showGroup(this)">Music</button>
+        <button type="button" class="cmd-tab" data-group="queue" aria-pressed="false" onclick="showGroup(this)">Queue</button>
+        <button type="button" class="cmd-tab" data-group="voice" aria-pressed="false" onclick="showGroup(this)">Voice</button>
+      </div>
+
+      <div class="cmd-grid" data-active="music">
+        <div class="cmd" data-group="music">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 4 13 8-13 8z"/></svg></div>
+          <span class="cmd-name">/play</span>
+          <p>Queue a track, playlist or URL</p>
+        </div>
+        <div class="cmd" data-group="music">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
+          <span class="cmd-name">/search</span>
+          <p>Find a track with autocomplete</p>
+        </div>
+        <div class="cmd" data-group="queue">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+          <span class="cmd-name">/now</span>
+          <p>Show what is playing</p>
+        </div>
+        <div class="cmd" data-group="queue">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg></div>
+          <span class="cmd-name">/queue</span>
+          <p>See what is up next</p>
+        </div>
+        <div class="cmd" data-group="queue">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 4 10 8-10 8z"/><path d="M19 5v14"/></svg></div>
+          <span class="cmd-name">/skip</span>
+          <p>Move to the next track</p>
+        </div>
+        <div class="cmd" data-group="queue">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></div>
+          <span class="cmd-name">/remove</span>
+          <p>Drop a track from the queue</p>
+        </div>
+        <div class="cmd" data-group="voice">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></div>
+          <span class="cmd-name">/leave</span>
+          <p>Disconnect and clear the queue</p>
+        </div>
+        <div class="cmd" data-group="music">
+          <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></div>
+          <span class="cmd-name">loop, shuffle</span>
+          <p>Options on /play and /search</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
+
+  <section class="band paper">
+    <div class="rail statement">
+      <p>Music in your voice channel. Nothing extra in your text channels.</p>
+    </div>
+  </section>
+
+  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
+
+  <!-- ================= HOW IT WORKS ================= -->
+  <section id="how" class="band">
+    <div class="rail">
+      <div class="head">
+        <h2>Control and audio never share a process</h2>
+        <p>Alfred handles your commands. A separate Lavalink node does the audio, so a long track never slows the bot down.</p>
+      </div>
+
+      <ol class="flow">
+        <li>
+          <h3>You run a command</h3>
+          <p>A slash command or a button press on the player card, in Discord.</p>
+        </li>
+        <li>
+          <h3>Alfred handles it</h3>
+          <p>The bot keeps the queue and player state, and tells the audio node what to play.</p>
+        </li>
+        <li>
+          <h3>Lavalink fetches the audio</h3>
+          <p>A separate Java node finds the track and decodes it.</p>
+        </li>
+        <li>
+          <h3>Sound reaches the channel</h3>
+          <p>Audio streams straight to your voice channel, never through the bot.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <div class="band black spacer" aria-hidden="true"><div class="rail"></div></div>
+
+  <!-- ================= QUICKSTART ================= -->
+  <section id="quickstart" class="band black">
+    <div class="rail">
+      <div class="head">
+        <h2>Up and running in three steps</h2>
+        <p>Docker Compose starts everything Alfred needs. Use uv if you want to work on the code.</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-tabs">
+          <button class="qs-tab-btn active" onclick="switchTab('docker')">Docker Compose</button>
+          <button class="qs-tab-btn" onclick="switchTab('local')">Local development</button>
         </div>
 
-        <!-- DOCKER TAB -->
         <div id="tab-docker" class="qs-tab-content active">
-          <div class="code-block-wrap">
-            <button class="copy-btn mono" onclick="copySnippet('docker-code')">
-              <span id="copy-docker-text">Copy</span>
-            </button>
-            <pre class="mono" id="docker-code"><span class="code-comment"># 1. Clone &amp; prepare environment files</span>
-<span class="code-cmd">cp</span> .env.example .env
-<span class="code-cmd">cp</span> lavalink/application.yml.example lavalink/application.yml
+          <div class="code-block">
+            <button class="copy-btn" onclick="copySnippet('docker-code')"><span id="copy-docker-text">Copy</span></button>
+            <pre id="docker-code"><span class="c-comment"># 1. Prepare the config files</span>
+<span class="c-cmd">cp</span> .env.example .env
+<span class="c-cmd">cp</span> lavalink/application.yml.example lavalink/application.yml
 
-<span class="code-comment"># 2. Set DISCORD_TOKEN &amp; CIPHER_PASSWORD in .env</span>
-<span class="code-comment"># Linux permissions (first run only):</span>
-<span class="code-cmd">chown</span> -R 322:322 lavalink/logs lavalink/plugins
+<span class="c-comment"># 2. Set DISCORD_TOKEN and CIPHER_PASSWORD in .env</span>
+<span class="c-comment">#    On Linux, first run only:</span>
+<span class="c-cmd">chown</span> -R 322:322 lavalink/logs lavalink/plugins
 
-<span class="code-comment"># 3. Start all three services (yt-cipher, Lavalink, Alfred)</span>
-<span class="code-cmd">docker compose up</span> -d</pre>
+<span class="c-comment"># 3. Start yt-cipher, Lavalink and the bot</span>
+<span class="c-cmd">docker compose up</span> -d</pre>
           </div>
-          <div class="qs-instructions">
-            <strong>Docker Compose</strong> automatically starts <code>yt-cipher</code>, <code>Lavalink</code>, and the <code>bot</code> in ordered sequence. To rebuild after local edits, run <code>docker compose up -d --build bot</code>.
-          </div>
+          <p class="qs-note">After editing the code, rebuild with <code>docker compose up -d --build bot</code>. Running on a VPS? Follow the <a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank" rel="noopener" style="color: var(--teal-pale);">deploy guide</a>.</p>
         </div>
 
-        <!-- LOCAL TAB -->
         <div id="tab-local" class="qs-tab-content">
-          <div class="code-block-wrap">
-            <button class="copy-btn mono" onclick="copySnippet('local-code')">
-              <span id="copy-local-text">Copy</span>
-            </button>
-            <pre class="mono" id="local-code"><span class="code-comment"># Requires Java 21+ for Lavalink</span>
-<span class="code-cmd">winget install</span> --id Microsoft.OpenJDK.21 -e
+          <div class="code-block">
+            <button class="copy-btn" onclick="copySnippet('local-code')"><span id="copy-local-text">Copy</span></button>
+            <pre id="local-code"><span class="c-comment"># Lavalink needs Java 21+</span>
+<span class="c-cmd">winget install</span> --id Microsoft.OpenJDK.21 -e
 
-<span class="code-comment"># Terminal 1: Run Lavalink node</span>
-<span class="code-cmd">.\scripts\lavalink.ps1</span>
+<span class="c-comment"># Terminal 1: the Lavalink node</span>
+<span class="c-cmd">.\scripts\lavalink.ps1</span>
 
-<span class="code-comment"># Terminal 2: Run Alfred bot with uv</span>
-<span class="code-cmd">uv sync</span> --frozen
-<span class="code-cmd">uv run alfred</span></pre>
+<span class="c-comment"># Terminal 2: the bot</span>
+<span class="c-cmd">uv sync</span> --frozen
+<span class="c-cmd">uv run alfred</span></pre>
           </div>
-          <div class="qs-instructions">
-            Running locally connects directly to <code>LAVALINK_HOST=127.0.0.1</code>. Run checks with <code>uv run pytest</code> and <code>uv run ruff check .</code>.
-          </div>
+          <p class="qs-note">Checks: <code>uv run pytest</code> and <code>uv run ruff check .</code></p>
         </div>
-
-        <!-- VPS TAB -->
-        <div id="tab-vps" class="qs-tab-content">
-          <div class="code-block-wrap">
-            <button class="copy-btn mono" onclick="copySnippet('vps-code')">
-              <span id="copy-vps-text">Copy</span>
-            </button>
-            <pre class="mono" id="vps-code"><span class="code-comment"># Check VPS deployment guide for machine hardening &amp; OAuth</span>
-<span class="code-cmd">git clone</span> https://github.com/nauqh/alfred.git /opt/alfred
-<span class="code-cmd">cd</span> /opt/alfred
-
-<span class="code-comment"># Follow docs/deploy.md for YouTube OAuth token generator</span>
-<span class="code-comment"># and systemd/docker restart configurations</span></pre>
-          </div>
-          <div class="qs-instructions">
-            When running on VPS host IPs flagged by YouTube, configure YouTube OAuth as documented in <a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank" style="color: var(--accent); text-decoration: underline;">docs/deploy.md</a>.
-          </div>
-        </div>
-
       </div>
 
-      <div class="source-notes-box mono">
-        <strong>Before your first run:</strong><br>
-        • <strong>YouTube</strong> needs no credentials locally - the bundled yt-cipher server handles it. On a VPS, YouTube blocks the host IP and you will need OAuth; the <a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank">deploy guide</a> walks through it.<br>
-        • <strong>Spotify</strong> registers without credentials but fails per request, so <code>/search</code> returns nothing until <code>clientId</code> and <code>clientSecret</code> are set.<br>
-        • <strong>Deezer</strong> is off until configured - LavaSrc refuses to start with <code>deezer: true</code> and an empty <code>masterDecryptionKey</code>, so enable it in the same edit that fills the key.
-      </div>
-
+      <ul class="caveats">
+        <li>
+          <h3>YouTube</h3>
+          <span>Works locally with no credentials. On a VPS, YouTube blocks the host IP and you will need OAuth; the <a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank" rel="noopener">deploy guide</a> covers it.</span>
+        </li>
+        <li>
+          <h3>Spotify</h3>
+          <span>Search returns nothing until <code>clientId</code> and <code>clientSecret</code> are set.</span>
+        </li>
+        <li>
+          <h3>Deezer</h3>
+          <span>Off by default. Set <code>deezer: true</code> in the same edit that fills <code>masterDecryptionKey</code>, or Lavalink will not start.</span>
+        </li>
+      </ul>
     </div>
   </section>
 
-  <!-- ================= DOCS & RESOURCES SECTION ================= -->
-  <section id="docs" class="section-wrap">
-    <div class="container">
-      <div class="section-head">
-        <div class="section-tag mono">
-          <span class="color-sq sq-orange"></span> 05 / Documentation & Guides
-        </div>
-        <h2 class="section-title">Deep dive into deployment and architecture.</h2>
-        <p class="section-subtitle">
-          Production operations, how the codebase is put together, and the decisions behind it.
-        </p>
+  <div class="band black spacer" aria-hidden="true"><div class="rail"></div></div>
+  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
+
+  <!-- ================= DOCS ================= -->
+  <section id="docs" class="band">
+    <div class="rail">
+      <div class="head">
+        <h2>Documentation</h2>
+        <p>Deployment, how the code is put together, and the decisions behind it.</p>
       </div>
 
-      <div class="docs-grid">
-        <a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank" class="doc-card">
-          <div>
-            <div class="doc-tag mono">Guide</div>
-            <h3>VPS Deployment</h3>
-            <p>Step-by-step VPS server preparation, secrets management, automatic updates, and YouTube OAuth authentication.</p>
-          </div>
-          <span class="doc-link mono">Read deploy.md &rarr;</span>
-        </a>
-
-        <a href="https://github.com/nauqh/alfred/blob/main/README.md" target="_blank" class="doc-card">
-          <div>
-            <div class="doc-tag mono">Architecture</div>
-            <h3>How It Fits Together</h3>
-            <p>The three-way split between the music layer, the UI layer and the commands, and the two rules that hold it together.</p>
-          </div>
-          <span class="doc-link mono">Read README.md &rarr;</span>
-        </a>
-
-        <a href="https://github.com/nauqh/alfred/blob/main/HANDOFF.md" target="_blank" class="doc-card">
-          <div>
-            <div class="doc-tag mono">Working Notes</div>
-            <h3>Decisions &amp; Constraints</h3>
-            <p>What is settled and why: the voice-receive limit, what was deliberately removed, and what not to re-open.</p>
-          </div>
-          <span class="doc-link mono">Read HANDOFF.md &rarr;</span>
-        </a>
-      </div>
+      <ul class="docs">
+        <li>
+          <a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank" rel="noopener">
+            <h3>Deploying to a VPS</h3>
+            <p>Server setup, secrets, automatic updates and YouTube OAuth.</p>
+            <span class="file">deploy.md</span>
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/nauqh/alfred/blob/main/README.md" target="_blank" rel="noopener">
+            <h3>How it fits together</h3>
+            <p>The music layer, the UI layer and the commands, and the rules between them.</p>
+            <span class="file">README.md</span>
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/nauqh/alfred/blob/main/HANDOFF.md" target="_blank" rel="noopener">
+            <h3>Decisions and constraints</h3>
+            <p>What is settled and why, and what was removed on purpose.</p>
+            <span class="file">HANDOFF.md</span>
+          </a>
+        </li>
+      </ul>
     </div>
   </section>
 
-  <!-- ================= TEAK GRID FOOTER ================= -->
-  <footer class="footer-section">
-    <div class="container">
+  <div class="band spacer" aria-hidden="true"><div class="rail"></div></div>
 
-      <!-- FRAMED GRID BOX -->
-      <div class="footer-grid-frame">
-
-        <!-- LEFT COLUMN: BRAND -->
-        <div class="footer-left-col">
-          <div>
-            <div class="footer-big-brand">
-              <img src="alfred_avatar.jpg" alt="Alfred" class="footer-big-avatar">
-              <div class="footer-brand-title">alfred</div>
-            </div>
-            <p class="footer-brand-desc">
-              The music bot for self-hosted servers. Seven slash commands, one reactive player card, and a Lavalink node doing the streaming.
-            </p>
-          </div>
+  <!-- ================= FOOTER ================= -->
+  <footer class="band black">
+    <div class="rail">
+      <div class="footer-cta">
+        <div>
+          <a href="#" class="logo">
+            <img src="alfred_avatar.jpg" alt="">
+            <span>alfred</span>
+          </a>
+          <h2>Put Alfred in your voice channel</h2>
         </div>
-
-        <!-- RIGHT COLUMN: NEWSLETTER + 2X2 LINKS -->
-        <div class="footer-right-col">
-
-          <!-- YELLOW NEWSLETTER BANNER -->
-          <div class="footer-newsletter-card">
-            <h3 class="newsletter-heading">Release wisdom straight to your inbox</h3>
-            <p class="newsletter-sub">Get the latest updates, deployment tips, and audio source fixes.</p>
-            <form class="newsletter-form" onsubmit="event.preventDefault(); alert('Subscribed for Alfred updates!');">
-              <input type="email" class="newsletter-input mono" placeholder="Enter your email" required>
-              <button type="submit" class="newsletter-btn mono">Subscribe</button>
-            </form>
-          </div>
-
-          <!-- 2X2 LINKS GRID -->
-          <div class="footer-links-grid">
-
-            <div class="footer-cell">
-              <h4 class="footer-cell-title">Product</h4>
-              <ul class="footer-cell-links mono">
-                <li><a href="#features">Features</a></li>
-                <li><a href="#commands">Commands</a></li>
-                <li><a href="#architecture">Architecture</a></li>
-                <li><a href="#quickstart">Quickstart</a></li>
-              </ul>
-            </div>
-
-            <div class="footer-cell">
-              <h4 class="footer-cell-title">Project</h4>
-              <ul class="footer-cell-links mono">
-                <li><a href="https://github.com/nauqh/alfred" target="_blank">GitHub ↗</a></li>
-                <li><a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank">Deploy Guide ↗</a></li>
-                <li><a href="https://github.com/nauqh/alfred/blob/main/CHANGELOG.md" target="_blank">Changelog ↗</a></li>
-                <li><a href="https://github.com/nauqh/alfred/issues" target="_blank">Issues ↗</a></li>
-              </ul>
-            </div>
-
-          </div>
-
-        </div>
-
+        <a href="#quickstart" class="btn btn-white">Deploy Alfred</a>
       </div>
 
-      <!-- BOTTOM METADATA -->
-      <div class="footer-bottom-bar mono">
-        <div class="footer-copy">© 2026 Alfred · MIT</div>
-        <div class="footer-legal-links">
-          Developed by <a href="https://nauqh.dev" target="_blank" rel="noopener">Nauqh</a>
+      <div class="footer-links">
+        <div>
+          <h3>Product</h3>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#commands">Commands</a></li>
+            <li><a href="#how">How it works</a></li>
+            <li><a href="#quickstart">Quickstart</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Docs</h3>
+          <ul>
+            <li><a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank" rel="noopener">Deploy guide</a></li>
+            <li><a href="https://github.com/nauqh/alfred/blob/main/README.md" target="_blank" rel="noopener">README</a></li>
+            <li><a href="https://github.com/nauqh/alfred/blob/main/HANDOFF.md" target="_blank" rel="noopener">Working notes</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Project</h3>
+          <ul>
+            <li><a href="https://github.com/nauqh/alfred" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://github.com/nauqh/alfred/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a></li>
+            <li><a href="https://github.com/nauqh/alfred/issues" target="_blank" rel="noopener">Issues</a></li>
+            <li><a href="https://nauqh.dev" target="_blank" rel="noopener">nauqh.dev</a></li>
+          </ul>
         </div>
       </div>
 
+      <div class="footer-bottom">
+        <span>&copy; 2026 Alfred. MIT licensed.</span>
+        <span>Developed by <a href="https://nauqh.dev" target="_blank" rel="noopener">Nauqh</a></span>
+      </div>
     </div>
   </footer>
 
@@ -2100,99 +1449,12 @@ flowchart TD
       });
     }
 
-    // Interactive Discord Player Demo State.
-    // Mirrors alfred/ui/formatting.py, so the mock shows what the bot actually draws:
-    // an 18-cell playhead line, not a percentage bar.
-    const tracks = [
-      { title: "Something in the Rain", pos: 118, len: 251 },
-      { title: "Way Down We Go",        pos: 45,  len: 222 },
-      { title: "Rockstar",              pos: 130, len: 202 }
-    ];
 
-    const PROGRESS_LINE_WIDTH = 18;
-    const EMOJI_PAUSE = "⏸️";
-    const EMOJI_RESUME = "▶️";
-
-    let currentTrackIdx = 0;
-    let isPaused = false;
-    let loopModeIdx = 0;
-    const loopModes = ["off", "track", "queue"];
-    const loopEmojis = { off: "🔁", track: "🔂", queue: "🔁" };
-
-    // formatting.format_time - largest unit the duration actually needs.
-    function formatTime(totalSeconds) {
-      const s = Math.max(0, Math.floor(totalSeconds));
-      const h = Math.floor(s / 3600);
-      const m = Math.floor((s % 3600) / 60);
-      const sec = String(s % 60).padStart(2, '0');
-      return h ? h + ':' + String(m).padStart(2, '0') + ':' + sec : m + ':' + sec;
+    // Command groups: the grid keeps every command visible and brings one group forward.
+    function showGroup(btn) {
+      document.querySelector('.cmd-grid').dataset.active = btn.dataset.group;
+      document.querySelectorAll('.cmd-tab').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
     }
-
-    // formatting.progress_line - filled run, playhead, empty run; always 18 cells.
-    function progressLine(fraction) {
-      const f = Math.min(Math.max(fraction, 0), 1);
-      const cursor = Math.round(f * (PROGRESS_LINE_WIDTH - 1));
-      return '━'.repeat(cursor) + '●' + '─'.repeat(PROGRESS_LINE_WIDTH - cursor - 1);
-    }
-
-    // formatting.player_bar - the leading glyph reports what is happening, not what the
-    // button would do, so it shows the resume glyph while paused.
-    function renderBar() {
-      const t = tracks[currentTrackIdx];
-      const glyph = isPaused ? EMOJI_RESUME : EMOJI_PAUSE;
-      document.getElementById('sim-bar').innerText =
-        glyph + ' ' + formatTime(t.pos) + ' ' + progressLine(t.pos / t.len) + ' ' + formatTime(t.len);
-    }
-
-    function togglePause() {
-      isPaused = !isPaused;
-      document.getElementById('pause-text').innerText = isPaused ? 'Resume' : 'Pause';
-      document.getElementById('pause-icon').innerText = isPaused ? EMOJI_RESUME : EMOJI_PAUSE;
-      document.getElementById('btn-pause').classList.toggle('btn-success', isPaused);
-      renderBar();
-    }
-
-    function skipTrack() {
-      currentTrackIdx = (currentTrackIdx + 1) % tracks.length;
-      const t = tracks[currentTrackIdx];
-      document.getElementById('sim-track-title').innerText = t.title;
-      renderBar();
-    }
-
-    function cycleLoop() {
-      loopModeIdx = (loopModeIdx + 1) % loopModes.length;
-      const mode = loopModes[loopModeIdx];
-      document.getElementById('loop-text').innerText = 'Loop: ' + mode;
-      document.getElementById('loop-icon').innerText = loopEmojis[mode];
-      document.getElementById('btn-loop').classList.toggle('btn-active', mode !== 'off');
-    }
-
-    document.getElementById('pause-icon').innerText = EMOJI_PAUSE;
-    renderBar();
-  </script>
-
-  <!-- Mermaid.js for Architecture Flowchart -->
-  <script type="module">
-    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-    mermaid.initialize({
-      startOnLoad: true,
-      theme: 'base',
-      themeVariables: {
-        fontFamily: 'Plus Jakarta Sans, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
-        fontSize: '13px',
-        primaryColor: '#ffffff',
-        primaryTextColor: '#1e1418',
-        primaryBorderColor: '#3a7582',
-        lineColor: '#786b70',
-        secondaryColor: '#f1f8f9',
-        tertiaryColor: '#f8faf7',
-        clusterBkg: '#fafbfa',
-        clusterBorder: '#d6ded8',
-        edgeLabelBackground: '#ffffff',
-        nodeBorder: '#3a7582',
-        mainBkg: '#ffffff'
-      }
-    });
   </script>
 </body>
 </html>
