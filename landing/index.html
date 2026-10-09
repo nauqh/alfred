@@ -1528,8 +1528,9 @@
 <span class="c-cmd">cp</span> lavalink/application.yml.example lavalink/application.yml
 
 <span class="c-comment"># 2. Set DISCORD_TOKEN and CIPHER_PASSWORD in .env</span>
-<span class="c-comment">#    On Linux, first run only:</span>
-<span class="c-cmd">chown</span> -R 322:322 lavalink/logs lavalink/plugins
+<span class="c-comment">#    On Linux, first run only (the node runs as uid 322):</span>
+<span class="c-cmd">mkdir</span> -p lavalink/logs lavalink/plugins
+<span class="c-cmd">sudo chown</span> -R 322:322 lavalink/logs lavalink/plugins
 
 <span class="c-comment"># 3. Start yt-cipher, Lavalink and the bot</span>
 <span class="c-cmd">docker compose up</span> -d</pre>
@@ -1540,8 +1541,12 @@
         <div id="tab-local" class="qs-tab-content">
           <div class="code-block">
             <button class="copy-btn" onclick="copySnippet('local-code')"><span id="copy-local-text">Copy</span></button>
-            <pre id="local-code"><span class="c-comment"># Lavalink needs Java 21+</span>
+            <pre id="local-code"><span class="c-comment"># Lavalink 4 needs Java 17+</span>
 <span class="c-cmd">winget install</span> --id Microsoft.OpenJDK.21 -e
+
+<span class="c-comment"># Config: in .env set DISCORD_TOKEN and LAVALINK_HOST=127.0.0.1</span>
+<span class="c-cmd">cp</span> .env.example .env
+<span class="c-cmd">cp</span> lavalink/application.yml.example lavalink/application.yml
 
 <span class="c-comment"># Terminal 1: the Lavalink node</span>
 <span class="c-cmd">.\scripts\lavalink.ps1</span>

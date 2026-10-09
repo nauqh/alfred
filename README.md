@@ -31,8 +31,13 @@ cp lavalink/application.yml.example lavalink/application.yml
 docker compose up -d
 ```
 
-Linux only: run `chown -R 322:322 lavalink/logs lavalink/plugins` before the
-first `up`, or the node cannot write its logs.
+Linux only, before the first `up`, or the node cannot write its logs. The
+directories are gitignored, so a fresh clone has to create them:
+
+```sh
+mkdir -p lavalink/logs lavalink/plugins
+sudo chown -R 322:322 lavalink/logs lavalink/plugins    # the node runs as uid 322
+```
 
 That starts three services: **yt-cipher**, **Lavalink**, then the **bot**.
 After a code change, rebuild the bot with `docker compose up -d --build bot`.
