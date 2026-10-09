@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>document.documentElement.classList.add('js')</script>
 <title>Alfred - The self-hosted music bot for Discord server</title>
 <link rel="icon" type="image/jpeg" href="alfred_avatar.jpg">
 <link rel="apple-touch-icon" href="alfred_avatar.jpg">
@@ -1165,6 +1166,46 @@
     }
   }
 
+  /* ================= SCROLL REVEAL ================= */
+  /* Blocks fade up once as they enter the viewport. Children of a [data-reveal-group]
+     that arrive together follow each other by 60ms (delay set by the script). Hidden
+     only when JS runs and motion is allowed, so without either the page simply shows. */
+  @media (prefers-reduced-motion: no-preference) {
+    .js [data-reveal],
+    .js [data-reveal-group] > :not(.feature),
+    .js .feature > * {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 600ms cubic-bezier(0.23, 1, 0.32, 1), transform 600ms cubic-bezier(0.23, 1, 0.32, 1);
+      transition-delay: var(--reveal-delay, 0ms);
+    }
+    /* Feature cells stay put and only their contents move: the grid's hairlines are its
+       grey background showing through 1px gaps, which a fading cell would expose. */
+    .js [data-reveal].is-in,
+    .js [data-reveal-group] > .is-in:not(.feature),
+    .js .feature.is-in > * {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* The hero is in view on load, so it gets a one-time entrance instead: the same
+       rise, cascading chip, title, text, buttons. A CSS animation, so it stays smooth
+       while the page is still loading, and it needs no JS. */
+    .hero-inner > * {
+      animation: hero-in 700ms cubic-bezier(0.23, 1, 0.32, 1) both;
+    }
+    .hero-inner > :nth-child(2) { animation-delay: 80ms; }
+    .hero-inner > :nth-child(3) { animation-delay: 160ms; }
+    .hero-inner > :nth-child(4) { animation-delay: 240ms; }
+  }
+
+  @keyframes hero-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+  }
+
   /* ================= USER MOTION & DISPLAY PREFERENCES ================= */
   /* Reduced motion keeps colour and opacity feedback and drops travel and scaling.
      Lenis is also never constructed under this query (see the script). */
@@ -1250,12 +1291,12 @@
   <!-- ================= FEATURES ================= -->
   <section id="features" class="band">
     <div class="rail">
-      <div class="head">
+      <div class="head" data-reveal>
         <h2>For friends who play with music on</h2>
         <p>You are in voice, mid-match, talking over the music. Queue a song with one command and it keeps playing while you play.</p>
       </div>
 
-      <div class="features">
+      <div class="features" data-reveal-group>
         <div class="feature">
           <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
           <h3>Every source you use</h3>
@@ -1293,12 +1334,12 @@
   <!-- ================= SCREENSHOTS ================= -->
   <section class="band" aria-labelledby="shots-title">
     <div class="rail">
-      <div class="head">
+      <div class="head" data-reveal>
         <h2 id="shots-title">It lives in your text channel</h2>
         <p>Everything Alfred posts is a card: what is playing, how far in, and what comes next.</p>
       </div>
 
-      <div class="shots">
+      <div class="shots" data-reveal-group>
         <figure class="shot">
           <div class="shot-panel">
             <img src="alfred-1.png" alt="Alfred's queue card in Discord, showing the current track with a progress bar and two tracks up next">
@@ -1324,12 +1365,12 @@
   <!-- ================= COMMANDS ================= -->
   <section id="commands" class="band">
     <div class="rail">
-      <div class="head">
+      <div class="head" data-reveal>
         <h2>Seven commands</h2>
         <p><code>/play</code> joins your voice channel on its own, so there is nothing to set up first. Each command is shown the way you would type it.</p>
       </div>
 
-      <div class="cmd-cols">
+      <div class="cmd-cols" data-reveal-group>
         <div class="cmd-stack">
           <div class="cmd-card">
             <div class="cmd-card-head"><h3>Queue</h3><p>See and change what is next</p><span class="cmd-count">4</span></div>
@@ -1408,19 +1449,19 @@
 
   <section class="band paper">
     <div class="rail statement">
-      <p>Music in your voice channel. Nothing extra in your text channels.</p>
+      <p data-reveal>Music in your voice channel. Nothing extra in your text channels.</p>
     </div>
   </section>
 
   <!-- ================= HOW IT WORKS ================= -->
   <section id="how" class="band">
     <div class="rail">
-      <div class="head">
+      <div class="head" data-reveal>
         <h2>Control and audio never share a process</h2>
         <p>Alfred handles your commands. A separate Lavalink node does the audio, so a long track never slows the bot down.</p>
       </div>
 
-      <div class="diagram" role="img" aria-label="You send a command in Discord to Alfred. Alfred tells the Lavalink node what to play. Lavalink pulls audio from YouTube, Spotify, SoundCloud and Deezer, with yt-cipher solving YouTube signatures, and streams it straight to the voice channel without passing through Alfred.">
+      <div class="diagram" data-reveal-group role="img" aria-label="You send a command in Discord to Alfred. Alfred tells the Lavalink node what to play. Lavalink pulls audio from YouTube, Spotify, SoundCloud and Deezer, with yt-cipher solving YouTube signatures, and streams it straight to the voice channel without passing through Alfred.">
         <div class="dg-node dg-1">
           <span class="dg-num">1</span>
           <h3>You, in Discord</h3>
@@ -1468,12 +1509,12 @@
   <!-- ================= QUICKSTART ================= -->
   <section id="quickstart" class="band black">
     <div class="rail">
-      <div class="head">
+      <div class="head" data-reveal>
         <h2>Up and running in three steps</h2>
         <p>Docker Compose starts everything Alfred needs. Use uv if you want to work on the code.</p>
       </div>
 
-      <div class="code-card">
+      <div class="code-card" data-reveal>
         <div class="code-tabs">
           <button class="qs-tab-btn active" onclick="switchTab('docker')">Docker Compose</button>
           <button class="qs-tab-btn" onclick="switchTab('local')">Local development</button>
@@ -1533,12 +1574,12 @@
   <!-- ================= DOCS ================= -->
   <section id="docs" class="band">
     <div class="rail">
-      <div class="head">
+      <div class="head" data-reveal>
         <h2>Documentation</h2>
         <p>Deployment, how the code is put together, and the decisions behind it.</p>
       </div>
 
-      <ul class="docs">
+      <ul class="docs" data-reveal-group>
         <li>
           <a href="https://github.com/nauqh/alfred/blob/main/docs/deploy.md" target="_blank" rel="noopener">
             <h3>Deploying to a VPS</h3>
@@ -1567,7 +1608,7 @@
   <!-- ================= FOOTER ================= -->
   <footer class="band black">
     <div class="rail">
-      <div class="footer-cta">
+      <div class="footer-cta" data-reveal>
         <div>
           <a href="#" class="logo">
             <img src="alfred_avatar.jpg" alt="">
@@ -1705,6 +1746,22 @@
         }
       });
     }
+  </script>
+  <script>
+    // Scroll reveal: each block animates once, the first time it is 10% into the viewport.
+    // Items that arrive together are staggered by 60ms in DOM order, so a grid that enters
+    // at once cascades while a card scrolled in on its own appears without waiting.
+    (function () {
+      const io = new IntersectionObserver((entries) => {
+        entries.filter((entry) => entry.isIntersecting).forEach((entry, i) => {
+          entry.target.style.setProperty('--reveal-delay', i * 60 + 'ms');
+          entry.target.classList.add('is-in');
+          io.unobserve(entry.target);
+        });
+      }, { rootMargin: '0px 0px -10% 0px' });
+
+      document.querySelectorAll('[data-reveal], [data-reveal-group] > *').forEach((el) => io.observe(el));
+    })();
   </script>
 </body>
 </html>
